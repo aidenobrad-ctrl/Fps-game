@@ -1,14 +1,14 @@
 using UnityEngine;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Loadouts
+namespace Recoil.Shared.Loadouts
 {
     /// <summary>
     /// Everything a loadout can be made from: the weapon catalog, plus utility items, perk
     /// sets and the ready-made presets. This one asset is all that is needed to turn saved
     /// ids back into something playable.
     /// </summary>
-    [CreateAssetMenu(menuName = "Pulsebreak/Loadout Catalog", fileName = "LoadoutCatalog")]
+    [CreateAssetMenu(menuName = "Recoil/Loadout Catalog", fileName = "LoadoutCatalog")]
     public sealed class LoadoutCatalog : ScriptableObject
     {
         public WeaponCatalog weapons;

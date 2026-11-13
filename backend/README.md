@@ -1,4 +1,4 @@
-# Pulsebreak backend
+# Recoil backend
 
 The accounts and matchmaking API: sign-up and sign-in, email verification, password reset, the
 player data that follows an account between computers (profile, loadouts, settings), and finding
@@ -16,7 +16,7 @@ PostgreSQL 16 and Redis 7.
 ```
 cd backend
 docker compose up -d
-dotnet run --project src/Pulsebreak.Api
+dotnet run --project src/Recoil.Api
 ```
 
 The API listens on http://localhost:5080, which is where the game looks by default. In
@@ -35,9 +35,9 @@ dotnet test
 
 The tests start the whole API in memory against the real PostgreSQL and Redis, each test class
 in a fresh database that is dropped afterwards. They expect PostgreSQL at 127.0.0.1:5432 with
-the user `pulsebreak` / `pulsebreak_dev` (allowed to create databases) and Redis at
-127.0.0.1:6379. Point them elsewhere with `PULSEBREAK_TEST_POSTGRES` (a connection string
-without a database name) and `PULSEBREAK_TEST_REDIS`. They flush Redis databases 1 to 14, so
+the user `recoil` / `recoil_dev` (allowed to create databases) and Redis at
+127.0.0.1:6379. Point them elsewhere with `RECOIL_TEST_POSTGRES` (a connection string
+without a database name) and `RECOIL_TEST_REDIS`. They flush Redis databases 1 to 14, so
 do not aim them at a Redis that holds anything you want.
 
 ## What it offers
@@ -119,7 +119,7 @@ development, set at least these. The API refuses to start without the first.
 | --- | --- |
 | `Auth__JwtSigningKey` | Secret that signs access tokens. 32 characters or more |
 | `Game__TicketSigningKey` | Secret that signs join tickets. Give dedicated game servers the same value. Different from the one above |
-| `ConnectionStrings__Postgres` | For example `Host=db;Database=pulsebreak;Username=...;Password=...` |
+| `ConnectionStrings__Postgres` | For example `Host=db;Database=recoil;Username=...;Password=...` |
 | `ConnectionStrings__Redis` | For example `redis:6379` |
 | `Email__Mode` | `Smtp` to send real email (`Log` prints it, `File` writes it to `Email__FileDirectory`) |
 | `Email__SmtpHost`, `Email__SmtpPort`, `Email__SmtpUser`, `Email__SmtpPassword`, `Email__From` | Your mail provider's SMTP details |
@@ -139,7 +139,7 @@ A dedicated game server given the ticket key admits only players who show a vali
 uses the account's username rather than whatever the client calls itself:
 
 ```
-PULSEBREAK_TICKET_KEY=<same as Game__TicketSigningKey> Pulsebreak.exe -batchmode -nographics -server
+RECOIL_TICKET_KEY=<same as Game__TicketSigningKey> Recoil.exe -batchmode -nographics -server
 ```
 
 Add `-ranked` and it admits only tickets good for ranked play, which the API gives only to
@@ -161,8 +161,8 @@ Queues, tickets and the fleet live in Redis, and the matchmaker runs under a loc
 processes can serve the same players. A dedicated server joins the fleet like this:
 
 ```
-PULSEBREAK_FLEET_KEY=<Matchmaking__FleetKey> PULSEBREAK_TICKET_KEY=<Game__TicketSigningKey> \
-  Pulsebreak.exe -batchmode -nographics -server -fleet https://api.example.com -public-address 203.0.113.5 -port 7777
+RECOIL_FLEET_KEY=<Matchmaking__FleetKey> RECOIL_TICKET_KEY=<Game__TicketSigningKey> \
+  Recoil.exe -batchmode -nographics -server -fleet https://api.example.com -public-address 203.0.113.5 -port 7777
 ```
 
 `-public-address` is where players reach it. Run one per port to host several matches on one
@@ -191,11 +191,11 @@ Seasons follow one another from `Seasons__FirstStart`, each `Seasons__LengthDays
 
 ## Changing the database
 
-The schema is in `src/Pulsebreak.Api/Data/`. After changing it, add a migration:
+The schema is in `src/Recoil.Api/Data/`. After changing it, add a migration:
 
 ```
 dotnet tool restore
-dotnet ef migrations add <Name> --project src/Pulsebreak.Api --output-dir Data/Migrations
+dotnet ef migrations add <Name> --project src/Recoil.Api --output-dir Data/Migrations
 ```
 
 ## Shared with the game

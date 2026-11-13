@@ -1,9 +1,9 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using Pulsebreak.Client.Settings;
+using Recoil.Client.Settings;
 
-namespace Pulsebreak.Client.Visuals
+namespace Recoil.Client.Visuals
 {
     /// <summary>
     /// Turns the video settings into engine settings: the quality preset (shadows,

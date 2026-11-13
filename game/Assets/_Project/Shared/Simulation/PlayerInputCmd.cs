@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Simulation
+namespace Recoil.Shared.Simulation
 {
     [Flags]
     public enum InputButtons : ushort

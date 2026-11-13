@@ -1,8 +1,8 @@
 using System;
 using UnityEngine;
-using Pulsebreak.Client.Settings;
+using Recoil.Client.Settings;
 
-namespace Pulsebreak.Client.Audio
+namespace Recoil.Client.Audio
 {
     /// <summary>A short musical phrase for a moment in a match.</summary>
     public enum Stinger

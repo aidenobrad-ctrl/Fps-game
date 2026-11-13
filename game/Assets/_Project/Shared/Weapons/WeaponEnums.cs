@@ -1,4 +1,4 @@
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     // Values are saved in assets as numbers. Add new entries at the end; never reorder or remove.
 

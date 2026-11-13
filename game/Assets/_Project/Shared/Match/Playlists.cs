@@ -1,11 +1,11 @@
 using System;
 
-// This file is also compiled into the backend (backend/src/Pulsebreak.Api): its matchmaker
+// This file is also compiled into the backend (backend/src/Recoil.Api): its matchmaker
 // fills matches from these playlists, so it and the game agree on what each mode needs.
 // Keep it free of UnityEngine.
 #nullable disable
 
-namespace Pulsebreak.Shared.Match
+namespace Recoil.Shared.Match
 {
     public enum GameModeKind : byte
     {

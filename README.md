@@ -1,6 +1,6 @@
-# Pulsebreak
+# Recoil
 
-A fast, competitive multiplayer FPS for PC, built in Unity 6. "Pulsebreak" is a working title.
+A fast, competitive multiplayer FPS for PC, built in Unity 6.
 
 Eleven phases are built so far: **movement and a firing range**, **the weapon system with 40 weapons and 21 attachments**, **loadouts**, **online play** on a server that owns the match, **accounts** on a backend of their own, **every game mode, bots and matchmaking**, **character customization with weapon skins**, **progression, challenges and ranked**, **sound, effects, settings and performance**, **friends, parties, chat, reports and ranked seasons**, and **three more maps, private-match rules and smarter bots**. Accounts are switched back on; see [Accounts](#accounts). The plan for everything after is in [docs/ROADMAP.md](docs/ROADMAP.md), and how the code is organised is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -10,10 +10,10 @@ Eleven phases are built so far: **movement and a firing range**, **the weapon sy
 
 1. Install **Unity 6** (6000.0 LTS or newer) through Unity Hub.
 2. In Unity Hub choose **Add ▸ Add project from disk** and pick the `game` folder inside your copy of this repository (for example `fps-game\game`). If Hub says the project's Editor version is not installed, pick the Unity 6 version you have.
-3. Let the first import finish. The firing range scene opens by itself. If it does not, use **Pulsebreak ▸ Open Firing Range** in the menu bar.
+3. Let the first import finish. The firing range scene opens by itself. If it does not, use **Recoil ▸ Open Firing Range** in the menu bar.
 4. Press **Play** and click inside the Game view to capture the mouse.
 
-That is the offline range. The main menu and online play are in a second scene: **Pulsebreak ▸ Open Duel (Main Menu)**. See [Play online](#play-online).
+That is the offline range. The main menu and online play are in a second scene: **Recoil ▸ Open Duel (Main Menu)**. See [Play online](#play-online).
 
 On first open Unity creates several settings files and one asset (`Resources/UI/HudPanel.asset`). Commit them; they are part of the project.
 
@@ -27,7 +27,7 @@ The backend has to be running for any of this: see [backend/README.md](backend/R
 
 ## Play online
 
-Online play is in the duel scene (**Pulsebreak ▸ Open Duel (Main Menu)**), which is also the main menu. Pick a **mode** at the top of the menu, then:
+Online play is in the duel scene (**Recoil ▸ Open Duel (Main Menu)**), which is also the main menu. Pick a **mode** at the top of the menu, then:
 
 - **Find match** puts you in that mode's queue on the backend, and drops you into a match on a dedicated server when one is found. Tick **Ranked** (Duel and Elimination) to play for rating. See [Matchmaking](#matchmaking) and [Progress and ranked](#progress-and-ranked).
 - **Host a private match** runs the match on your own computer with the rules you pick: map, team size, what wins it, whether bots take the empty places (and how good they are), the time limit (or round time), health, how soon people respawn, and which weapons are allowed (any, sidearms only, snipers only, shotguns only, no explosives, melee only). With bots on, you can play any mode on your own straight away.
@@ -72,7 +72,7 @@ You are in a match against bots a few seconds later.
 
 You need two copies of the game running. The Editor is one; a build is the other.
 
-1. Make a build: **File ▸ Build Profiles** (Build Settings in older versions), check that **Duel** is the first scene in the list and **FiringRange** the second, and press **Build**. If the list is wrong, run **Pulsebreak ▸ Run Project Doctor** first.
+1. Make a build: **File ▸ Build Profiles** (Build Settings in older versions), check that **Duel** is the first scene in the list and **FiringRange** the second, and press **Build**. If the list is wrong, run **Recoil ▸ Run Project Doctor** first.
 2. One copy hosts a private match. The banner shows the address others should use, something like `192.168.1.20` (on one computer, `127.0.0.1`).
 3. The other types that address and chooses **Join by address**.
 
@@ -83,7 +83,7 @@ Both copies keep running when their window is not in front, so you can click bet
 Start a build with no window and no player:
 
 ```
-Pulsebreak.exe -batchmode -nographics -server -mode tdm -map crossroads -bots
+Recoil.exe -batchmode -nographics -server -mode tdm -map crossroads -bots
 ```
 
 `-mode` is one of `duel`, `tdm`, `ffa`, `elimination`, `domination`, `hardpoint`, `gungame`; `-bots` fills empty places. Players **Join by address**. Add `-logFile server.log` to choose where the log goes.
@@ -93,9 +93,9 @@ Pulsebreak.exe -batchmode -nographics -server -mode tdm -map crossroads -bots
 **Find match** needs the backend running (see [backend/README.md](backend/README.md)) and at least one dedicated server offered to it:
 
 ```
-set PULSEBREAK_FLEET_KEY=development-only-fleet-key-do-not-use-anywhere-real
-set PULSEBREAK_TICKET_KEY=development-only-ticket-key-do-not-use-anywhere-real
-Pulsebreak.exe -batchmode -nographics -server -fleet http://localhost:5080 -public-address 127.0.0.1
+set RECOIL_FLEET_KEY=development-only-fleet-key-do-not-use-anywhere-real
+set RECOIL_TICKET_KEY=development-only-ticket-key-do-not-use-anywhere-real
+Recoil.exe -batchmode -nographics -server -fleet http://localhost:5080 -public-address 127.0.0.1
 ```
 
 (Those are the development keys from the backend's settings; use your own anywhere real.) The server registers and checks in every few seconds. Signed-in players queue as themselves, everyone else as a guest. A full queue starts a match at once; otherwise, after 20 seconds, a casual match starts with whoever is waiting and bots take the other places (a Duel always waits for two people; ranked always waits for a full match). The server switches to the match's mode and map, lets in only the players matchmaking sent it, plays **one** match, reports it to the backend and sends everyone back to the menu, where a line says what the match earned. Run several servers on different `-port`s to host several matches.
@@ -237,7 +237,7 @@ Press **Esc** in play to open the loadout screen. Items locked for matchmaking s
 
 Press **B** in play for the quick swap list: your loadouts, numbered, with each one's primary and secondary. Press the number and you carry it, straight away on the range and from your next spawn in a match.
 
-Loadouts are kept in a file called `loadouts.json` in the game's save folder (your look is in `cosmetics.json` beside it); **Pulsebreak ▸ Open Saved Loadouts Folder** in the Editor takes you to it. Delete the file to start over. If it ever becomes unreadable, the game keeps it under another name and starts over with one loadout.
+Loadouts are kept in a file called `loadouts.json` in the game's save folder (your look is in `cosmetics.json` beside it); **Recoil ▸ Open Saved Loadouts Folder** in the Editor takes you to it. Delete the file to start over. If it ever becomes unreadable, the game keeps it under another name and starts over with one loadout.
 
 Loadouts are saved on your computer. In a match the server checks the loadout you bring against its own content and replaces anything you could not have.
 
@@ -304,13 +304,13 @@ Everything is data. Select an asset in the Project window and edit it in the Ins
 | `Perks/` | `PRK_*` | A perk set: weapon stat changes, move speed, utility bonuses |
 | `Loadouts/` | `LDT_*`, `LoadoutCatalog` | Default loadouts; the catalog lists utility, perks and defaults |
 
-To add something, create the asset from **Assets ▸ Create ▸ Pulsebreak**, give it a unique lower-case id, and add it to the right catalog list:
+To add something, create the asset from **Assets ▸ Create ▸ Recoil**, give it a unique lower-case id, and add it to the right catalog list:
 
 - **Weapon:** add to `WeaponCatalog` ▸ Weapons, and drag the attachments it accepts into its own Attachments list.
 - **Attachment:** add to `WeaponCatalog` ▸ Attachments, then to each weapon that should accept it.
 - **Utility item, perk set or default loadout:** add to the matching list on `LoadoutCatalog`.
 
-Then run **Pulsebreak ▸ Validate Content**, which checks all of it and logs anything wrong.
+Then run **Recoil ▸ Validate Content**, which checks all of it and logs anything wrong.
 
 A weapon or utility item needs code only if it behaves in a way none of the existing ones do. The existing behaviours are: automatic, semi-automatic, burst and charge fire; instant bullets with optional piercing; multi-pellet blasts; projectiles with optional gravity, bounces, fuse and explosion; and melee.
 
@@ -326,11 +326,11 @@ The backend has its own tests; see [backend/README.md](backend/README.md#tests).
 
 ## Troubleshooting
 
-**Everything is pink, or the scene looks flat and unlit.** The render pipeline did not get assigned. Run **Pulsebreak ▸ Run Project Doctor** and read the Console. If it reports that the URP asset could not be loaded, create one with **Assets ▸ Create ▸ Rendering ▸ URP Asset (with Universal Renderer)** and assign it under **Project Settings ▸ Graphics**. The game is built to run without it too, on the Built-in pipeline.
+**Everything is pink, or the scene looks flat and unlit.** The render pipeline did not get assigned. Run **Recoil ▸ Run Project Doctor** and read the Console. If it reports that the URP asset could not be loaded, create one with **Assets ▸ Create ▸ Rendering ▸ URP Asset (with Universal Renderer)** and assign it under **Project Settings ▸ Graphics**. The game is built to run without it too, on the Built-in pipeline.
 
-**Pressing Play shows an empty scene.** Use **Pulsebreak ▸ Rebuild Firing Range Scene**, or **Rebuild Duel Scene** if it was the duel scene.
+**Pressing Play shows an empty scene.** Use **Recoil ▸ Rebuild Firing Range Scene**, or **Rebuild Duel Scene** if it was the duel scene.
 
-**A build starts on the firing range, with no menu.** The duel scene is not first in the build. Run **Pulsebreak ▸ Run Project Doctor**, or drag **Duel** to the top under **File ▸ Build Profiles**.
+**A build starts on the firing range, with no menu.** The duel scene is not first in the build. Run **Recoil ▸ Run Project Doctor**, or drag **Duel** to the top under **File ▸ Build Profiles**.
 
 **"Could not open port 7777" when hosting.** Another copy of the game on this computer is already hosting. Join that one at `127.0.0.1`, or close it.
 
@@ -352,20 +352,20 @@ The backend has its own tests; see [backend/README.md](backend/README.md#tests).
 
 **My loadouts lost their second grenade.** Loadouts now carry one utility item. Saved loadouts keep working; pick the grenade you want on the Utility tab.
 
-**There is only one loadout, called "Fallback".** The scene lost its link to the loadout catalog. Run **Pulsebreak ▸ Run Project Doctor**, which reconnects it.
+**There is only one loadout, called "Fallback".** The scene lost its link to the loadout catalog. Run **Recoil ▸ Run Project Doctor**, which reconnects it.
 
 **A loadout changed by itself.** Something it used was removed or no longer fits, and it was repaired on load. That is by design; pick the item again.
 
 **Keys and mouse do nothing.** Go to **Project Settings ▸ Player ▸ Other Settings ▸ Active Input Handling**, set it to **Both**, and let the Editor restart.
 
-**No HUD, or HUD text is missing.** Check the Console for a message starting "Pulsebreak HUD" or "Pulsebreak Project Doctor"; it names the file that failed to load.
+**No HUD, or HUD text is missing.** Check the Console for a message starting "Recoil HUD" or "Recoil Project Doctor"; it names the file that failed to load.
 
 **A package fails to resolve.** Open **Window ▸ Package Manager** and update the package it names to the version your Editor offers.
 
 **Compile errors.** Please send them to me as they appear in the Console. A single error stops the whole project from running, and they are quick to fix once seen.
 
 
-**Effects look like plain white or coloured squares.** The effects shader (`Assets/_Project/Resources/Shaders/PulsebreakEffect.shader`) did not load or compile; the Console says which. The game falls back to plain colours rather than pink.
+**Effects look like plain white or coloured squares.** The effects shader (`Assets/_Project/Resources/Shaders/RecoilEffect.shader`) did not load or compile; the Console says which. The game falls back to plain colours rather than pink.
 
 **No music in the menu.** Check the Music slider in Settings → Audio. Music only plays in the menus; in a match there are only stingers at the start and end.
 

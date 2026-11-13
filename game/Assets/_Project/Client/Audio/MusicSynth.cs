@@ -1,6 +1,6 @@
 using System;
 
-namespace Pulsebreak.Client.Audio
+namespace Recoil.Client.Audio
 {
     /// <summary>
     /// The menu music, made as it plays: a slow synth piece in D minor at 100 beats a minute,

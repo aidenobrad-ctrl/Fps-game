@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Pulsebreak.Shared.Loadouts;
+using Recoil.Shared.Loadouts;
 
-namespace Pulsebreak.Client.Loadouts
+namespace Recoil.Client.Loadouts
 {
     /// <summary>
     /// A player's loadouts: the presets that ship with the game, the custom ones they have

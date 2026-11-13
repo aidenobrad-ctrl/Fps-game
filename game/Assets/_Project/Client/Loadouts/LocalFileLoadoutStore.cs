@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using UnityEngine;
-using Pulsebreak.Shared.Loadouts;
+using Recoil.Shared.Loadouts;
 
-namespace Pulsebreak.Client.Loadouts
+namespace Recoil.Client.Loadouts
 {
     /// <summary>
     /// Keeps loadouts in a JSON file in the game's save folder, so they are still there the
@@ -40,7 +40,7 @@ namespace Pulsebreak.Client.Loadouts
                 try { File.Copy(FilePath, aside, true); }
                 catch (Exception) { /* Nothing more can be done about it here. */ }
 
-                Debug.LogWarning("Pulsebreak: could not read saved loadouts (" + error.Message + "). Starting with the defaults; " +
+                Debug.LogWarning("Recoil: could not read saved loadouts (" + error.Message + "). Starting with the defaults; " +
                                  "the old file was kept as " + aside + ".");
                 return null;
             }
@@ -62,7 +62,7 @@ namespace Pulsebreak.Client.Loadouts
             }
             catch (Exception error)
             {
-                Debug.LogWarning("Pulsebreak: could not save loadouts to " + FilePath + " (" + error.Message + "). " +
+                Debug.LogWarning("Recoil: could not save loadouts to " + FilePath + " (" + error.Message + "). " +
                                  "Changes will last until the game closes.");
             }
         }

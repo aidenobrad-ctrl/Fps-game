@@ -1,4 +1,4 @@
-namespace Pulsebreak.Client.UI
+namespace Recoil.Client.UI
 {
     /// <summary>
     /// Set while the player is typing into something in play (chat), so screens that take

@@ -1,12 +1,12 @@
 using System;
 using UnityEngine;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Net;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Net;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Server
+namespace Recoil.Server
 {
     /// <summary>
     /// Runs a <see cref="GameServer"/> inside Unity: opens the socket, gives the server

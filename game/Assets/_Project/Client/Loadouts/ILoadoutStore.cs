@@ -1,6 +1,6 @@
-using Pulsebreak.Shared.Loadouts;
+using Recoil.Shared.Loadouts;
 
-namespace Pulsebreak.Client.Loadouts
+namespace Recoil.Client.Loadouts
 {
     /// <summary>
     /// Where a player's loadouts are kept. Today that is a file on this machine

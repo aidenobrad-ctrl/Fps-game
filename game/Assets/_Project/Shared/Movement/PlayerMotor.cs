@@ -1,8 +1,8 @@
 using System;
 using UnityEngine;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Shared.Movement
+namespace Recoil.Shared.Movement
 {
     /// <summary>
     /// Kinematic first-person character motor: run, sprint, crouch, slide, jump, mantle and lean.

@@ -1,13 +1,13 @@
 using System;
 using UnityEngine;
-using Pulsebreak.Shared.Cosmetics;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Net;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Cosmetics;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Net;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Client.Net
+namespace Recoil.Client.Net
 {
     public enum ClientStatus
     {

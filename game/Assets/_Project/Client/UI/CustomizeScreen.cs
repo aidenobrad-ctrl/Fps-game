@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
-using Pulsebreak.Client.Cosmetics;
-using Pulsebreak.Client.Loadouts;
-using Pulsebreak.Client.Visuals;
-using Pulsebreak.Shared.Cosmetics;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Cosmetics;
+using Recoil.Client.Loadouts;
+using Recoil.Client.Visuals;
+using Recoil.Shared.Cosmetics;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.UI
+namespace Recoil.Client.UI
 {
     /// <summary>
     /// Where a player chooses how they look: suit and trim colours, a pattern, headgear, a
@@ -70,7 +70,7 @@ namespace Pulsebreak.Client.UI
             if (_open != null) return _open;
             if (cosmetics == null)
             {
-                Debug.LogWarning("Pulsebreak: customizing needs the game's services; there is no cosmetics library.");
+                Debug.LogWarning("Recoil: customizing needs the game's services; there is no cosmetics library.");
                 return null;
             }
 

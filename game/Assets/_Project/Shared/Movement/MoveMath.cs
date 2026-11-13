@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Movement
+namespace Recoil.Shared.Movement
 {
     /// <summary>
     /// The velocity maths behind the motor, kept free of physics calls so it can be unit tested.

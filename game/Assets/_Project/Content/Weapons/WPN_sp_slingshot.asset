@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f6a251fe876909704af95a88ea478068, type: 3}
+  m_Script: {fileID: 11500000, guid: cc07b6aaf86e0a80b61662175a613d09, type: 3}
   m_Name: WPN_sp_slingshot
   m_EditorClassIdentifier: 
   weaponId: sp_slingshot

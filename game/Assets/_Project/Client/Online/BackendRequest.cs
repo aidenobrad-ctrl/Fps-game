@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Pulsebreak.Client.Online
+namespace Recoil.Client.Online
 {
     /// <summary>
     /// One request to the backend, and its answer turned into a result the game can show:

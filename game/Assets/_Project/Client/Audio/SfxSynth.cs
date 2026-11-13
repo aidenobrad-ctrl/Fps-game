@@ -1,8 +1,8 @@
 using System;
 using UnityEngine;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.Audio
+namespace Recoil.Client.Audio
 {
     /// <summary>
     /// Generates the game's sound effects from noise and sine waves when they are first needed,

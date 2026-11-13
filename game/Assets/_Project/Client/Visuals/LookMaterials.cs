@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Shared.Cosmetics;
+using Recoil.Shared.Cosmetics;
 
-namespace Pulsebreak.Client.Visuals
+namespace Recoil.Client.Visuals
 {
     /// <summary>
     /// Materials for cosmetics: two-colour patterns drawn into small textures in code, so

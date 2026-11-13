@@ -1,7 +1,7 @@
 using UnityEngine;
-using Pulsebreak.Client.Visuals;
+using Recoil.Client.Visuals;
 
-namespace Pulsebreak.Client.FiringRange
+namespace Recoil.Client.FiringRange
 {
     /// <summary>
     /// Builds the firing range out of prototype boxes. The origin is the firing line and +Z

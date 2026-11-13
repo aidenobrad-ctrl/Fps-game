@@ -1,9 +1,9 @@
 using UnityEngine;
-using Pulsebreak.Client.Visuals;
-using Pulsebreak.Shared.Cosmetics;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Visuals;
+using Recoil.Shared.Cosmetics;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.Weapons
+namespace Recoil.Client.Weapons
 {
     /// <summary>A built first-person weapon model and how to hold it.</summary>
     public struct ViewModelLayout

@@ -1,10 +1,10 @@
 using System;
 using UnityEngine;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Simulation
+namespace Recoil.Shared.Simulation
 {
     /// <summary>
     /// Everything about one player that the simulation changes, in a form that can be saved,

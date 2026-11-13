@@ -1,6 +1,6 @@
-# Pulsebreak architecture
+# Recoil architecture
 
-Pulsebreak (working title) is a fast, competitive multiplayer FPS for PC: tight gunplay and loadouts from modern military shooters, short rounds and snappy movement from arena shooters. This document covers the technology choices, how the repository is laid out, and how the systems connect. The phased plan is in [ROADMAP.md](ROADMAP.md).
+Recoil is a fast, competitive multiplayer FPS for PC: tight gunplay and loadouts from modern military shooters, short rounds and snappy movement from arena shooters. This document covers the technology choices, how the repository is laid out, and how the systems connect. The phased plan is in [ROADMAP.md](ROADMAP.md).
 
 Phases 1 to 10 (and 9b) exist as code today: movement, the weapon system, loadouts, a firing range to try them in, online matches on a server that owns the match, accounts on a backend that the loadouts and settings follow, every game mode with bots and matchmaking, character cosmetics, progression with challenges and ranked play, sound, effects and settings, friends, parties, chat and ranked seasons, and five maps. Accounts can be switched off with one flag, `GameServices.AccountsEnabled` (they were, during Phase 5 to 7); they are on. Sections that describe later phases say so.
 
@@ -60,14 +60,14 @@ fps-game/
 └── backend/                The accounts API
     ├── README.md             How to run it, configure it and call it
     ├── docker-compose.yml    PostgreSQL and Redis for local development
-    ├── src/Pulsebreak.Api/
+    ├── src/Recoil.Api/
     │   ├── Auth/               Password hashing, input rules, tokens, sessions, lockout, emailed codes
     │   ├── Data/               Database model and migrations
     │   ├── Email/              Sending email, and its wording
     │   ├── Endpoints/          The HTTP routes
     │   ├── Loadouts/           Storing and merging loadouts
     │   └── Program.cs          Wiring, rate limits, token checking
-    └── tests/Pulsebreak.Api.Tests/   The whole API against a real PostgreSQL and Redis
+    └── tests/Recoil.Api.Tests/   The whole API against a real PostgreSQL and Redis
 ```
 
 ### Inside the Unity project
@@ -123,13 +123,13 @@ Each top-level code folder is its own assembly, and the compiler enforces the di
 
 ```mermaid
 flowchart LR
-    Client[Pulsebreak.Client] --> Shared[Pulsebreak.Shared]
-    Server[Pulsebreak.Server] --> Shared
+    Client[Recoil.Client] --> Shared[Recoil.Shared]
+    Server[Recoil.Server] --> Shared
     Client -. "to host a match" .-> Server
-    Api[backend: Pulsebreak.Api] -. "three source files" .-> Shared
-    Editor[Pulsebreak.Editor] --> Client
+    Api[backend: Recoil.Api] -. "three source files" .-> Shared
+    Editor[Recoil.Editor] --> Client
     Editor --> Shared
-    Tests[Pulsebreak.Tests.EditMode] --> Shared
+    Tests[Recoil.Tests.EditMode] --> Shared
     Tests --> Client
 ```
 
@@ -452,7 +452,7 @@ Every sound is generated in code when the game starts (`SfxSynth`), so the proje
 
 ## Effects and the picture
 
-Effects are drawn with one small shader of the game's own (`Resources/Shaders/PulsebreakEffect.shader`: unlit, vertex colour, additive or see-through) and textures painted in code (`FxResources`). Particle colours are eight-bit, so the additive material carries a brightness above white that lets fire and sparks catch the bloom.
+Effects are drawn with one small shader of the game's own (`Resources/Shaders/RecoilEffect.shader`: unlit, vertex colour, additive or see-through) and textures painted in code (`FxResources`). Particle colours are eight-bit, so the additive material carries a brightness above white that lets fire and sparks catch the bloom.
 
 | Piece | Job |
 | --- | --- |

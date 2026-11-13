@@ -1,0 +1,20 @@
+{
+    "name": "Recoil.Client",
+    "rootNamespace": "Recoil.Client",
+    "references": [
+        "Recoil.Shared",
+        "Recoil.Server",
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

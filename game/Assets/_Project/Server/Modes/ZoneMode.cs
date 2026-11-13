@@ -1,9 +1,9 @@
 using UnityEngine;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Net;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Match;
+using Recoil.Shared.Net;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Server.Modes
+namespace Recoil.Server.Modes
 {
     /// <summary>
     /// Domination and Hardpoint: respawning teams fighting over ground.

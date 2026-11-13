@@ -1,14 +1,14 @@
 using UnityEngine;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Loadouts
+namespace Recoil.Shared.Loadouts
 {
     /// <summary>
     /// A ready-made loadout that ships with the game. Players can use one as it is, or copy
     /// it as the starting point for their own. Built from asset references so it can be put
     /// together by dragging in the Inspector.
     /// </summary>
-    [CreateAssetMenu(menuName = "Pulsebreak/Loadout Preset", fileName = "LDT_New")]
+    [CreateAssetMenu(menuName = "Recoil/Loadout Preset", fileName = "LDT_New")]
     public sealed class LoadoutPreset : ScriptableObject
     {
         [Tooltip("Stable id. Never change it once shipped: saves remember which preset was equipped.")]

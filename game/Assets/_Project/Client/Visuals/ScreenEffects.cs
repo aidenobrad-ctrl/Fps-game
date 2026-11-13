@@ -1,9 +1,9 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using Pulsebreak.Client.Settings;
+using Recoil.Client.Settings;
 
-namespace Pulsebreak.Client.Visuals
+namespace Recoil.Client.Visuals
 {
     /// <summary>
     /// The finishing pass on the picture, as one global post-processing volume made in code:
@@ -64,7 +64,7 @@ namespace Pulsebreak.Client.Visuals
         void Awake()
         {
             _profile = ScriptableObject.CreateInstance<VolumeProfile>();
-            _profile.name = "Pulsebreak Screen";
+            _profile.name = "Recoil Screen";
 
             _bloom = _profile.Add<Bloom>(true);
             _bloom.threshold.Override(1f);

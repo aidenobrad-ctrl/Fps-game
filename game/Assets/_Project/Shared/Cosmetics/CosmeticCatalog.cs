@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Cosmetics
+namespace Recoil.Shared.Cosmetics
 {
     /// <summary>The parts of a look a player chooses. Each has its own list of items.</summary>
     public enum CosmeticSlot : byte

@@ -1,8 +1,8 @@
 using UnityEngine;
-using Pulsebreak.Client.Visuals;
-using Pulsebreak.Shared.Match;
+using Recoil.Client.Visuals;
+using Recoil.Shared.Match;
 
-namespace Pulsebreak.Client.Duel
+namespace Recoil.Client.Duel
 {
     /// <summary>
     /// The capture zones drawn in the world: a ring on the ground and a pole with a flag in

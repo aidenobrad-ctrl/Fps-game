@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>
     /// Describes a weapon's placeholder first-person model as a handful of proportions. The

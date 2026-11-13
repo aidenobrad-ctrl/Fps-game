@@ -1,6 +1,6 @@
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Loadouts
+namespace Recoil.Shared.Loadouts
 {
     /// <summary>
     /// A loadout ready to play: real weapon builds, utility items and a perk set, resolved

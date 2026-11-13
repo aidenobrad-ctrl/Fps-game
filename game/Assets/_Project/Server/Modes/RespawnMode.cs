@@ -1,6 +1,6 @@
-using Pulsebreak.Shared.Match;
+using Recoil.Shared.Match;
 
-namespace Pulsebreak.Server.Modes
+namespace Recoil.Server.Modes
 {
     /// <summary>
     /// Team Deathmatch and Free-for-All: one long round, coming back a few seconds after

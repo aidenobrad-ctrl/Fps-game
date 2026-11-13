@@ -1,4 +1,4 @@
-/* Pulsebreak HUD. Sizes are in reference pixels: the panel scales from 1920x1080 by screen height. */
+/* Recoil HUD. Sizes are in reference pixels: the panel scales from 1920x1080 by screen height. */
 
 .hud {
     position: absolute;

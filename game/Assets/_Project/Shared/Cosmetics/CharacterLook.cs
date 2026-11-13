@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Shared.Cosmetics
+namespace Recoil.Shared.Cosmetics
 {
     /// <summary>A skin chosen for one weapon, overriding the skin for every weapon.</summary>
     [Serializable]

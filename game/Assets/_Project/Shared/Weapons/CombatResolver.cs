@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>
     /// Turns shots into damage: bullets (with piercing), melee strikes and explosions. This is

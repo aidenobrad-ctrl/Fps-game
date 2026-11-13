@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Combat
+namespace Recoil.Shared.Combat
 {
     /// <summary>Hit points for anything that can be shot.</summary>
     [DisallowMultipleComponent]

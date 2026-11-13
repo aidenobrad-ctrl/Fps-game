@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using UnityEngine;
-using Pulsebreak.Shared.Cosmetics;
+using Recoil.Shared.Cosmetics;
 
-namespace Pulsebreak.Client.Cosmetics
+namespace Recoil.Client.Cosmetics
 {
     /// <summary>
     /// The player's look, kept in a JSON file in the game's save folder beside their
@@ -70,7 +70,7 @@ namespace Pulsebreak.Client.Cosmetics
                 string aside = FilePath + ".unreadable";
                 try { File.Copy(FilePath, aside, true); }
                 catch (Exception) { /* Nothing more can be done about it here. */ }
-                Debug.LogWarning("Pulsebreak: could not read the saved look (" + error.Message + "). Starting from the default; " +
+                Debug.LogWarning("Recoil: could not read the saved look (" + error.Message + "). Starting from the default; " +
                                  "the old file was kept as " + aside + ".");
                 return new CharacterLook();
             }
@@ -90,7 +90,7 @@ namespace Pulsebreak.Client.Cosmetics
             }
             catch (Exception error)
             {
-                Debug.LogWarning("Pulsebreak: could not save the look to " + FilePath + " (" + error.Message + "). " +
+                Debug.LogWarning("Recoil: could not save the look to " + FilePath + " (" + error.Message + "). " +
                                  "It will last until the game closes.");
             }
         }

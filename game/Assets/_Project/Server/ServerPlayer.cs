@@ -1,12 +1,12 @@
 using System.Collections.Generic;
-using Pulsebreak.Server.Bots;
-using Pulsebreak.Shared.Cosmetics;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Net;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Server.Bots;
+using Recoil.Shared.Cosmetics;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
+using Recoil.Shared.Net;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Server
+namespace Recoil.Server
 {
     /// <summary>Everything the server keeps about one player, connected or a bot.</summary>
     public sealed class ServerPlayer

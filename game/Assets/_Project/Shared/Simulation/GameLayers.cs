@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Simulation
+namespace Recoil.Shared.Simulation
 {
     /// <summary>
     /// Physics layers by index. Code uses the indices, so it keeps working even if the

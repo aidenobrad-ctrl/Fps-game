@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
-using Pulsebreak.Client.Online;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Progression;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Online;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
+using Recoil.Shared.Progression;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.UI
+namespace Recoil.Client.UI
 {
     /// <summary>
     /// A signed-in player's progress: their level, today's and this week's challenges, what

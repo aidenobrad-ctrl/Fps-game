@@ -1,8 +1,8 @@
 using UnityEngine;
-using Pulsebreak.Client.Cosmetics;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Cosmetics;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.Weapons
+namespace Recoil.Client.Weapons
 {
     /// <summary>What the first-person weapon model needs for one rendered frame.</summary>
     public struct ViewModelInput

@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Pulsebreak.Client.Visuals
+namespace Recoil.Client.Visuals
 {
     /// <summary>
     /// A particle system set up once and then told where to put particles: sparks, smoke,

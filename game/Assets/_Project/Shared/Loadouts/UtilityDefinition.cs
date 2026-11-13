@@ -1,14 +1,14 @@
 using UnityEngine;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Loadouts
+namespace Recoil.Shared.Loadouts
 {
     /// <summary>
     /// A throwable carried in one of the two utility slots: a grenade, a charge, a disc.
     /// What it does once thrown is described by the same projectile stats weapons use, so a
     /// new throwable is an asset, not code.
     /// </summary>
-    [CreateAssetMenu(menuName = "Pulsebreak/Utility Definition", fileName = "UTL_New")]
+    [CreateAssetMenu(menuName = "Recoil/Utility Definition", fileName = "UTL_New")]
     public sealed class UtilityDefinition : ScriptableObject
     {
         [Header("Identity")]

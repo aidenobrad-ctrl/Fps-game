@@ -1,8 +1,8 @@
 using System;
 using UnityEngine;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>
     /// The weapons a player is carrying and which one is in their hands. Each slot keeps its

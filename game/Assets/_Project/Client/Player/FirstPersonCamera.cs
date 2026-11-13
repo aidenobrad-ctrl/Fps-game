@@ -1,7 +1,7 @@
 using UnityEngine;
-using Pulsebreak.Client.Settings;
+using Recoil.Client.Settings;
 
-namespace Pulsebreak.Client.Player
+namespace Recoil.Client.Player
 {
     /// <summary>Everything the camera needs for one rendered frame.</summary>
     public struct CameraPose

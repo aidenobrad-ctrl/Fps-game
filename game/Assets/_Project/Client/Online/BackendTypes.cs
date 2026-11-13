@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
-using Pulsebreak.Shared.Loadouts;
+using Recoil.Shared.Loadouts;
 
-namespace Pulsebreak.Client.Online
+namespace Recoil.Client.Online
 {
     /// <summary>What came back from one HTTP request.</summary>
     public struct HttpResult
@@ -184,7 +184,7 @@ namespace Pulsebreak.Client.Online
     }
 }
 
-namespace Pulsebreak.Client.Online
+namespace Recoil.Client.Online
 {
     // ------------------------------------------------------------------ progression, as the backend sends it
 

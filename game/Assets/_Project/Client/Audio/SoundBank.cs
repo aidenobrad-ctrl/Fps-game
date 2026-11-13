@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Client.Settings;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Settings;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.Audio
+namespace Recoil.Client.Audio
 {
     public enum Sfx
     {

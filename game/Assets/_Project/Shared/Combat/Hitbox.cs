@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Combat
+namespace Recoil.Shared.Combat
 {
     /// <summary>
     /// Marks a collider as one damageable body part. Put it on a collider on the Hitbox

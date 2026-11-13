@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Tests
+namespace Recoil.Tests
 {
     /// <summary>The parts of the game modes that client and server share: maps, rules, playlists and restricted loadouts.</summary>
     public class MatchRulesTests

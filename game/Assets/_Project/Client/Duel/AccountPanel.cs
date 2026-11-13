@@ -2,9 +2,9 @@ using System;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Pulsebreak.Client.Online;
+using Recoil.Client.Online;
 
-namespace Pulsebreak.Client.Duel
+namespace Recoil.Client.Duel
 {
     /// <summary>
     /// The account part of the main menu: a line saying who you are signed in as, and the

@@ -6,21 +6,21 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
-using Pulsebreak.Client.Duel;
-using Pulsebreak.Client.FiringRange;
-using Pulsebreak.Client.UI;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Duel;
+using Recoil.Client.FiringRange;
+using Recoil.Client.UI;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.EditorTools
+namespace Recoil.EditorTools
 {
     /// <summary>
     /// Checks that the project is set up the way the game expects and quietly fixes what it
     /// can: render pipeline assigned, linear colour space, layer names, the two scenes (the
     /// duel with its main menu, and the firing range) present, wired and in the build. It
-    /// runs once each time the Editor opens the project, and on demand from the Pulsebreak menu.
+    /// runs once each time the Editor opens the project, and on demand from the Recoil menu.
     ///
     /// It only ever fills in things that are missing. It never overwrites a choice you made.
     /// </summary>
@@ -33,7 +33,7 @@ namespace Pulsebreak.EditorTools
         const string CatalogPath = "Assets/_Project/Content/Loadouts/LoadoutCatalog.asset";
         const string HudPanelPath = "Assets/_Project/Resources/" + HudController.PanelResource + ".asset";
         const string HudThemePath = "Assets/_Project/Resources/" + HudController.ThemeResource + ".tss";
-        const string SessionKey = "Pulsebreak.ProjectDoctor.Ran";
+        const string SessionKey = "Recoil.ProjectDoctor.Ran";
 
         [InitializeOnLoadMethod]
         static void OnEditorLoad()
@@ -49,14 +49,14 @@ namespace Pulsebreak.EditorTools
             };
         }
 
-        [MenuItem("Pulsebreak/Run Project Doctor")]
+        [MenuItem("Recoil/Run Project Doctor")]
         static void RunFromMenu()
         {
             List<string> report = Run(firstOpen: false);
-            if (report.Count == 0) Debug.Log("Pulsebreak Project Doctor: everything is set up correctly.");
+            if (report.Count == 0) Debug.Log("Recoil Project Doctor: everything is set up correctly.");
         }
 
-        [MenuItem("Pulsebreak/Validate Content")]
+        [MenuItem("Recoil/Validate Content")]
         static void ValidateContentFromMenu() => ValidateContent(showAllClear: true);
 
         /// <summary>Checks every weapon, attachment, utility item, perk set and preset, and logs anything that looks wrong.</summary>
@@ -65,24 +65,24 @@ namespace Pulsebreak.EditorTools
             var catalog = AssetDatabase.LoadAssetAtPath<LoadoutCatalog>(CatalogPath);
             if (catalog == null)
             {
-                Debug.LogWarning("Pulsebreak: no loadout catalog at " + CatalogPath + ". The firing range will use stand-in equipment.");
+                Debug.LogWarning("Recoil: no loadout catalog at " + CatalogPath + ". The firing range will use stand-in equipment.");
                 return;
             }
 
             List<string> problems = LoadoutValidator.Validate(catalog);
-            foreach (string problem in problems) Debug.LogWarning("Pulsebreak content: " + problem, catalog);
+            foreach (string problem in problems) Debug.LogWarning("Recoil content: " + problem, catalog);
             if (problems.Count == 0 && showAllClear)
             {
-                Debug.Log("Pulsebreak: all content is valid: " + catalog.weapons.weapons.Length + " weapons, " +
+                Debug.Log("Recoil: all content is valid: " + catalog.weapons.weapons.Length + " weapons, " +
                           catalog.weapons.attachments.Length + " attachments, " + catalog.utilities.Length + " utility items, " +
                           catalog.perkSets.Length + " perk sets, " + catalog.presets.Length + " presets.");
             }
         }
 
-        [MenuItem("Pulsebreak/Open Saved Loadouts Folder")]
+        [MenuItem("Recoil/Open Saved Loadouts Folder")]
         static void OpenSaveFolder() => EditorUtility.RevealInFinder(Application.persistentDataPath);
 
-        [MenuItem("Pulsebreak/Open Duel (Main Menu)")]
+        [MenuItem("Recoil/Open Duel (Main Menu)")]
         static void OpenDuel()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
@@ -90,7 +90,7 @@ namespace Pulsebreak.EditorTools
             else EditorSceneManager.OpenScene(DuelScenePath);
         }
 
-        [MenuItem("Pulsebreak/Rebuild Duel Scene")]
+        [MenuItem("Recoil/Rebuild Duel Scene")]
         static void RebuildDuel()
         {
             if (File.Exists(DuelScenePath) && !EditorUtility.DisplayDialog("Rebuild duel scene",
@@ -101,7 +101,7 @@ namespace Pulsebreak.EditorTools
             CreateDuelScene();
         }
 
-        [MenuItem("Pulsebreak/Open Firing Range")]
+        [MenuItem("Recoil/Open Firing Range")]
         static void OpenFiringRange()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
@@ -109,7 +109,7 @@ namespace Pulsebreak.EditorTools
             else EditorSceneManager.OpenScene(ScenePath);
         }
 
-        [MenuItem("Pulsebreak/Rebuild Firing Range Scene")]
+        [MenuItem("Recoil/Rebuild Firing Range Scene")]
         static void RebuildFiringRange()
         {
             if (File.Exists(ScenePath) && !EditorUtility.DisplayDialog("Rebuild firing range scene",
@@ -133,7 +133,7 @@ namespace Pulsebreak.EditorTools
             EnsureSceneInBuild(report);
             ValidateContent(showAllClear: false);
 
-            foreach (string line in report) Debug.Log("Pulsebreak Project Doctor: " + line);
+            foreach (string line in report) Debug.Log("Recoil Project Doctor: " + line);
             return report;
         }
 
@@ -144,7 +144,7 @@ namespace Pulsebreak.EditorTools
             var pipeline = AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(PipelinePath);
             if (pipeline == null)
             {
-                Debug.LogWarning("Pulsebreak Project Doctor: no render pipeline is assigned and " + PipelinePath +
+                Debug.LogWarning("Recoil Project Doctor: no render pipeline is assigned and " + PipelinePath +
                                  " could not be loaded. The game still runs (with the Built-in pipeline). To use URP, " +
                                  "create one with Assets > Create > Rendering > URP Asset (with Universal Renderer) and " +
                                  "assign it under Project Settings > Graphics.");
@@ -192,7 +192,7 @@ namespace Pulsebreak.EditorTools
             var theme = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(HudThemePath);
             if (theme == null)
             {
-                Debug.LogWarning("Pulsebreak Project Doctor: " + HudThemePath + " did not import, so HUD text may not draw. " +
+                Debug.LogWarning("Recoil Project Doctor: " + HudThemePath + " did not import, so HUD text may not draw. " +
                                  "Create a theme with Assets > Create > UI Toolkit > TSS Theme File and save it at that path.");
                 return;
             }
@@ -221,7 +221,7 @@ namespace Pulsebreak.EditorTools
                 Scene active = SceneManager.GetActiveScene();
                 if (!string.IsNullOrEmpty(active.path) || active.isDirty)
                 {
-                    Debug.LogWarning("Pulsebreak Project Doctor: " + ScenePath + " is missing. Use Pulsebreak > Rebuild Firing Range Scene to create it.");
+                    Debug.LogWarning("Recoil Project Doctor: " + ScenePath + " is missing. Use Recoil > Rebuild Firing Range Scene to create it.");
                     return;
                 }
                 CreateFiringRangeScene();
@@ -242,8 +242,8 @@ namespace Pulsebreak.EditorTools
             FiringRangeBootstrap bootstrap = FindBootstrap(scene);
             if (bootstrap == null)
             {
-                Debug.LogWarning("Pulsebreak Project Doctor: the firing range scene has no FiringRangeBootstrap, so pressing Play " +
-                                 "will show an empty scene. Use Pulsebreak > Rebuild Firing Range Scene to fix it.");
+                Debug.LogWarning("Recoil Project Doctor: the firing range scene has no FiringRangeBootstrap, so pressing Play " +
+                                 "will show an empty scene. Use Recoil > Rebuild Firing Range Scene to fix it.");
                 return;
             }
 
@@ -260,7 +260,7 @@ namespace Pulsebreak.EditorTools
         {
             if (!File.Exists(DuelScenePath))
             {
-                Debug.LogWarning("Pulsebreak Project Doctor: " + DuelScenePath + " is missing. Use Pulsebreak > Rebuild Duel Scene to create it.");
+                Debug.LogWarning("Recoil Project Doctor: " + DuelScenePath + " is missing. Use Recoil > Rebuild Duel Scene to create it.");
                 return;
             }
 
@@ -275,8 +275,8 @@ namespace Pulsebreak.EditorTools
             }
             if (bootstrap == null)
             {
-                Debug.LogWarning("Pulsebreak Project Doctor: the duel scene has no DuelBootstrap, so pressing Play " +
-                                 "will show an empty scene. Use Pulsebreak > Rebuild Duel Scene to fix it.");
+                Debug.LogWarning("Recoil Project Doctor: the duel scene has no DuelBootstrap, so pressing Play " +
+                                 "will show an empty scene. Use Recoil > Rebuild Duel Scene to fix it.");
                 return;
             }
 

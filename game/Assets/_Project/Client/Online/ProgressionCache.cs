@@ -1,8 +1,8 @@
 using System;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Progression;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Progression;
 
-namespace Pulsebreak.Client.Online
+namespace Recoil.Client.Online
 {
     /// <summary>
     /// The signed-in player's progression as last heard from the backend: level, weapon levels,

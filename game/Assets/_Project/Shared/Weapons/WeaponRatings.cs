@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>
     /// A weapon's stats boiled down to what a player compares: a few 0..1 bars and the

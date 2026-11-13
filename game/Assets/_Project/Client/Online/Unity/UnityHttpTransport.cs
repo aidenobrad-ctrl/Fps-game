@@ -2,7 +2,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine.Networking;
 
-namespace Pulsebreak.Client.Online
+namespace Recoil.Client.Online
 {
     /// <summary>Sends the account client's requests with Unity's own web requests.</summary>
     public sealed class UnityHttpTransport : IHttpTransport

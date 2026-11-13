@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
-using Pulsebreak.Client.Loadouts;
-using Pulsebreak.Shared.Loadouts;
+using Recoil.Client.Loadouts;
+using Recoil.Shared.Loadouts;
 
-namespace Pulsebreak.Client.Online
+namespace Recoil.Client.Online
 {
     /// <summary>
     /// Keeps the loadout library and the player's account in step.

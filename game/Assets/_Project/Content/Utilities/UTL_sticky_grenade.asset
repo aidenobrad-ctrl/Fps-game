@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 877e6902f87108a35b01718175e87f71, type: 3}
+  m_Script: {fileID: 11500000, guid: ac3afcc34eab46d31135fd32e7b43d4c, type: 3}
   m_Name: UTL_sticky_grenade
   m_EditorClassIdentifier: 
   utilityId: sticky_grenade

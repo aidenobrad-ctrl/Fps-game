@@ -1,10 +1,10 @@
 using System;
 using UnityEngine;
-using Pulsebreak.Client.Settings;
+using Recoil.Client.Settings;
 using UnityEngine.InputSystem;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Client.Controls
+namespace Recoil.Client.Controls
 {
     /// <summary>
     /// Turns keyboard and mouse into <see cref="PlayerInputCmd"/>s. This is the only class

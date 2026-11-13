@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Pulsebreak.Client.Audio;
-using Pulsebreak.Client.Online;
-using Pulsebreak.Client.UI;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Progression;
+using Recoil.Client.Audio;
+using Recoil.Client.Online;
+using Recoil.Client.UI;
+using Recoil.Shared.Match;
+using Recoil.Shared.Progression;
 using Cursor = UnityEngine.Cursor;
 
-namespace Pulsebreak.Client.Duel
+namespace Recoil.Client.Duel
 {
     /// <summary>One line of the scoreboard.</summary>
     public struct ScoreRow
@@ -159,7 +159,7 @@ namespace Pulsebreak.Client.Duel
         {
             if (root == null)
             {
-                Debug.LogError("Pulsebreak: the online UI could not be created (no UI root).");
+                Debug.LogError("Recoil: the online UI could not be created (no UI root).");
                 return;
             }
 
@@ -167,7 +167,7 @@ namespace Pulsebreak.Client.Duel
             // here in code, so a missing stylesheet costs polish, not a usable menu.
             var styles = Resources.Load<StyleSheet>("UI/HudStyles");
             if (styles != null) root.styleSheets.Add(styles);
-            else Debug.LogWarning("Pulsebreak: Resources/UI/HudStyles.uss did not load; the online menu will look plain.");
+            else Debug.LogWarning("Recoil: Resources/UI/HudStyles.uss did not load; the online menu will look plain.");
             root.AddToClassList("hud");
             root.pickingMode = PickingMode.Ignore;
             Fill(root);
@@ -201,7 +201,7 @@ namespace Pulsebreak.Client.Duel
             _menu.Add(card);
             _menuCard = card;
 
-            card.Add(Text_("PULSEBREAK", 30, Text, bold: true, spacing: 6, className: "pause-title"));
+            card.Add(Text_("RECOIL", 30, Text, bold: true, spacing: 6, className: "pause-title"));
             Label subtitle = Text_("PLAY ONLINE", 13, Accent, bold: true, spacing: 3);
             subtitle.style.marginTop = -12;
             subtitle.style.marginBottom = 14;

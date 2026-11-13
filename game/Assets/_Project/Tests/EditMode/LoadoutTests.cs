@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
-using Pulsebreak.Client.Loadouts;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Loadouts;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Tests
+namespace Recoil.Tests
 {
     /// <summary>A small catalog built in memory, so these tests do not depend on the real content.</summary>
     static class LoadoutTestKit

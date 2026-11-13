@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Recoil.Api/Recoil.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Recoil.Api.Tests/Recoil.Api.Tests.csproj" />
+  </Folder>
+</Solution>

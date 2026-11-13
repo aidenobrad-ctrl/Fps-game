@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Cosmetics;
-using Pulsebreak.Shared.Match;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Cosmetics;
+using Recoil.Shared.Match;
 
-namespace Pulsebreak.Client.Visuals
+namespace Recoil.Client.Visuals
 {
     /// <summary>
     /// Dresses a character body in a <see cref="CharacterLook"/>: the suit's colour and pattern

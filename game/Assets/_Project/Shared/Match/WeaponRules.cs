@@ -1,7 +1,7 @@
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Match
+namespace Recoil.Shared.Match
 {
     /// <summary>What a private match lets people carry.</summary>
     public enum WeaponRule : byte

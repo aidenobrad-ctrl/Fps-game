@@ -1,19 +1,19 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Server.Bots;
-using Pulsebreak.Server.Modes;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Cosmetics;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Net;
-using Pulsebreak.Shared.Progression;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Server.Bots;
+using Recoil.Server.Modes;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Cosmetics;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Net;
+using Recoil.Shared.Progression;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Server
+namespace Recoil.Server
 {
     [Serializable]
     public sealed class ServerConfig

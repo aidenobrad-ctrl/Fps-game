@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Client.Controls;
-using Pulsebreak.Client.Net;
-using Pulsebreak.Client.Settings;
-using Pulsebreak.Client.Weapons;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Net;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Controls;
+using Recoil.Client.Net;
+using Recoil.Client.Settings;
+using Recoil.Client.Weapons;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Net;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.Player
+namespace Recoil.Client.Player
 {
     /// <summary>
     /// Drives the local player. Each rendered frame it:

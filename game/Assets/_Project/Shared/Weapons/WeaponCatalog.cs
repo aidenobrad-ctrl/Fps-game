@@ -1,13 +1,13 @@
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>
     /// The list of every weapon and attachment in the game. Anything that needs to turn an
     /// id back into an asset (a saved loadout, a message from the server) looks it up here.
     /// A new weapon only exists for the game once it is in this list.
     /// </summary>
-    [CreateAssetMenu(menuName = "Pulsebreak/Weapon Catalog", fileName = "WeaponCatalog")]
+    [CreateAssetMenu(menuName = "Recoil/Weapon Catalog", fileName = "WeaponCatalog")]
     public sealed class WeaponCatalog : ScriptableObject
     {
         public WeaponDefinition[] weapons = new WeaponDefinition[0];

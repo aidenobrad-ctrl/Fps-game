@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Loadouts
+namespace Recoil.Shared.Loadouts
 {
     /// <summary>
     /// The rules for what a legal loadout is, and the one place stored loadouts are turned

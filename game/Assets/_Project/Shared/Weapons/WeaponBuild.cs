@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>
     /// A weapon plus the attachments fitted to it: one per slot at most. This is what a

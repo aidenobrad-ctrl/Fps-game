@@ -1,4 +1,4 @@
-namespace Pulsebreak.Shared.Simulation
+namespace Recoil.Shared.Simulation
 {
     /// <summary>
     /// Fixed simulation timing. Movement and weapons advance in whole ticks, never in

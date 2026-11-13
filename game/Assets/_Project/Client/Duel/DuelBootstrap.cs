@@ -7,24 +7,24 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
-using Pulsebreak.Client.Audio;
-using Pulsebreak.Client.FiringRange;
-using Pulsebreak.Client.Loadouts;
-using Pulsebreak.Client.Net;
-using Pulsebreak.Client.Online;
-using Pulsebreak.Client.Player;
-using Pulsebreak.Client.Settings;
-using Pulsebreak.Client.UI;
-using Pulsebreak.Client.Visuals;
-using Pulsebreak.Server;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Net;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Audio;
+using Recoil.Client.FiringRange;
+using Recoil.Client.Loadouts;
+using Recoil.Client.Net;
+using Recoil.Client.Online;
+using Recoil.Client.Player;
+using Recoil.Client.Settings;
+using Recoil.Client.UI;
+using Recoil.Client.Visuals;
+using Recoil.Server;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Net;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.Duel
+namespace Recoil.Client.Duel
 {
     /// <summary>
     /// Entry point of the online scene, and the game's main menu. Put this on one object in
@@ -144,7 +144,7 @@ namespace Pulsebreak.Client.Duel
                 // Given the backend's ticket key, it admits only signed-in players. The
                 // environment is the better place for a secret: the command line can be read
                 // by anyone on the machine who can list processes.
-                server.ticketKey = Environment.GetEnvironmentVariable("PULSEBREAK_TICKET_KEY") ?? ArgText(args, "-ticket-key") ?? "";
+                server.ticketKey = Environment.GetEnvironmentVariable("RECOIL_TICKET_KEY") ?? ArgText(args, "-ticket-key") ?? "";
                 server.rankedOnly |= HasArg(args, "-ranked");
                 ApplyServerArgs(args);
                 if (!StartServer(out string problem))
@@ -158,7 +158,7 @@ namespace Pulsebreak.Client.Duel
                 if (fleet != null)
                 {
                     var agent = gameObject.AddComponent<FleetAgent>();
-                    agent.Begin(_host, fleet, Environment.GetEnvironmentVariable("PULSEBREAK_FLEET_KEY") ?? ArgText(args, "-fleet-key") ?? "",
+                    agent.Begin(_host, fleet, Environment.GetEnvironmentVariable("RECOIL_FLEET_KEY") ?? ArgText(args, "-fleet-key") ?? "",
                         ArgText(args, "-public-address") ?? LocalAddress(), port);
                 }
                 return;
@@ -220,7 +220,7 @@ namespace Pulsebreak.Client.Duel
             {
                 Playlist playlist = Playlists.Find(modeId);
                 if (playlist != null) server.match = MatchSettings.For(playlist.Mode);
-                else Debug.LogWarning("Pulsebreak: unknown -mode \"" + modeId + "\". Modes: duel, tdm, ffa, elimination, domination, hardpoint, gungame.");
+                else Debug.LogWarning("Recoil: unknown -mode \"" + modeId + "\". Modes: duel, tdm, ffa, elimination, domination, hardpoint, gungame.");
             }
             string map = ArgText(args, "-map");
             if (map != null) server.match.arenaId = map;
@@ -426,7 +426,7 @@ namespace Pulsebreak.Client.Duel
                 // Left the scene, or pressed Cancel, while waiting.
                 if (this == null || attempt != _attempt) return;
                 if (result.Ok) ticket = result.Value;
-                else Debug.LogWarning("Pulsebreak: could not get a join ticket (" + result.Message + "). Joining without one; servers that need one will say so.");
+                else Debug.LogWarning("Recoil: could not get a join ticket (" + result.Message + "). Joining without one; servers that need one will say so.");
             }
             ConnectWithTicket(target, ticket);
         }

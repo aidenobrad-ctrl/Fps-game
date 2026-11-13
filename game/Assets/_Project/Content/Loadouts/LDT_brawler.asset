@@ -9,16 +9,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cf495866b88359d8f1b6e8c964588444, type: 3}
+  m_Script: {fileID: 11500000, guid: c43c5c7593295e138e3bfa2e679d22e5, type: 3}
   m_Name: LDT_brawler
   m_EditorClassIdentifier: 
   presetId: brawler
   displayName: Brawler
   description: 'Fire, buckshot and an axe. Get in their face and stay there.'
-  primary: {fileID: 11400000, guid: 2d1a28278c3cb24663f939cced2afee3, type: 2}
+  primary: {fileID: 11400000, guid: 84c9ed2cb76e3c8f75af43b432719937, type: 2}
   primaryAttachments: []
-  secondary: {fileID: 11400000, guid: 34fcb13c41f9e7efceab768d39ffa824, type: 2}
+  secondary: {fileID: 11400000, guid: ba0b9dab665a326ba246553bb16c3ddd, type: 2}
   secondaryAttachments: []
-  melee: {fileID: 11400000, guid: beb05637e5cc6823a51957fb68d1475b, type: 2}
-  utility: {fileID: 11400000, guid: edc0b1651e82dd70e1f880d1c10de4c0, type: 2}
-  perkSet: {fileID: 11400000, guid: 3b1db5a585e809888e9abdfbbacbe84f, type: 2}
+  melee: {fileID: 11400000, guid: 487cb76ad59825366a39cc82de48f173, type: 2}
+  utility: {fileID: 11400000, guid: ca104a3c35d9e9543375913ff5aa613c, type: 2}
+  perkSet: {fileID: 11400000, guid: 8746e6e8be4d429ea97c0f9125b30cb8, type: 2}

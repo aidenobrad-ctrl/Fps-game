@@ -1,8 +1,8 @@
 using System;
 using UnityEngine;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Shared.Loadouts
+namespace Recoil.Shared.Loadouts
 {
     /// <summary>One utility slot's state.</summary>
     public struct UtilitySlotState

@@ -4,10 +4,10 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Progression;
+using Recoil.Shared.Match;
+using Recoil.Shared.Progression;
 
-namespace Pulsebreak.Server
+namespace Recoil.Server
 {
     /// <summary>
     /// Offers a dedicated server to the backend's matchmaking. It registers the server, then
@@ -15,7 +15,7 @@ namespace Pulsebreak.Server
     /// the backend may hand it a match: the rules to play, and the id that the players' join
     /// tickets will carry. The server switches to those rules and admits only those players.
     ///
-    /// The fleet key (PULSEBREAK_FLEET_KEY in the environment) proves to the backend that this
+    /// The fleet key (RECOIL_FLEET_KEY in the environment) proves to the backend that this
     /// is one of our servers. Players' tickets are checked with the separate ticket key.
     /// </summary>
     public sealed class FleetAgent : MonoBehaviour
@@ -69,8 +69,8 @@ namespace Pulsebreak.Server
             _key = fleetKey ?? "";
             _address = publicAddress;
             _port = port;
-            if (_key.Length == 0) Debug.LogWarning("[Fleet] No fleet key (PULSEBREAK_FLEET_KEY): the backend will not accept this server.");
-            if (!_host.Server.RequiresTicket) Debug.LogWarning("[Fleet] No ticket key (PULSEBREAK_TICKET_KEY): matchmade players cannot be checked, so anyone could join.");
+            if (_key.Length == 0) Debug.LogWarning("[Fleet] No fleet key (RECOIL_FLEET_KEY): the backend will not accept this server.");
+            if (!_host.Server.RequiresTicket) Debug.LogWarning("[Fleet] No ticket key (RECOIL_TICKET_KEY): matchmade players cannot be checked, so anyone could join.");
             _host.Server.MatchReported += report => _ = ReportAsync(report);
             Debug.Log("[Fleet] Offering " + _address + ":" + _port + " to matchmaking at " + _baseUrl + ".");
         }

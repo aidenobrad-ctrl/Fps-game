@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Pulsebreak.Server
+namespace Recoil.Server
 {
     /// <summary>
     /// Where each team last saw an enemy, and when. A bot that spots someone reports it; a bot

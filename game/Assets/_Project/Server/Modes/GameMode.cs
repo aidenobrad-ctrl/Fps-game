@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Net;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Match;
+using Recoil.Shared.Net;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Server.Modes
+namespace Recoil.Server.Modes
 {
     /// <summary>
     /// The rules of a match, on top of the server that runs it. Every mode follows the same
@@ -287,12 +287,12 @@ namespace Pulsebreak.Server.Modes
         /// How a match ended for a player: won, drawn or lost. With teams it is their team's
         /// result; without, only the winner wins.
         /// </summary>
-        public Pulsebreak.Shared.Progression.MatchOutcome OutcomeFor(int team, int playerId)
+        public Recoil.Shared.Progression.MatchOutcome OutcomeFor(int team, int playerId)
         {
             int winner = _state.MatchWinner;
-            if (winner == MatchState.Nobody) return Pulsebreak.Shared.Progression.MatchOutcome.Draw;
+            if (winner == MatchState.Nobody) return Recoil.Shared.Progression.MatchOutcome.Draw;
             bool won = Settings.TeamBased ? winner == team : winner == playerId;
-            return won ? Pulsebreak.Shared.Progression.MatchOutcome.Won : Pulsebreak.Shared.Progression.MatchOutcome.Lost;
+            return won ? Recoil.Shared.Progression.MatchOutcome.Won : Recoil.Shared.Progression.MatchOutcome.Lost;
         }
 
         protected void StartMatch()

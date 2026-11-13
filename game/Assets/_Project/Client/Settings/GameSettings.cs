@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Pulsebreak.Client.Settings
+namespace Recoil.Client.Settings
 {
     /// <summary>How much the graphics cost, from fastest to best looking.</summary>
     public enum GraphicsQuality

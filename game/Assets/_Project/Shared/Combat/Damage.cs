@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Combat
+namespace Recoil.Shared.Combat
 {
     public enum HitZone : byte
     {

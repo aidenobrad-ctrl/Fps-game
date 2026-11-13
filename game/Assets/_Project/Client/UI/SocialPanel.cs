@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Pulsebreak.Client.Audio;
-using Pulsebreak.Client.Online;
-using Pulsebreak.Client.Settings;
-using Pulsebreak.Shared.Social;
+using Recoil.Client.Audio;
+using Recoil.Client.Online;
+using Recoil.Client.Settings;
+using Recoil.Shared.Social;
 
-namespace Pulsebreak.Client.UI
+namespace Recoil.Client.UI
 {
     /// <summary>
     /// The social side of the main menu: party invites, the party and its chat, friends (with

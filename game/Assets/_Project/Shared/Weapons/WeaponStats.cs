@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>One change an attachment makes to a weapon.</summary>
     [Serializable]

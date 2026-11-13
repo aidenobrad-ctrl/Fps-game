@@ -1,6 +1,6 @@
 using UnityEngine.UIElements;
 
-namespace Pulsebreak.Client.UI
+namespace Recoil.Client.UI
 {
     /// <summary>Small bits of movement for the interface, driven by the transitions in HudStyles.uss.</summary>
     public static class UiMotion

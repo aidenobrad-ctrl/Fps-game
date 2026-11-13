@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
-namespace Pulsebreak.Shared.Net
+namespace Recoil.Shared.Net
 {
     /// <summary>Where a packet came from or is going: an IPv4 address and a port.</summary>
     public readonly struct NetAddress : IEquatable<NetAddress>

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Shared.Net
+namespace Recoil.Shared.Net
 {
     /// <summary>How bad a connection to pretend to have. All values are one-way.</summary>
     [Serializable]

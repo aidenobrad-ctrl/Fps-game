@@ -1,8 +1,8 @@
 using UnityEngine;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.Audio
+namespace Recoil.Client.Audio
 {
     /// <summary>
     /// Plays sound effects for the camera it sits on. Sounds of our own (our gun, our

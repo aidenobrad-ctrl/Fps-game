@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Loadouts
+namespace Recoil.Shared.Loadouts
 {
     /// <summary>
     /// Checks utility items, perk sets and presets for mistakes, and runs the weapon checks

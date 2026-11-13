@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Server.Bots
+namespace Recoil.Server.Bots
 {
     /// <summary>
     /// Decides what a bot presses each tick. A bot plays by the same rules as a person: it

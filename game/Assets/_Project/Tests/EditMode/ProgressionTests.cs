@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using NUnit.Framework;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Progression;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
+using Recoil.Shared.Progression;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Tests
+namespace Recoil.Tests
 {
     /// <summary>Levels, match XP, ranks and unlocks: the rules the backend pays out by and the game shows.</summary>
     public class ProgressionTests

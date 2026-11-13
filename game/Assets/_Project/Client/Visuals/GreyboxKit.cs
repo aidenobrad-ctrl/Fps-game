@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Client.Visuals
+namespace Recoil.Client.Visuals
 {
     /// <summary>
     /// Builds prototype geometry in code. Until there are art assets and hand-built scenes,

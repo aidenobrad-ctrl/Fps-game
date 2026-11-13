@@ -1,7 +1,7 @@
 using UnityEngine;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.Player
+namespace Recoil.Client.Player
 {
     /// <summary>Where one bullet or pellet went, for tracers and impact marks.</summary>
     public struct ShotPresentation

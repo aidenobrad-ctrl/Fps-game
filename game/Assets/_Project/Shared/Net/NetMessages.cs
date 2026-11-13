@@ -1,13 +1,13 @@
 using UnityEngine;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Cosmetics;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Cosmetics;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Net
+namespace Recoil.Shared.Net
 {
     /// <summary>The first byte of every message inside a data packet.</summary>
     public enum NetMessage : byte

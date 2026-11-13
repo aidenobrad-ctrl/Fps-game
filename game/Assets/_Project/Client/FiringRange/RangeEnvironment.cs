@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Pulsebreak.Client.FiringRange
+namespace Recoil.Client.FiringRange
 {
     /// <summary>
     /// Lighting and atmosphere for the range, set from code so the level looks the same

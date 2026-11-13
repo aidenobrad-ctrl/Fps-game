@@ -1,16 +1,16 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Client.Loadouts;
-using Pulsebreak.Client.Online;
-using Pulsebreak.Client.Player;
-using Pulsebreak.Client.Settings;
-using Pulsebreak.Client.UI;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Loadouts;
+using Recoil.Client.Online;
+using Recoil.Client.Player;
+using Recoil.Client.Settings;
+using Recoil.Client.UI;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.FiringRange
+namespace Recoil.Client.FiringRange
 {
     /// <summary>
     /// Entry point of the firing range scene. Put this on one object in an otherwise empty

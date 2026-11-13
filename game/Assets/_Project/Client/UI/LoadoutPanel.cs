@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Pulsebreak.Client.Loadouts;
-using Pulsebreak.Client.Online;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Loadouts;
+using Recoil.Client.Online;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.UI
+namespace Recoil.Client.UI
 {
     /// <summary>
     /// The loadout screen in the pause menu. Pick a loadout from the list and it is equipped;

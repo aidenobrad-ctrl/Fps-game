@@ -1,13 +1,13 @@
 using System;
 using UnityEngine;
 using UnityEngine.Rendering;
-using Pulsebreak.Client.Player;
-using Pulsebreak.Client.Visuals;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Player;
+using Recoil.Client.Visuals;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 using Random = UnityEngine.Random;
 
-namespace Pulsebreak.Client.Weapons
+namespace Recoil.Client.Weapons
 {
     /// <summary>
     /// Everything a fight looks like apart from the bodies: muzzle flashes (ours and other

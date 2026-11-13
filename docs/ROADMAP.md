@@ -1,4 +1,4 @@
-# Pulsebreak roadmap
+# Recoil roadmap
 
 The game is built in phases. Each one ends with something you can run and judge, and none starts until you approve it. Technology choices and structure are in [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -240,7 +240,7 @@ You chose: ranked stays solo; party and match chat with a word filter; ranked se
 
 ## Decisions waiting on you
 
-1. **The name.** "Pulsebreak" is a working title and I have not checked it against trademarks. It appears in namespaces, asset names and now the backend, so it is cheapest to change early.
-2. **An email provider**, when you want real email sent: any provider with SMTP works. Nothing else needs it until then.
+1. **An email provider**, when you want real email sent: any provider with SMTP works. Nothing else needs it until then.
+2. **A trademark check on the name**, before a public release. Other games have been called Recoil before (a 1999 tank action game, for one), so it is worth checking it is free to use.
 
-Decided so far: netcode is written for the game, over UDP (Phase 4); the backend is ASP.NET Core (Phase 5).
+Decided so far: netcode is written for the game, over UDP (Phase 4); the backend is ASP.NET Core (Phase 5); the game is called **Recoil**.

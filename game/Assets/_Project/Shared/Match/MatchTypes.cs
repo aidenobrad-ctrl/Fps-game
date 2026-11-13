@@ -1,12 +1,12 @@
 using System;
 using UnityEngine;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Match
+namespace Recoil.Shared.Match
 {
     public enum MatchPhase : byte
     {

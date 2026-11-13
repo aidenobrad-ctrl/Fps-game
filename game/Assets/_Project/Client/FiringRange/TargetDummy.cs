@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Client.Visuals;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Client.Visuals;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Client.FiringRange
+namespace Recoil.Client.FiringRange
 {
     /// <summary>
     /// A practice target shaped like a player, with head, body and limb hitboxes. It takes

@@ -1,13 +1,13 @@
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>
-    /// One weapon, as an asset. To add a weapon: Assets ▸ Create ▸ Pulsebreak ▸ Weapon Definition,
+    /// One weapon, as an asset. To add a weapon: Assets ▸ Create ▸ Recoil ▸ Weapon Definition,
     /// fill it in, and add it to the weapon catalog. No code changes are needed unless it
     /// behaves in a way no existing weapon does.
     /// </summary>
-    [CreateAssetMenu(menuName = "Pulsebreak/Weapon Definition", fileName = "WPN_New")]
+    [CreateAssetMenu(menuName = "Recoil/Weapon Definition", fileName = "WPN_New")]
     public sealed class WeaponDefinition : ScriptableObject
     {
         [Header("Identity")]

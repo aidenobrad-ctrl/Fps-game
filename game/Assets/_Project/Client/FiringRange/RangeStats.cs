@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Client.FiringRange
+namespace Recoil.Client.FiringRange
 {
     /// <summary>Running totals for a firing range session.</summary>
     public sealed class RangeStats

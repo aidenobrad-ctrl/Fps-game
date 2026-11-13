@@ -3,19 +3,19 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
-using Pulsebreak.Client.FiringRange;
-using Pulsebreak.Client.Audio;
-using Pulsebreak.Client.Loadouts;
-using Pulsebreak.Client.Player;
-using Pulsebreak.Client.Settings;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.FiringRange;
+using Recoil.Client.Audio;
+using Recoil.Client.Loadouts;
+using Recoil.Client.Player;
+using Recoil.Client.Settings;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 using Cursor = UnityEngine.Cursor;
 
-namespace Pulsebreak.Client.UI
+namespace Recoil.Client.UI
 {
     /// <summary>
     /// The in-game HUD and pause menu, built with UI Toolkit. The layout lives in
@@ -122,7 +122,7 @@ namespace Pulsebreak.Client.UI
 
         /// <summary>Resources path of the panel settings asset the Project Doctor generates.</summary>
         public const string PanelResource = "UI/HudPanel";
-        public const string ThemeResource = "UI/PulsebreakTheme";
+        public const string ThemeResource = "UI/RecoilTheme";
 
         /// <summary>Creates the HUD object, its panel and its document.</summary>
         public static HudController Create()
@@ -165,7 +165,7 @@ namespace Pulsebreak.Client.UI
             _root = document.rootVisualElement;
             if (_root == null || _root.Q<VisualElement>("hud") == null)
             {
-                Debug.LogError("Pulsebreak HUD: could not load Resources/UI/HudLayout.uxml. The game runs, but without a HUD.");
+                Debug.LogError("Recoil HUD: could not load Resources/UI/HudLayout.uxml. The game runs, but without a HUD.");
                 return;
             }
 
@@ -178,7 +178,7 @@ namespace Pulsebreak.Client.UI
 
             var styles = Resources.Load<StyleSheet>("UI/HudStyles");
             if (styles != null) _root.styleSheets.Add(styles);
-            else Debug.LogWarning("Pulsebreak HUD: Resources/UI/HudStyles.uss not found; the HUD will be unstyled.");
+            else Debug.LogWarning("Recoil HUD: Resources/UI/HudStyles.uss not found; the HUD will be unstyled.");
 
             _lineTop = _root.Q<VisualElement>("ch-top");
             _lineBottom = _root.Q<VisualElement>("ch-bottom");

@@ -1,10 +1,10 @@
 using NUnit.Framework;
 using UnityEngine;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Social;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Match;
+using Recoil.Shared.Social;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Tests
+namespace Recoil.Tests
 {
     public class SocialAndMapTests
     {

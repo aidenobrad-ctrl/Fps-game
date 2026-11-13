@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using UnityEngine;
 
-namespace Pulsebreak.Client.Online
+namespace Recoil.Client.Online
 {
     /// <summary>
     /// Keeps the refresh token in a file, so a player stays signed in between launches.
@@ -47,7 +47,7 @@ namespace Pulsebreak.Client.Online
             }
             catch (Exception error)
             {
-                Debug.LogWarning("Pulsebreak: could not remember the sign-in (" + error.Message + "). You will need to sign in again next time.");
+                Debug.LogWarning("Recoil: could not remember the sign-in (" + error.Message + "). You will need to sign in again next time.");
             }
         }
 

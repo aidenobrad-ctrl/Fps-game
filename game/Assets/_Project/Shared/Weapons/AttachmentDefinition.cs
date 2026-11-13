@@ -1,15 +1,15 @@
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>
     /// One attachment, as an asset. An attachment is a list of stat changes, so the same
     /// asset (say, a suppressor) can fit many weapons: each weapon lists the attachments it accepts.
     ///
-    /// To add one: Assets ▸ Create ▸ Pulsebreak ▸ Attachment Definition, then add it to the
+    /// To add one: Assets ▸ Create ▸ Recoil ▸ Attachment Definition, then add it to the
     /// attachments list of every weapon it should fit.
     /// </summary>
-    [CreateAssetMenu(menuName = "Pulsebreak/Attachment Definition", fileName = "ATT_New")]
+    [CreateAssetMenu(menuName = "Recoil/Attachment Definition", fileName = "ATT_New")]
     public sealed class AttachmentDefinition : ScriptableObject
     {
         [Header("Identity")]

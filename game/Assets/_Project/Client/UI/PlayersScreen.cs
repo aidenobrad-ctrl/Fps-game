@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
-using Pulsebreak.Client.Audio;
+using Recoil.Client.Audio;
 
-namespace Pulsebreak.Client.UI
+namespace Recoil.Client.UI
 {
     /// <summary>One row of the players screen.</summary>
     public struct PlayerRow

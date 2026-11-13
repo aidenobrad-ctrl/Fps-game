@@ -1,14 +1,14 @@
 using UnityEngine;
-using Pulsebreak.Client.Audio;
-using Pulsebreak.Client.Net;
-using Pulsebreak.Client.Weapons;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Audio;
+using Recoil.Client.Net;
+using Recoil.Client.Weapons;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.Player
+namespace Recoil.Client.Player
 {
     /// <summary>The objects that make up a spawned local player.</summary>
     public sealed class PlayerRig

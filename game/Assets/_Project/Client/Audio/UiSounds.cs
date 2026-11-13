@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Pulsebreak.Client.Audio
+namespace Recoil.Client.Audio
 {
     /// <summary>
     /// Interface sounds: clicks and hovers in the menus, countdown beeps, objective chimes.

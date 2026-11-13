@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>
     /// Checks weapon and attachment data for mistakes that would otherwise only show up as odd

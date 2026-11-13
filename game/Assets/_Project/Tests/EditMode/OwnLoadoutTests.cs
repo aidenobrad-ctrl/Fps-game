@@ -1,7 +1,7 @@
 using NUnit.Framework;
-using Pulsebreak.Client.Loadouts;
+using Recoil.Client.Loadouts;
 
-namespace Pulsebreak.Tests
+namespace Recoil.Tests
 {
     /// <summary>The game lists only the player's own loadouts; the presets are starting points kept out of sight.</summary>
     public class OwnLoadoutTests

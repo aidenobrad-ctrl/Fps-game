@@ -9,18 +9,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cf495866b88359d8f1b6e8c964588444, type: 3}
+  m_Script: {fileID: 11500000, guid: c43c5c7593295e138e3bfa2e679d22e5, type: 3}
   m_Name: LDT_sharpshooter
   m_EditorClassIdentifier: 
   presetId: sharpshooter
   displayName: Sharpshooter
   description: 'One shot from far away, quietly.'
-  primary: {fileID: 11400000, guid: bff9e195415835ad77024f6af6fb58f6, type: 2}
+  primary: {fileID: 11400000, guid: 256f8a3554d628913566fd16bca8e88b, type: 2}
   primaryAttachments:
-  - {fileID: 11400000, guid: 28fbf477d29c8f2049314b19f5d907fa, type: 2}
-  secondary: {fileID: 11400000, guid: 310667811d5b4c1145a6cf18447f95d7, type: 2}
+  - {fileID: 11400000, guid: b23ecdadd52793312572f9556ae74a77, type: 2}
+  secondary: {fileID: 11400000, guid: 97293d9cd8230680255572a0d5a253c9, type: 2}
   secondaryAttachments:
-  - {fileID: 11400000, guid: 28fbf477d29c8f2049314b19f5d907fa, type: 2}
-  melee: {fileID: 11400000, guid: e7a331c50b20c566955bf4b462141e37, type: 2}
-  utility: {fileID: 11400000, guid: 3b38c5c467931de36dff563b087dead5, type: 2}
-  perkSet: {fileID: 11400000, guid: 01b6839a97866eac95b727eca781b94b, type: 2}
+  - {fileID: 11400000, guid: b23ecdadd52793312572f9556ae74a77, type: 2}
+  melee: {fileID: 11400000, guid: 038da574bceff32d4e0f355842bee0a0, type: 2}
+  utility: {fileID: 11400000, guid: 95992e0508e0e6f42ee1fe8aa3c0b393, type: 2}
+  perkSet: {fileID: 11400000, guid: 920483bff78fd9f048102f409a702054, type: 2}

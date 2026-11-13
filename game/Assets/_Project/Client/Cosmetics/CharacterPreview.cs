@@ -1,12 +1,12 @@
 using UnityEngine;
-using Pulsebreak.Client.Visuals;
-using Pulsebreak.Client.Weapons;
-using Pulsebreak.Shared.Cosmetics;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Visuals;
+using Recoil.Client.Weapons;
+using Recoil.Shared.Cosmetics;
+using Recoil.Shared.Match;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.Cosmetics
+namespace Recoil.Client.Cosmetics
 {
     /// <summary>
     /// A small stage far below the level: a character in the chosen look, holding a weapon in

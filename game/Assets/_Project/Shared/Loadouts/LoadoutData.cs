@@ -1,10 +1,10 @@
 using System;
 
-// This file is also compiled into the backend (backend/src/Pulsebreak.Api), so the game and
+// This file is also compiled into the backend (backend/src/Recoil.Api), so the game and
 // the server agree on the stored format by construction. Keep it free of UnityEngine.
 #nullable disable
 
-namespace Pulsebreak.Shared.Loadouts
+namespace Recoil.Shared.Loadouts
 {
     /// <summary>A weapon and its attachments, by id. The saved form of a WeaponBuild.</summary>
     [Serializable]

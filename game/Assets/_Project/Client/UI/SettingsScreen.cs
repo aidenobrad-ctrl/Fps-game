@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
-using Pulsebreak.Client.Audio;
-using Pulsebreak.Client.Settings;
+using Recoil.Client.Audio;
+using Recoil.Client.Settings;
 
-namespace Pulsebreak.Client.UI
+namespace Recoil.Client.UI
 {
     /// <summary>
     /// Every setting in one place, in three tabs: gameplay (aim and feel), video (quality,

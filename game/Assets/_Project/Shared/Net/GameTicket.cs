@@ -4,11 +4,11 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
-// This file is also compiled into the backend (backend/src/Pulsebreak.Api): the API writes
+// This file is also compiled into the backend (backend/src/Recoil.Api): the API writes
 // tickets with it and game servers check them with it. Keep it free of UnityEngine.
 #nullable disable
 
-namespace Pulsebreak.Shared.Net
+namespace Recoil.Shared.Net
 {
     /// <summary>What a valid ticket says about the player holding it.</summary>
     public sealed class TicketClaims
@@ -43,7 +43,7 @@ namespace Pulsebreak.Shared.Net
     /// </summary>
     public static class GameTicket
     {
-        public const string Audience = "pulsebreak-game";
+        public const string Audience = "recoil-game";
         public const string Casual = "casual", Ranked = "ranked";
         /// <summary>A key shorter than this is refused: it would be guessable.</summary>
         public const int MinKeyBytes = 32;

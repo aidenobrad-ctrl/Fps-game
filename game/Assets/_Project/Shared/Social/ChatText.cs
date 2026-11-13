@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-// This file is also compiled into the backend (backend/src/Pulsebreak.Api): party chat and
+// This file is also compiled into the backend (backend/src/Recoil.Api): party chat and
 // reports are cleaned by the same rules as chat in a match. Keep it free of UnityEngine.
 #nullable disable
 
-namespace Pulsebreak.Shared.Social
+namespace Recoil.Shared.Social
 {
     /// <summary>
     /// The rules for chat text, shared by the game, its servers and the backend: what a

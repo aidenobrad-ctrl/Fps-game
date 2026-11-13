@@ -1,7 +1,7 @@
 using UnityEngine;
-using Pulsebreak.Shared.Movement;
+using Recoil.Shared.Movement;
 
-namespace Pulsebreak.Client.Audio
+namespace Recoil.Client.Audio
 {
     /// <summary>
     /// Decides when a moving body takes a step and how loud it is. Sprinting is loud,

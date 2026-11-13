@@ -1,12 +1,12 @@
 using UnityEngine;
-using Pulsebreak.Client.Audio;
-using Pulsebreak.Client.Visuals;
-using Pulsebreak.Shared.Cosmetics;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Client.Audio;
+using Recoil.Client.Visuals;
+using Recoil.Shared.Cosmetics;
+using Recoil.Shared.Match;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Client.Net
+namespace Recoil.Client.Net
 {
     /// <summary>
     /// Another player, as drawn on this client: a body made of the same parts the server

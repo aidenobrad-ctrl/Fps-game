@@ -1,9 +1,9 @@
 using System.Linq;
 using NUnit.Framework;
-using Pulsebreak.Client.Loadouts;
-using Pulsebreak.Shared.Loadouts;
+using Recoil.Client.Loadouts;
+using Recoil.Shared.Loadouts;
 
-namespace Pulsebreak.Tests
+namespace Recoil.Tests
 {
     public class LoadoutSyncTests
     {

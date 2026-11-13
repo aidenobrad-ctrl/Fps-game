@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 
-// This file is also compiled into the backend (backend/src/Pulsebreak.Api), so both ends
+// This file is also compiled into the backend (backend/src/Recoil.Api), so both ends
 // merge loadouts by exactly the same rule. Keep it free of UnityEngine.
 #nullable disable
 
-namespace Pulsebreak.Shared.Loadouts
+namespace Recoil.Shared.Loadouts
 {
     /// <summary>
     /// How two copies of a player's loadouts become one. The copies may come from two

@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f6a251fe876909704af95a88ea478068, type: 3}
+  m_Script: {fileID: 11500000, guid: cc07b6aaf86e0a80b61662175a613d09, type: 3}
   m_Name: WPN_sp_flamethrower
   m_EditorClassIdentifier: 
   weaponId: sp_flamethrower
@@ -101,10 +101,10 @@ MonoBehaviour:
     recoilResetTime: 0.35
   reticle: 0
   attachments:
-  - {fileID: 11400000, guid: cac71da591c30ba7b76f5be7c7364e9d, type: 2}
-  - {fileID: 11400000, guid: f0ccfc29c240b707a378dce542d86b1c, type: 2}
-  - {fileID: 11400000, guid: 544b4d67a6a8b3c512f4ae072f7a831b, type: 2}
-  - {fileID: 11400000, guid: c1d00cf082de219ca93f6697e4b0579c, type: 2}
+  - {fileID: 11400000, guid: 6b2edead74731afb6d6e63e5d6c1b1d6, type: 2}
+  - {fileID: 11400000, guid: 5c82e204a27bc1b97ff570161dba70b9, type: 2}
+  - {fileID: 11400000, guid: f1c68932c1ac711773e34f2b5fa5d7c9, type: 2}
+  - {fileID: 11400000, guid: ca419faaaae144f00de7f2c2babe10f5, type: 2}
   view:
     kind: 0
     bodyLength: 0.4

@@ -1,6 +1,6 @@
-using Pulsebreak.Shared.Match;
+using Recoil.Shared.Match;
 
-namespace Pulsebreak.Server.Modes
+namespace Recoil.Server.Modes
 {
     /// <summary>
     /// Duel and Elimination: rounds with no coming back. A round ends when one side has

@@ -1,7 +1,7 @@
 using UnityEngine;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Shared.Movement
+namespace Recoil.Shared.Movement
 {
     public enum Stance : byte
     {

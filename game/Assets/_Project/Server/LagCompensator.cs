@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Shared.Match;
+using Recoil.Shared.Match;
 
-namespace Pulsebreak.Server
+namespace Recoil.Server
 {
     /// <summary>
     /// Remembers where every player's body was over the last second, so a shot can be judged

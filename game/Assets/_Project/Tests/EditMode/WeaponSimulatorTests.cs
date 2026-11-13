@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Tests
+namespace Recoil.Tests
 {
     /// <summary>Shared helpers for driving a weapon tick by tick.</summary>
     static class WeaponTestKit

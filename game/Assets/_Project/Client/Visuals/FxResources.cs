@@ -2,17 +2,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Pulsebreak.Client.Visuals
+namespace Recoil.Client.Visuals
 {
     /// <summary>
     /// The textures and materials effects are drawn with. The textures are painted in code
     /// the first time they are needed (a soft glow, a spark streak, a puff of smoke, a star,
     /// a ring, a bullet hole, a scorch mark), so the project carries no image files for them.
-    /// The materials use the game's own effect shader (Resources/Shaders/PulsebreakEffect).
+    /// The materials use the game's own effect shader (Resources/Shaders/RecoilEffect).
     /// </summary>
     public static class FxResources
     {
-        public const string ShaderResource = "Shaders/PulsebreakEffect";
+        public const string ShaderResource = "Shaders/RecoilEffect";
 
         /// <summary>
         /// How much brighter than white additive effects are drawn. Particle and line colours
@@ -140,9 +140,9 @@ namespace Pulsebreak.Client.Visuals
             if (_shaderChecked) return _shader;
             _shaderChecked = true;
             Shader shader = Resources.Load<Shader>(ShaderResource);
-            if (shader == null) shader = Shader.Find("Pulsebreak/Effect");
+            if (shader == null) shader = Shader.Find("Recoil/Effect");
             if (shader != null && !shader.isSupported) shader = null;
-            if (shader == null) Debug.LogWarning("Pulsebreak: the effects shader (" + ShaderResource + ") is missing or unsupported; effects will be drawn plainly.");
+            if (shader == null) Debug.LogWarning("Recoil: the effects shader (" + ShaderResource + ") is missing or unsupported; effects will be drawn plainly.");
             _shader = shader;
             return shader;
         }

@@ -9,16 +9,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cf495866b88359d8f1b6e8c964588444, type: 3}
+  m_Script: {fileID: 11500000, guid: c43c5c7593295e138e3bfa2e679d22e5, type: 3}
   m_Name: LDT_archer
   m_EditorClassIdentifier: 
   presetId: archer
   displayName: Archer
   description: 'A bow, a sling and a blade. Quiet, and deadly at every range if you can aim.'
-  primary: {fileID: 11400000, guid: 1aacbf5666e2c026c7936d73e1763c92, type: 2}
+  primary: {fileID: 11400000, guid: 72de0b3a8b0061f1b058a2b843bb71a8, type: 2}
   primaryAttachments: []
-  secondary: {fileID: 11400000, guid: e87bc37e1a9398cbfaa489468e5011b5, type: 2}
+  secondary: {fileID: 11400000, guid: 9bde484fd288dd037bd557c9d0ba4181, type: 2}
   secondaryAttachments: []
-  melee: {fileID: 11400000, guid: 0356491e142f2ff5600f5f89998ebf4c, type: 2}
-  utility: {fileID: 11400000, guid: 852a97347546ce5e7780be5e99c0bb37, type: 2}
-  perkSet: {fileID: 11400000, guid: 43fe55dc6d0167817de8c89de7131e07, type: 2}
+  melee: {fileID: 11400000, guid: d7d163543fd216397ddf3e0ec9ad5ae3, type: 2}
+  utility: {fileID: 11400000, guid: 0cc1f75904138398f53c6a2e23ea14b1, type: 2}
+  perkSet: {fileID: 11400000, guid: ba0986402bbb0d2a5602d54f2dc8fd3c, type: 2}

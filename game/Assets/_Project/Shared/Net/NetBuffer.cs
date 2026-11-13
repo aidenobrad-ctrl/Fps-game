@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Net
+namespace Recoil.Shared.Net
 {
     /// <summary>Writes values into a growing byte buffer, little-endian.</summary>
     public sealed class NetWriter

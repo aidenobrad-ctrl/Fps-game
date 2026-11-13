@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Match
+namespace Recoil.Shared.Match
 {
     public enum ArenaPaint : byte
     {

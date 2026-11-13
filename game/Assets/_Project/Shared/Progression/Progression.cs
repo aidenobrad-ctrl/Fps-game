@@ -1,11 +1,11 @@
 using System;
 
-// This file is also compiled into the backend (backend/src/Pulsebreak.Api): the backend
+// This file is also compiled into the backend (backend/src/Recoil.Api): the backend
 // awards XP and rating with it, and the game shows levels and ranks with it, so the two
 // always agree. Keep it free of UnityEngine.
 #nullable disable
 
-namespace Pulsebreak.Shared.Progression
+namespace Recoil.Shared.Progression
 {
     /// <summary>How a match went for one player.</summary>
     public enum MatchOutcome : byte

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>
     /// Runs one weapon: trigger logic, fire rate, ammo, reloading, aim-down-sights, spread and

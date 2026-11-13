@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEditor;
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Simulation;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
+using Recoil.Shared.Simulation;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Tests
+namespace Recoil.Tests
 {
     /// <summary>
     /// Checks the real content assets, not test doubles. This is the test that fails when a

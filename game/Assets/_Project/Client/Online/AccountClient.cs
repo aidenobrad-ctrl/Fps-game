@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using UnityEngine;
-using Pulsebreak.Shared.Loadouts;
+using Recoil.Shared.Loadouts;
 
-namespace Pulsebreak.Client.Online
+namespace Recoil.Client.Online
 {
     /// <summary>
     /// The game's side of the accounts backend: signing up and in, staying signed in, and

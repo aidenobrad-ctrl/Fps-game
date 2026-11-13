@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Shared.Match;
+using Recoil.Shared.Match;
 
-namespace Pulsebreak.Server.Bots
+namespace Recoil.Server.Bots
 {
     /// <summary>
     /// Where a bot can walk, worked out from the same block description the level's collision

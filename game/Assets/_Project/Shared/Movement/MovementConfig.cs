@@ -1,12 +1,12 @@
 using UnityEngine;
 
-namespace Pulsebreak.Shared.Movement
+namespace Recoil.Shared.Movement
 {
     /// <summary>
     /// Every movement tuning value in one asset. Distances are metres, speeds metres per
     /// second, times seconds. Change values here (or on a copy of the asset) rather than in code.
     /// </summary>
-    [CreateAssetMenu(menuName = "Pulsebreak/Movement Config", fileName = "MovementConfig")]
+    [CreateAssetMenu(menuName = "Recoil/Movement Config", fileName = "MovementConfig")]
     public sealed class MovementConfig : ScriptableObject
     {
         [Header("Body")]

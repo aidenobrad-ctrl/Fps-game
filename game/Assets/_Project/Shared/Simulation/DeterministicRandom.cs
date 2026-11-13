@@ -1,4 +1,4 @@
-namespace Pulsebreak.Shared.Simulation
+namespace Recoil.Shared.Simulation
 {
     /// <summary>
     /// Small seedable generator (xorshift32). Bullet spread uses it instead of

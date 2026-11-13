@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
-using Pulsebreak.Shared.Match;
-using Pulsebreak.Shared.Net;
+using Recoil.Shared.Match;
+using Recoil.Shared.Net;
 
-namespace Pulsebreak.Client.Online
+namespace Recoil.Client.Online
 {
     /// <summary>Where a place in the matchmaking queue stands.</summary>
     [Serializable]

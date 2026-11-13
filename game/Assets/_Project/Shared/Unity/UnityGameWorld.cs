@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Movement;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Movement;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Shared.Match
+namespace Recoil.Shared.Match
 {
     /// <summary>
     /// A character's body made of real Unity colliders: a head, a torso, two arms and two

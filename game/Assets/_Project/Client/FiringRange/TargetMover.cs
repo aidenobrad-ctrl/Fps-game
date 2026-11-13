@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Pulsebreak.Client.FiringRange
+namespace Recoil.Client.FiringRange
 {
     /// <summary>Slides a target back and forth along a line at constant speed, for tracking practice.</summary>
     public sealed class TargetMover : MonoBehaviour

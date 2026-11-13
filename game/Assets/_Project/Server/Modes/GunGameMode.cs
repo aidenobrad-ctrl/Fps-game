@@ -1,7 +1,7 @@
-using Pulsebreak.Shared.Loadouts;
-using Pulsebreak.Shared.Match;
+using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
 
-namespace Pulsebreak.Server.Modes
+namespace Recoil.Server.Modes
 {
     /// <summary>
     /// Gun Game: everyone for themselves, everyone on the same ladder of weapons. A kill

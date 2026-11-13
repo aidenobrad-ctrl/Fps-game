@@ -1,13 +1,13 @@
 using UnityEngine;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Loadouts
+namespace Recoil.Shared.Loadouts
 {
     /// <summary>
     /// A perk set: a named bundle of passive bonuses, one per loadout. Weapon bonuses use
     /// the same stat modifiers as attachments and apply to every weapon carried.
     /// </summary>
-    [CreateAssetMenu(menuName = "Pulsebreak/Perk Set Definition", fileName = "PRK_New")]
+    [CreateAssetMenu(menuName = "Recoil/Perk Set Definition", fileName = "PRK_New")]
     public sealed class PerkSetDefinition : ScriptableObject
     {
         [Header("Identity")]

@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Tests
+namespace Recoil.Tests
 {
     public class WeaponBuildTests
     {

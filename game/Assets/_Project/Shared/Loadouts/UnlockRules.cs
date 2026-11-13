@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Pulsebreak.Shared.Progression;
-using Pulsebreak.Shared.Weapons;
+using Recoil.Shared.Progression;
+using Recoil.Shared.Weapons;
 
-namespace Pulsebreak.Shared.Loadouts
+namespace Recoil.Shared.Loadouts
 {
     /// <summary>What a player has unlocked: their level, and the level of each weapon they have used.</summary>
     public sealed class PlayerUnlocks

@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Pulsebreak.Shared.Combat;
-using Pulsebreak.Shared.Simulation;
+using Recoil.Shared.Combat;
+using Recoil.Shared.Simulation;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>One projectile in flight.</summary>
     public struct Projectile

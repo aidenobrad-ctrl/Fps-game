@@ -1,7 +1,7 @@
 using UnityEngine;
-using Pulsebreak.Shared.Combat;
+using Recoil.Shared.Combat;
 
-namespace Pulsebreak.Shared.Weapons
+namespace Recoil.Shared.Weapons
 {
     /// <summary>The one place damage is worked out, so client feedback and server authority cannot disagree.</summary>
     public static class DamageCalculator

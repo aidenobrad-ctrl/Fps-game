@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
-using Pulsebreak.Client.Cosmetics;
-using Pulsebreak.Shared.Cosmetics;
-using Pulsebreak.Shared.Net;
+using Recoil.Client.Cosmetics;
+using Recoil.Shared.Cosmetics;
+using Recoil.Shared.Net;
 
-namespace Pulsebreak.Tests
+namespace Recoil.Tests
 {
     /// <summary>The cosmetic catalog, the rules for a look, how a look is sent, and where it is saved.</summary>
     public class CosmeticsTests
