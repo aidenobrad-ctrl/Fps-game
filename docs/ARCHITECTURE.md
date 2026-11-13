@@ -51,7 +51,7 @@ It targets .NET 10, the current long-term-support release: .NET 8 reached the en
 ## Repository layout
 
 ```
-pulsebreak/
+fps-game/
 ├── README.md               How to open and play the current build
 ├── docs/
 │   ├── ARCHITECTURE.md     This file

@@ -14,7 +14,7 @@ You need the [.NET 10 SDK](https://dotnet.microsoft.com/download) and either Doc
 PostgreSQL 16 and Redis 7.
 
 ```
-cd pulsebreak/backend
+cd backend
 docker compose up -d
 dotnet run --project src/Pulsebreak.Api
 ```
@@ -28,7 +28,7 @@ Check it is up: http://localhost:5080/health/ready should say the database and R
 ## Tests
 
 ```
-cd pulsebreak/backend
+cd backend
 docker compose up -d
 dotnet test
 ```

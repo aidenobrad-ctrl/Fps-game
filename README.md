@@ -9,7 +9,7 @@ Eleven phases are built so far: **movement and a firing range**, **the weapon sy
 ## Open and play
 
 1. Install **Unity 6** (6000.0 LTS or newer) through Unity Hub.
-2. In Unity Hub choose **Add ▸ Add project from disk** and pick the `pulsebreak/game` folder. If Hub says the project's Editor version is not installed, pick the Unity 6 version you have.
+2. In Unity Hub choose **Add ▸ Add project from disk** and pick the `game` folder inside your copy of this repository (for example `fps-game\game`). If Hub says the project's Editor version is not installed, pick the Unity 6 version you have.
 3. Let the first import finish. The firing range scene opens by itself. If it does not, use **Pulsebreak ▸ Open Firing Range** in the menu bar.
 4. Press **Play** and click inside the Game view to capture the mouse.
 
@@ -381,7 +381,7 @@ The backend has its own tests; see [backend/README.md](backend/README.md#tests).
 ## Layout
 
 ```
-pulsebreak/
+fps-game/
 ├── docs/        Architecture and roadmap
 ├── backend/     Accounts and matchmaking (ASP.NET Core, PostgreSQL, Redis)
 └── game/        The Unity project
