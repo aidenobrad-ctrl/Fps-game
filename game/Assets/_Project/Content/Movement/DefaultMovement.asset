@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ea0a3482b8a782c0755b7d4892affe3c, type: 3}
+  m_Script: {fileID: 11500000, guid: bc561568de33860c38bf3dfa8f3be0dc, type: 3}
   m_Name: DefaultMovement
   m_EditorClassIdentifier: 
   standHeight: 1.8

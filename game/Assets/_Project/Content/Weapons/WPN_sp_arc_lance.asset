@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cc07b6aaf86e0a80b61662175a613d09, type: 3}
+  m_Script: {fileID: 11500000, guid: f6a251fe876909704af95a88ea478068, type: 3}
   m_Name: WPN_sp_arc_lance
   m_EditorClassIdentifier: 
   weaponId: sp_arc_lance
@@ -86,12 +86,12 @@ MonoBehaviour:
     recoilResetTime: 0.35
   reticle: 3
   attachments:
-  - {fileID: 11400000, guid: a01486e7e7088af962b88e218684033b, type: 2}
-  - {fileID: 11400000, guid: 572a73c84d76508db5f86d22f36212da, type: 2}
-  - {fileID: 11400000, guid: 6b2edead74731afb6d6e63e5d6c1b1d6, type: 2}
-  - {fileID: 11400000, guid: 3b04f7a787732e4234f7eb18cb64b82c, type: 2}
-  - {fileID: 11400000, guid: f1c68932c1ac711773e34f2b5fa5d7c9, type: 2}
-  - {fileID: 11400000, guid: ca419faaaae144f00de7f2c2babe10f5, type: 2}
+  - {fileID: 11400000, guid: 9bbb22842c1e974ed9f3cde99ab748e6, type: 2}
+  - {fileID: 11400000, guid: b6b35a37f7d5eaf3115602c03e93a623, type: 2}
+  - {fileID: 11400000, guid: cac71da591c30ba7b76f5be7c7364e9d, type: 2}
+  - {fileID: 11400000, guid: 3ddd05335cec6df3a100b9686cfbb4e3, type: 2}
+  - {fileID: 11400000, guid: 544b4d67a6a8b3c512f4ae072f7a831b, type: 2}
+  - {fileID: 11400000, guid: c1d00cf082de219ca93f6697e4b0579c, type: 2}
   view:
     kind: 0
     bodyLength: 0.34

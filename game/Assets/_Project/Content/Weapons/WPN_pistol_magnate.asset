@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cc07b6aaf86e0a80b61662175a613d09, type: 3}
+  m_Script: {fileID: 11500000, guid: f6a251fe876909704af95a88ea478068, type: 3}
   m_Name: WPN_pistol_magnate
   m_EditorClassIdentifier: 
   weaponId: pistol_magnate
@@ -86,10 +86,10 @@ MonoBehaviour:
     recoilResetTime: 0.35
   reticle: 0
   attachments:
-  - {fileID: 11400000, guid: 7dae83633e7e556919d6264edddef6ea, type: 2}
-  - {fileID: 11400000, guid: e378317031c8d6c5a226355811ffe9ce, type: 2}
-  - {fileID: 11400000, guid: e4246217721c1762b0b1a98efef67ee2, type: 2}
-  - {fileID: 11400000, guid: cd72c5c4ca2e60b9504608fc95460c40, type: 2}
+  - {fileID: 11400000, guid: f95313d2c50561b865952851718eecf8, type: 2}
+  - {fileID: 11400000, guid: 000f0b30cfdd566799826e38e4bc2216, type: 2}
+  - {fileID: 11400000, guid: e31b4cf7f4f9e8daeb0b6ff9924e6ee0, type: 2}
+  - {fileID: 11400000, guid: fcde29bc8d2181595d2d7045faa9886a, type: 2}
   view:
     kind: 0
     bodyLength: 0.16

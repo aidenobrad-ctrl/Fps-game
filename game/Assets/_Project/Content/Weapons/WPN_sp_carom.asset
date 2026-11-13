@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cc07b6aaf86e0a80b61662175a613d09, type: 3}
+  m_Script: {fileID: 11500000, guid: f6a251fe876909704af95a88ea478068, type: 3}
   m_Name: WPN_sp_carom
   m_EditorClassIdentifier: 
   weaponId: sp_carom
@@ -94,15 +94,15 @@ MonoBehaviour:
     recoilResetTime: 0.35
   reticle: 0
   attachments:
-  - {fileID: 11400000, guid: 7dae83633e7e556919d6264edddef6ea, type: 2}
-  - {fileID: 11400000, guid: bdfe6bff3913e7545e864e7fe523240a, type: 2}
-  - {fileID: 11400000, guid: 6b2edead74731afb6d6e63e5d6c1b1d6, type: 2}
-  - {fileID: 11400000, guid: 3b04f7a787732e4234f7eb18cb64b82c, type: 2}
-  - {fileID: 11400000, guid: 5c82e204a27bc1b97ff570161dba70b9, type: 2}
-  - {fileID: 11400000, guid: 2dce040466908c021ae7bd933cf006d0, type: 2}
-  - {fileID: 11400000, guid: 4523b4f23c77a7023c6f34eca3f1e113, type: 2}
-  - {fileID: 11400000, guid: e4246217721c1762b0b1a98efef67ee2, type: 2}
-  - {fileID: 11400000, guid: cd72c5c4ca2e60b9504608fc95460c40, type: 2}
+  - {fileID: 11400000, guid: f95313d2c50561b865952851718eecf8, type: 2}
+  - {fileID: 11400000, guid: 9ae6080a6981af55082842fd53486649, type: 2}
+  - {fileID: 11400000, guid: cac71da591c30ba7b76f5be7c7364e9d, type: 2}
+  - {fileID: 11400000, guid: 3ddd05335cec6df3a100b9686cfbb4e3, type: 2}
+  - {fileID: 11400000, guid: f0ccfc29c240b707a378dce542d86b1c, type: 2}
+  - {fileID: 11400000, guid: 6242cd4f3400567a3f05abf96ff54fc1, type: 2}
+  - {fileID: 11400000, guid: 6fada89d01e99c15bea4104ac352bec9, type: 2}
+  - {fileID: 11400000, guid: e31b4cf7f4f9e8daeb0b6ff9924e6ee0, type: 2}
+  - {fileID: 11400000, guid: fcde29bc8d2181595d2d7045faa9886a, type: 2}
   view:
     kind: 0
     bodyLength: 0.3

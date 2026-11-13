@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 877bd15beebaa3f91f757c56e21f6e3f, type: 3}
+  m_Script: {fileID: 11500000, guid: 0f5acc5e6c339016e1cf25ea8f1571dc, type: 3}
   m_Name: PRK_steady_hands
   m_EditorClassIdentifier: 
   perkSetId: steady_hands

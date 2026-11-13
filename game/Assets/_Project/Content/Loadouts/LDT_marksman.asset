@@ -9,19 +9,19 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c43c5c7593295e138e3bfa2e679d22e5, type: 3}
+  m_Script: {fileID: 11500000, guid: cf495866b88359d8f1b6e8c964588444, type: 3}
   m_Name: LDT_marksman
   m_EditorClassIdentifier: 
   presetId: marksman
   displayName: Marksman
   description: 'Hold a long lane and make each shot count.'
-  primary: {fileID: 11400000, guid: 2e78f15c0aceaac64df2486b99c3b56a, type: 2}
+  primary: {fileID: 11400000, guid: ddd03fba1dfa55f353d3767cc05eddf0, type: 2}
   primaryAttachments:
-  - {fileID: 11400000, guid: a01486e7e7088af962b88e218684033b, type: 2}
-  - {fileID: 11400000, guid: e378317031c8d6c5a226355811ffe9ce, type: 2}
-  secondary: {fileID: 11400000, guid: f1da4152e3625ca247555624c6aa56d7, type: 2}
+  - {fileID: 11400000, guid: 9bbb22842c1e974ed9f3cde99ab748e6, type: 2}
+  - {fileID: 11400000, guid: 000f0b30cfdd566799826e38e4bc2216, type: 2}
+  secondary: {fileID: 11400000, guid: fdbda20c309c3246b60dd02764ab998e, type: 2}
   secondaryAttachments:
-  - {fileID: 11400000, guid: 7dae83633e7e556919d6264edddef6ea, type: 2}
-  melee: {fileID: 11400000, guid: 038da574bceff32d4e0f355842bee0a0, type: 2}
-  utility: {fileID: 11400000, guid: 76e77e04bdd6596a0d17500b10b5c5a9, type: 2}
-  perkSet: {fileID: 11400000, guid: 920483bff78fd9f048102f409a702054, type: 2}
+  - {fileID: 11400000, guid: f95313d2c50561b865952851718eecf8, type: 2}
+  melee: {fileID: 11400000, guid: e7a331c50b20c566955bf4b462141e37, type: 2}
+  utility: {fileID: 11400000, guid: ab30681abe28888d4278e4f50181af1f, type: 2}
+  perkSet: {fileID: 11400000, guid: 01b6839a97866eac95b727eca781b94b, type: 2}

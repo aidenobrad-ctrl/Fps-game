@@ -9,18 +9,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c43c5c7593295e138e3bfa2e679d22e5, type: 3}
+  m_Script: {fileID: 11500000, guid: cf495866b88359d8f1b6e8c964588444, type: 3}
   m_Name: LDT_assault
   m_EditorClassIdentifier: 
   presetId: assault
   displayName: Assault
   description: 'A rifle for every range, with a sight and a steadier grip.'
-  primary: {fileID: 11400000, guid: 27695ad496f854c9a2f91c7a81b98644, type: 2}
+  primary: {fileID: 11400000, guid: 5f92c4e7698deb9fafb0752c8289e0bb, type: 2}
   primaryAttachments:
-  - {fileID: 11400000, guid: 7dae83633e7e556919d6264edddef6ea, type: 2}
-  - {fileID: 11400000, guid: 5c82e204a27bc1b97ff570161dba70b9, type: 2}
-  secondary: {fileID: 11400000, guid: 97293d9cd8230680255572a0d5a253c9, type: 2}
+  - {fileID: 11400000, guid: f95313d2c50561b865952851718eecf8, type: 2}
+  - {fileID: 11400000, guid: f0ccfc29c240b707a378dce542d86b1c, type: 2}
+  secondary: {fileID: 11400000, guid: 310667811d5b4c1145a6cf18447f95d7, type: 2}
   secondaryAttachments: []
-  melee: {fileID: 11400000, guid: 038da574bceff32d4e0f355842bee0a0, type: 2}
-  utility: {fileID: 11400000, guid: 9c510d744b59fb3818979a321f3b4da6, type: 2}
-  perkSet: {fileID: 11400000, guid: 7d702c8521f43763d575e963a8ab83e4, type: 2}
+  melee: {fileID: 11400000, guid: e7a331c50b20c566955bf4b462141e37, type: 2}
+  utility: {fileID: 11400000, guid: 7b11223ef436b8c010a6f236f868451f, type: 2}
+  perkSet: {fileID: 11400000, guid: b7716b83694479bb1f63f8b9b512b532, type: 2}
