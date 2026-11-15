@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 using Recoil.Client.Audio;
 using Recoil.Client.Online;
@@ -61,7 +62,13 @@ namespace Recoil.Client.Duel
 
         static readonly string[] BotChoices = { "No bots", "Easy bots", "Normal bots", "Hard bots" };
 
-        VisualElement _menu, _match, _menuCard;
+        VisualElement _menu, _match, _menuCard, _pages, _home, _backdrop, _extras, _challengeList, _lastMatchPanel, _modeGrid;
+        Page _page;
+        Label _homeStatus, _crumb, _season, _chipLevel, _chipName, _footerHint, _lastMatchLine, _lastMatchDetail, _modeTitle;
+        Button _playButton, _backButton;
+        readonly List<Button> _modeTiles = new List<Button>();
+        static Texture2D _shade, _fallbackArt;
+        bool _overlayOpenLastFrame;
         VisualElement _chatBox, _chatLines;
         TextField _chatField;
         Label _chatScope;
@@ -183,64 +190,512 @@ namespace Recoil.Client.Duel
 
         void BuildMenu(VisualElement root)
         {
+            // The whole screen: art behind everything, a bar across the top, the page in the
+            // middle with friends and party to its right, and a footer.
             _menu = new VisualElement();
             _menu.AddToClassList("pause");
+            _menu.AddToClassList("main-menu");
             Fill(_menu);
-            _menu.style.alignItems = Align.Center;
-            _menu.style.flexDirection = FlexDirection.Row;
-            _menu.style.justifyContent = Justify.Center;
-            _menu.style.backgroundColor = new Color(0.024f, 0.035f, 0.055f, 0.78f);
+            _menu.style.flexDirection = FlexDirection.Column;
+            _menu.style.alignItems = Align.Stretch;
+            _menu.style.justifyContent = Justify.FlexStart;
+            _menu.style.backgroundColor = new Color(0.027f, 0.035f, 0.055f, 1f);
+            _menu.style.overflow = Overflow.Hidden;
             root.Add(_menu);
 
-            var card = new VisualElement();
-            card.AddToClassList("pause-card");
-            card.style.width = 560;
-            card.style.paddingLeft = card.style.paddingRight = 32;
-            card.style.paddingTop = card.style.paddingBottom = 26;
-            card.style.backgroundColor = new Color(0.07f, 0.09f, 0.125f, 1f);
-            _menu.Add(card);
-            _menuCard = card;
+            _backdrop = new VisualElement { pickingMode = PickingMode.Ignore };
+            _backdrop.AddToClassList("menu-backdrop");
+            Fill(_backdrop);
+            Texture2D art = Resources.Load<Texture2D>("UI/MenuBackdrop");
+            _backdrop.style.backgroundImage = new StyleBackground(art != null ? art : FallbackBackdrop());
+            _menu.Add(_backdrop);
+            var shade = new VisualElement { pickingMode = PickingMode.Ignore };
+            Fill(shade);
+            shade.style.backgroundImage = new StyleBackground(MenuShade());
+            _menu.Add(shade);
+            // A slow drift, so the art feels alive rather than pasted on.
+            _backdrop.schedule.Execute(DriftBackdrop).Every(33);
 
-            card.Add(Text_("RECOIL", 30, Text, bold: true, spacing: 6, className: "pause-title"));
-            Label subtitle = Text_("PLAY ONLINE", 13, Accent, bold: true, spacing: 3);
-            subtitle.style.marginTop = -12;
-            subtitle.style.marginBottom = 14;
-            card.Add(subtitle);
+            BuildTopBar(_menu);
+
+            var body = new VisualElement();
+            body.style.flexGrow = 1;
+            body.style.flexDirection = FlexDirection.Row;
+            body.style.alignItems = Align.Stretch;
+            body.style.minHeight = 0;
+            _menu.Add(body);
+
+            // One page at a time: home, play, or an account form.
+            _pages = new VisualElement();
+            _pages.style.flexGrow = 1;
+            _pages.style.flexShrink = 1;
+            _pages.style.flexDirection = FlexDirection.Row;
+            _pages.style.alignItems = Align.Center;
+            _pages.style.justifyContent = Justify.Center;
+            body.Add(_pages);
+
+            VisualElement accountHost = BuildHome(_pages);
+            BuildPlayPage(_pages);
 
             if (_services != null && GameServices.AccountsEnabled)
             {
-                var accountHost = new VisualElement();
-                card.Add(accountHost);
-                _account = new AccountPanel(_services, card, accountHost, _menu);
+                _account = new AccountPanel(_services, _home, accountHost, _pages);
                 // Signed in, a player goes by their account's name, so there is nothing to type.
                 _account.Changed += () =>
                 {
                     if (_nameField != null) _nameField.style.display = _services.Account.SignedIn ? DisplayStyle.None : DisplayStyle.Flex;
+                    RefreshTopBar();
                 };
             }
+            _account?.Refresh();
 
-            BuildProfile(card);
+            // Friends and party, down the right-hand side.
+            if (_services != null && _services.Social != null)
+            {
+                var side = new VisualElement();
+                side.style.justifyContent = Justify.Center;
+                side.style.paddingRight = 40;
+                side.style.paddingLeft = 8;
+                body.Add(side);
+                _social = new SocialPanel(side, _services.Social, _services.Account);
+                _social.Root.style.maxHeight = Length.Percent(96);
+                _services.Social.Changed += OnSocialChanged;
+            }
+
+            BuildFooter(_menu);
+
+            ProgressionCache.Changed += RefreshHomeExtras;
+            if (_services != null) _services.Account.Changed += RefreshHomeExtras;
+            _menu.RegisterCallback<GeometryChangedEvent>(_ => FitToWidth());
+
+            OnModeChanged();
+            RefreshHomeExtras();
+            ShowPage(Page.Home);
+        }
+
+        // ------------------------------------------------------------------ top bar and footer
+
+        void BuildTopBar(VisualElement menu)
+        {
+            var bar = new VisualElement();
+            bar.AddToClassList("menu-topbar");
+            bar.style.flexDirection = FlexDirection.Row;
+            bar.style.alignItems = Align.Center;
+            bar.style.height = 72;
+            bar.style.paddingLeft = 48;
+            bar.style.paddingRight = 40;
+            bar.style.flexShrink = 0;
+            menu.Add(bar);
+
+            _crumb = Text_("RECOIL", 18, Text, bold: true, spacing: 6);
+            bar.Add(_crumb);
+            _season = Text_("", 13, Dim, bold: true, spacing: 2);
+            _season.style.marginLeft = 22;
+            _season.style.paddingLeft = 22;
+            _season.style.borderLeftWidth = 1;
+            _season.style.borderLeftColor = new Color(1f, 1f, 1f, 0.18f);
+            bar.Add(_season);
+
+            var gap = new VisualElement { pickingMode = PickingMode.Ignore };
+            gap.style.flexGrow = 1;
+            bar.Add(gap);
+
+            // Who is playing: a level badge and a name.
+            var chip = new VisualElement();
+            chip.AddToClassList("menu-chip");
+            chip.style.flexDirection = FlexDirection.Row;
+            chip.style.alignItems = Align.Center;
+            chip.style.paddingLeft = 6;
+            chip.style.paddingRight = 16;
+            chip.style.height = 44;
+            chip.style.backgroundColor = new Color(0.04f, 0.06f, 0.09f, 0.75f);
+            chip.style.borderTopWidth = chip.style.borderBottomWidth = chip.style.borderLeftWidth = chip.style.borderRightWidth = 1;
+            chip.style.borderTopColor = chip.style.borderBottomColor = chip.style.borderLeftColor = chip.style.borderRightColor = new Color(1f, 1f, 1f, 0.1f);
+            Round(chip, 22);
+            bar.Add(chip);
+            _chipLevel = Text_("", 14, new Color32(6, 16, 22, 255), bold: true);
+            _chipLevel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _chipLevel.style.minWidth = 34;
+            _chipLevel.style.height = 34;
+            _chipLevel.style.paddingLeft = _chipLevel.style.paddingRight = 6;
+            _chipLevel.style.backgroundColor = Accent;
+            Round(_chipLevel, 17);
+            chip.Add(_chipLevel);
+            _chipName = Text_("", 16, Text, bold: true);
+            _chipName.style.marginLeft = 12;
+            chip.Add(_chipName);
+            RefreshTopBar();
+        }
+
+        void BuildFooter(VisualElement menu)
+        {
+            var footer = new VisualElement();
+            footer.AddToClassList("menu-footer");
+            footer.style.flexDirection = FlexDirection.Row;
+            footer.style.alignItems = Align.Center;
+            footer.style.height = 44;
+            footer.style.paddingLeft = 48;
+            footer.style.paddingRight = 40;
+            footer.style.flexShrink = 0;
+            footer.style.backgroundColor = new Color(0f, 0f, 0f, 0.4f);
+            footer.style.borderTopWidth = 1;
+            footer.style.borderTopColor = new Color(1f, 1f, 1f, 0.07f);
+            menu.Add(footer);
+
+            _footerHint = Text_("", 13, Dim, bold: true, spacing: 2);
+            footer.Add(_footerHint);
+            var gap = new VisualElement { pickingMode = PickingMode.Ignore };
+            gap.style.flexGrow = 1;
+            footer.Add(gap);
+            footer.Add(Text_("RECOIL  ·  v" + Application.version, 12, new Color(1f, 1f, 1f, 0.35f), spacing: 2));
+        }
+
+        void RefreshTopBar()
+        {
+            if (_chipName == null) return;
+            bool signedIn = _services != null && _services.Account.SignedIn;
+            ProgressionData progression = ProgressionCache.Current;
+            string name = signedIn && _services.Account.Account != null ? _services.Account.Account.username : PlayerName;
+            _chipName.text = string.IsNullOrEmpty(name) ? "Player" : name;
+            _chipLevel.text = signedIn && progression != null ? progression.level.level.ToString() : "–";
+
+            SeasonData season = signedIn && progression != null ? progression.season : null;
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            if (season != null && season.endsAt > now)
+            {
+                long days = (season.endsAt - now + 86399) / 86400;
+                _season.text = "SEASON " + season.number + "   ·   " + days + (days == 1 ? " DAY LEFT" : " DAYS LEFT");
+            }
+            else
+            {
+                _season.text = "ARENA COMBAT";
+            }
+        }
+
+        float _drift;
+
+        void DriftBackdrop()
+        {
+            if (_backdrop == null || _menu.resolvedStyle.display == DisplayStyle.None) return;
+            _drift += 0.033f;
+            float scale = 1.06f + 0.025f * Mathf.Sin(_drift * 0.07f);
+            _backdrop.style.scale = new Scale(new Vector3(scale, scale, 1f));
+            _backdrop.style.translate = new Translate(Mathf.Sin(_drift * 0.045f) * 18f, Mathf.Cos(_drift * 0.06f) * 8f);
+        }
+
+        /// <summary>Narrow screens drop the extras first, so the buttons and the social panel always fit.</summary>
+        void FitToWidth()
+        {
+            float width = _menu.resolvedStyle.width;
+            if (float.IsNaN(width) || _extras == null) return;
+            _extras.style.display = width >= 1750f ? DisplayStyle.Flex : DisplayStyle.None;
+            if (_social != null) _social.Root.parent.style.display = width >= 1250f ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        // ------------------------------------------------------------------ home
+
+        /// <summary>
+        /// The home screen: the game's name, who is playing, and the big buttons, with the
+        /// player's challenges beside them. Returns the place for the account summary.
+        /// </summary>
+        VisualElement BuildHome(VisualElement pages)
+        {
+            _home = new VisualElement();
+            _home.AddToClassList("home");
+            _home.style.flexGrow = 1;
+            _home.style.alignSelf = Align.Stretch;
+            _home.style.flexDirection = FlexDirection.Row;
+            _home.style.alignItems = Align.Center;
+            _home.style.paddingLeft = Length.Percent(6);
+            _home.style.paddingRight = 24;
+            pages.Add(_home);
+
+            var left = new VisualElement();
+            left.style.width = 480;
+            left.style.flexShrink = 0;
+            _home.Add(left);
+
+            var brand = new VisualElement { pickingMode = PickingMode.Ignore };
+            brand.style.marginBottom = 26;
+            left.Add(brand);
+            brand.Add(Text_("RECOIL", 112, Text, bold: true, spacing: 22, className: "home-title"));
+            var bar = new VisualElement { pickingMode = PickingMode.Ignore };
+            bar.AddToClassList("home-bar");
+            bar.style.width = 160;
+            bar.style.height = 5;
+            bar.style.marginTop = -8;
+            bar.style.backgroundColor = Accent;
+            brand.Add(bar);
+            Label tagline = Text_("FAST  ·  FAIR  ·  RELENTLESS", 14, Accent, bold: true, spacing: 6);
+            tagline.style.marginTop = 14;
+            brand.Add(tagline);
+
+            var accountHost = new VisualElement();
+            left.Add(accountHost);
+            BuildProfile(left);
+
+            _playButton = HomeButton("PLAY", "Quick match, ranked or a private game", true, () => ShowPage(Page.Play));
+            _customizeButton = HomeButton("CUSTOMIZE", "Loadouts, attachments and your look", false, () => CustomizeRequested?.Invoke());
+            _rangeButton = HomeButton("FIRING RANGE", "Warm up on targets at every distance", false, () => RangeRequested?.Invoke());
+            Button settings = HomeButton("SETTINGS", "Controls, video, audio and gameplay", false, () => SettingsScreen.Open());
+            _quitButton = HomeButton("QUIT", "Back to the desktop", false, () => QuitRequested?.Invoke());
+            foreach (Button button in new[] { _playButton, _customizeButton, _rangeButton, settings, _quitButton })
+                left.Add(button);
+            _quitButton.style.marginTop = 12;
+
+            _homeStatus = Text_("", 14, Bad);
+            _homeStatus.style.whiteSpace = WhiteSpace.Normal;
+            _homeStatus.style.marginTop = 10;
+            _homeStatus.style.minHeight = 20;
+            left.Add(_homeStatus);
+
+            var gap = new VisualElement { pickingMode = PickingMode.Ignore };
+            gap.style.flexGrow = 1;
+            _home.Add(gap);
+
+            BuildExtras(_home);
+            return accountHost;
+        }
+
+        /// <summary>Beside the buttons: this player's challenges, and how their last match went.</summary>
+        void BuildExtras(VisualElement home)
+        {
+            _extras = new VisualElement();
+            _extras.style.width = 400;
+            _extras.style.flexShrink = 0;
+            _extras.style.alignSelf = Align.FlexEnd;
+            _extras.style.marginBottom = 40;
+            home.Add(_extras);
+
+            VisualElement challenges = MenuPanel(_extras, "CHALLENGES");
+            _challengeList = new VisualElement();
+            challenges.Add(_challengeList);
+
+            _lastMatchPanel = MenuPanel(_extras, "LAST MATCH");
+            _lastMatchPanel.style.marginTop = 14;
+            _lastMatchLine = Text_("", 15, Text, bold: true);
+            _lastMatchLine.style.whiteSpace = WhiteSpace.Normal;
+            _lastMatchPanel.Add(_lastMatchLine);
+            _lastMatchDetail = Text_("", 13, Dim);
+            _lastMatchDetail.style.whiteSpace = WhiteSpace.Normal;
+            _lastMatchDetail.style.marginTop = 4;
+            _lastMatchPanel.Add(_lastMatchDetail);
+        }
+
+        /// <summary>A glassy panel with a small heading, for the menu's side content.</summary>
+        static VisualElement MenuPanel(VisualElement parent, string heading)
+        {
+            var panel = new VisualElement();
+            panel.AddToClassList("menu-panel");
+            panel.style.paddingLeft = panel.style.paddingRight = 20;
+            panel.style.paddingTop = 16;
+            panel.style.paddingBottom = 18;
+            panel.style.backgroundColor = new Color(0.035f, 0.05f, 0.075f, 0.82f);
+            panel.style.borderTopWidth = 2;
+            panel.style.borderTopColor = Accent;
+            Round(panel, 6);
+            parent.Add(panel);
+            Label title = Text_(heading, 13, Accent, bold: true, spacing: 4);
+            title.style.marginBottom = 10;
+            panel.Add(title);
+            return panel;
+        }
+
+        void RefreshHomeExtras()
+        {
+            RefreshTopBar();
+            if (_challengeList == null) return;
+            _challengeList.Clear();
+            bool signedIn = _services != null && _services.Account.SignedIn;
+            ProgressionData progression = ProgressionCache.Current;
+
+            if (!signedIn || progression == null)
+            {
+                Label hint = Text_(signedIn ? "Fetching your challenges..." : "Sign in to take on daily and weekly challenges, earn XP and climb the ranks.", 14, Dim);
+                hint.style.whiteSpace = WhiteSpace.Normal;
+                _challengeList.Add(hint);
+                _lastMatchPanel.style.display = DisplayStyle.None;
+                return;
+            }
+
+            int shown = 0;
+            foreach (ChallengeData challenge in progression.challenges)
+            {
+                if (shown >= 4) break;
+                shown++;
+                var row = new VisualElement { pickingMode = PickingMode.Ignore };
+                row.style.marginBottom = 10;
+                _challengeList.Add(row);
+                var line = Row(row);
+                line.style.justifyContent = Justify.SpaceBetween;
+                Label text = Text_((challenge.weekly ? "WEEKLY  " : "") + challenge.text, 13, challenge.completed ? Good : Text);
+                text.style.whiteSpace = WhiteSpace.Normal;
+                text.style.flexShrink = 1;
+                line.Add(text);
+                Label count = Text_(challenge.completed ? "DONE" : Mathf.Min(challenge.progress, challenge.goal) + "/" + challenge.goal, 12,
+                    challenge.completed ? Good : Dim, bold: true);
+                count.style.marginLeft = 10;
+                line.Add(count);
+                var track = new VisualElement { pickingMode = PickingMode.Ignore };
+                track.style.height = 4;
+                track.style.marginTop = 5;
+                track.style.backgroundColor = new Color(1f, 1f, 1f, 0.08f);
+                Round(track, 2);
+                row.Add(track);
+                var fill = new VisualElement { pickingMode = PickingMode.Ignore };
+                fill.style.height = Length.Percent(100);
+                fill.style.width = Length.Percent(Mathf.Clamp01(challenge.goal > 0 ? challenge.progress / (float)challenge.goal : 1f) * 100f);
+                fill.style.backgroundColor = challenge.completed ? Good : Accent;
+                Round(fill, 2);
+                track.Add(fill);
+            }
+            if (shown == 0) _challengeList.Add(Text_("All done for now. New ones arrive soon.", 14, Dim));
+
+            LastMatchData last = progression.lastMatch;
+            bool hasLast = last != null && !string.IsNullOrEmpty(last.matchId);
+            _lastMatchPanel.style.display = hasLast ? DisplayStyle.Flex : DisplayStyle.None;
+            if (hasLast)
+            {
+                _lastMatchLine.text = DescribeLastMatch(last);
+                _lastMatchDetail.text = LastMatchDetail(last);
+            }
+        }
+
+        static string DescribeLastMatch(LastMatchData last)
+        {
+            Playlist playlist = Playlists.Find(last.playlist);
+            string title = playlist != null ? playlist.Title : last.playlist;
+            string outcome = last.outcome == 2 ? "Won" : last.outcome == 0 ? "Lost" : "Drew";
+            return outcome + " a " + (last.ranked ? "ranked " : "") + title + " match";
+        }
+
+        static string LastMatchDetail(LastMatchData last)
+        {
+            string line = "+" + last.xpGained + " XP";
+            if (last.levelAfter > last.levelBefore) line += "   ·   level " + last.levelAfter + "!";
+            if (last.ranked && last.ratingAfter != last.ratingBefore)
+                line += "   ·   rating " + (last.ratingAfter > last.ratingBefore ? "+" : "") + (last.ratingAfter - last.ratingBefore);
+            return line;
+        }
+
+        static Button HomeButton(string title, string caption, bool primary, Action onClick)
+        {
+            var button = new Button(onClick) { text = "" };
+            button.AddToClassList("home-button");
+            if (primary) button.AddToClassList("primary");
+            // The look is in the stylesheet; the size is here too, so a missing sheet still leaves big buttons.
+            button.style.height = primary ? 76 : 58;
+            button.style.marginLeft = 0;
+            button.style.marginRight = 0;
+            button.style.marginBottom = 8;
+            button.style.flexDirection = FlexDirection.Column;
+            button.style.justifyContent = Justify.Center;
+            button.style.alignItems = Align.FlexStart;
+
+            Color ink = primary ? (Color)new Color32(6, 16, 22, 255) : Text;
+            Label name = Text_(title, primary ? 30 : 20, ink, bold: true, spacing: primary ? 8 : 4);
+            name.AddToClassList("home-button__title");
+            button.Add(name);
+            Label sub = Text_(caption, 12, new Color(ink.r, ink.g, ink.b, 0.62f));
+            sub.AddToClassList("home-button__caption");
+            sub.style.marginTop = 1;
+            button.Add(sub);
+            return button;
+        }
+
+        // ------------------------------------------------------------------ play
+
+        /// <summary>
+        /// The play page: every mode as a tile across the screen, and down the right, finding
+        /// a match, hosting a private one, or joining one by address.
+        /// </summary>
+        void BuildPlayPage(VisualElement pages)
+        {
+            var page = new VisualElement();
+            page.AddToClassList("play-page");
+            page.style.flexGrow = 1;
+            page.style.alignSelf = Align.Stretch;
+            page.style.flexDirection = FlexDirection.Row;
+            page.style.paddingLeft = 48;
+            page.style.paddingRight = 16;
+            page.style.paddingTop = 8;
+            page.style.paddingBottom = 16;
+            pages.Add(page);
+            _menuCard = page;
+
+            // Left: the header and the mode tiles.
+            var left = new VisualElement();
+            left.style.flexGrow = 1;
+            left.style.flexShrink = 1;
+            left.style.minWidth = 0;
+            page.Add(left);
+
+            var header = Row(left);
+            header.pickingMode = PickingMode.Position;
+            header.style.alignItems = Align.Center;
+            header.style.marginBottom = 20;
+            _backButton = MenuButton("◂  BACK", false, () => ShowPage(Page.Home));
+            _backButton.AddToClassList("back-button");
+            _backButton.style.marginLeft = 0;
+            _backButton.style.minWidth = 110;
+            _backButton.style.height = 40;
+            header.Add(_backButton);
+            Label title = Text_("PLAY", 48, Text, bold: true, spacing: 10);
+            title.style.marginLeft = 24;
+            header.Add(title);
+
+            left.Add(Text_("CHOOSE A MODE", 13, Accent, bold: true, spacing: 4));
+            _modeGrid = new VisualElement();
+            _modeGrid.style.flexDirection = FlexDirection.Row;
+            _modeGrid.style.flexWrap = Wrap.Wrap;
+            _modeGrid.style.marginTop = 12;
+            left.Add(_modeGrid);
+            _modeTiles.Clear();
+            for (int i = 0; i < Modes.Length; i++)
+            {
+                int index = i;
+                _modeTiles.Add(ModeTile(_modeGrid, Modes[i], () =>
+                {
+                    if (_modeField.index != index) _modeField.index = index;
+                }));
+            }
+
+            // Right: how to get into a match, in a column that scrolls if the private match's options run long.
+            var scroll = new ScrollView(ScrollViewMode.Vertical);
+            scroll.style.width = 470;
+            scroll.style.flexShrink = 0;
+            scroll.style.marginLeft = 28;
+            page.Add(scroll);
+            VisualElement column = scroll.contentContainer;
+
+            VisualElement match = MenuPanel(column, "MATCHMAKING");
+            _modeTitle = Text_("", 30, Text, bold: true, spacing: 3);
+            match.Add(_modeTitle);
+            _modeHint = Text_("", 13, Dim);
+            _modeHint.style.whiteSpace = WhiteSpace.Normal;
+            _modeHint.style.marginTop = 2;
+            _modeHint.style.marginBottom = 12;
+            match.Add(_modeHint);
 
             _nameField = new TextField("Name") { value = PlayerPrefs.GetString(NameKey, "Player"), maxLength = 24 };
             _nameField.AddToClassList("loadout-name");
             _nameField.style.fontSize = 16;
-            card.Add(_nameField);
-            _account?.Refresh();
+            _nameField.style.marginLeft = 0;
+            _nameField.RegisterValueChangedCallback(_ => RefreshTopBar());
+            match.Add(_nameField);
 
+            // The mode's dropdown stays the one record of which mode is chosen; the tiles set it.
             var modeNames = new List<string>();
             foreach (GameModeKind mode in Modes) modeNames.Add(MatchSettings.Title(mode));
-            _modeField = Dropdown(card, "Mode", modeNames, Mathf.Clamp(PlayerPrefs.GetInt(ModeKey, 0), 0, Modes.Length - 1));
-            _modeHint = Text_("", 12, Dim);
-            _modeHint.style.whiteSpace = WhiteSpace.Normal;
-            _modeHint.style.marginBottom = 10;
-            card.Add(_modeHint);
+            _modeField = Dropdown(match, "Mode", modeNames, Mathf.Clamp(PlayerPrefs.GetInt(ModeKey, 0), 0, Modes.Length - 1));
+            _modeField.style.display = DisplayStyle.None;
             _modeField.RegisterValueChangedCallback(_ => OnModeChanged());
 
             // Ranked, for the modes that have it.
             var rankedRow = new VisualElement();
             rankedRow.style.flexDirection = FlexDirection.Row;
             rankedRow.style.alignItems = Align.Center;
-            rankedRow.style.marginBottom = 8;
+            rankedRow.style.marginBottom = 10;
             _rankedToggle = new Toggle("Ranked") { value = false };
             _rankedToggle.style.fontSize = 15;
             _rankedToggle.RegisterValueChangedCallback(_ => RefreshRanked());
@@ -250,27 +705,38 @@ namespace Recoil.Client.Duel
             _rankedHint.style.whiteSpace = WhiteSpace.Normal;
             _rankedHint.style.flexShrink = 1;
             rankedRow.Add(_rankedHint);
-            card.Add(rankedRow);
+            match.Add(rankedRow);
 
-            _findButton = MenuButton("Find match", true, () =>
+            _findButton = MenuButton("FIND MATCH", true, () =>
             {
                 Remember();
                 FindRequested?.Invoke(SelectedMode, RankedChosen);
             });
-            card.Add(_findButton);
+            _findButton.AddToClassList("find-button");
+            _findButton.style.height = 58;
+            _findButton.style.fontSize = 22;
+            match.Add(_findButton);
+
+            _menuStatus = Text_("", 14, Bad);
+            _menuStatus.style.whiteSpace = WhiteSpace.Normal;
+            _menuStatus.style.marginTop = 10;
+            _menuStatus.style.minHeight = 20;
+            match.Add(_menuStatus);
+            _cancelButton = MenuButton("CANCEL", false, () => CancelRequested?.Invoke());
+            _cancelButton.style.marginLeft = 0;
+            _cancelButton.style.marginTop = 4;
+            match.Add(_cancelButton);
 
             // A private match: the host picks every rule.
+            VisualElement host = MenuPanel(column, "PRIVATE MATCH");
+            host.style.marginTop = 14;
             _hostToggle = MenuButton("Host a private match  ▾", false, () => SetHostOptions(_hostOptions.style.display == DisplayStyle.None));
-            _hostToggle.style.marginTop = 10;
             _hostToggle.style.marginLeft = 0;
-            card.Add(_hostToggle);
+            host.Add(_hostToggle);
 
             _hostOptions = new VisualElement();
-            _hostOptions.style.marginTop = 4;
-            _hostOptions.style.paddingLeft = 12;
-            _hostOptions.style.borderLeftWidth = 2;
-            _hostOptions.style.borderLeftColor = new Color(1f, 1f, 1f, 0.12f);
-            card.Add(_hostOptions);
+            _hostOptions.style.marginTop = 6;
+            host.Add(_hostOptions);
             _mapField = Dropdown(_hostOptions, "Map", new List<string>(), 0);
             _sizeField = Dropdown(_hostOptions, "Players", new List<string>(), 0);
             _limitField = Dropdown(_hostOptions, "Win at", new List<string>(), 0);
@@ -288,7 +754,7 @@ namespace Recoil.Client.Duel
             Label hostHint = Text_("Bots fill any place nobody has taken, and step aside when someone joins. Others join with your address.", 12, Dim);
             hostHint.style.whiteSpace = WhiteSpace.Normal;
             _hostOptions.Add(hostHint);
-            _startButton = MenuButton("Start private match", true, () =>
+            _startButton = MenuButton("START PRIVATE MATCH", true, () =>
             {
                 Remember();
                 HostRequested?.Invoke(BuildSettings());
@@ -297,62 +763,156 @@ namespace Recoil.Client.Duel
             _hostOptions.Add(_startButton);
             SetHostOptions(false);
 
+            // Straight to a server someone told you about.
+            VisualElement join = MenuPanel(column, "DIRECT CONNECT");
+            join.style.marginTop = 14;
             var joinRow = new VisualElement();
             joinRow.style.flexDirection = FlexDirection.Row;
             joinRow.style.alignItems = Align.Center;
-            joinRow.style.marginTop = 14;
             _addressField = new TextField { value = PlayerPrefs.GetString(AddressKey, "127.0.0.1"), maxLength = 64 };
             _addressField.AddToClassList("loadout-name");
             _addressField.style.fontSize = 16;
             _addressField.style.flexGrow = 1;
+            _addressField.style.marginLeft = 0;
             joinRow.Add(_addressField);
-            _joinButton = MenuButton("Join by address", false, RequestJoin);
+            _joinButton = MenuButton("JOIN", false, RequestJoin);
             _joinButton.style.marginLeft = 10;
+            _joinButton.style.minWidth = 100;
             joinRow.Add(_joinButton);
-            card.Add(joinRow);
+            join.Add(joinRow);
             // Enter in the address box joins. Which of these two events carries the key depends on the Unity version.
             _addressField.RegisterCallback<KeyDownEvent>(e =>
             {
                 if (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) RequestJoin();
             }, TrickleDown.TrickleDown);
             _addressField.RegisterCallback<NavigationSubmitEvent>(e => RequestJoin(), TrickleDown.TrickleDown);
+        }
 
-            _menuStatus = Text_("", 14, Bad);
-            _menuStatus.style.whiteSpace = WhiteSpace.Normal;
-            _menuStatus.style.marginTop = 14;
-            _menuStatus.style.minHeight = 20;
-            card.Add(_menuStatus);
+        /// <summary>One mode, as a tile: its name, how many play, and what it is about.</summary>
+        static Button ModeTile(VisualElement grid, GameModeKind mode, Action onClick)
+        {
+            var tile = new Button(onClick) { text = "" };
+            tile.AddToClassList("mode-tile");
+            tile.style.width = 250;
+            tile.style.height = 168;
+            tile.style.marginLeft = 0;
+            tile.style.marginRight = 14;
+            tile.style.marginBottom = 14;
+            tile.style.paddingLeft = tile.style.paddingRight = 18;
+            tile.style.paddingTop = 16;
+            tile.style.paddingBottom = 14;
+            tile.style.flexDirection = FlexDirection.Column;
+            tile.style.alignItems = Align.FlexStart;
+            tile.style.justifyContent = Justify.FlexStart;
+            grid.Add(tile);
 
-            var bottom = new VisualElement();
-            bottom.AddToClassList("pause-buttons");
-            bottom.style.flexDirection = FlexDirection.Row;
-            bottom.style.justifyContent = Justify.FlexEnd;
-            bottom.style.marginTop = 18;
-            _cancelButton = MenuButton("Cancel", false, () => CancelRequested?.Invoke());
-            _customizeButton = MenuButton("Customize", false, () => CustomizeRequested?.Invoke());
-            Button settings = MenuButton("Settings", false, () => SettingsScreen.Open());
-            _rangeButton = MenuButton("Firing range", false, () => RangeRequested?.Invoke());
-            _quitButton = MenuButton("Quit", false, () => QuitRequested?.Invoke());
-            foreach (Button button in new[] { _cancelButton, _customizeButton, settings, _rangeButton, _quitButton })
+            MatchSettings rules = MatchSettings.For(mode);
+            string players = mode == GameModeKind.Duel ? "1 v 1"
+                : rules.TeamBased ? rules.teamSize + " v " + rules.teamSize
+                : "UP TO " + rules.Capacity + " PLAYERS";
+            Label size = Text_(players, 12, Accent, bold: true, spacing: 3);
+            size.AddToClassList("mode-tile__size");
+            tile.Add(size);
+            Label name = Text_(MatchSettings.Title(mode).ToUpperInvariant(), 21, Text, bold: true, spacing: 2);
+            name.AddToClassList("mode-tile__name");
+            name.style.marginTop = 6;
+            name.style.whiteSpace = WhiteSpace.Normal;
+            tile.Add(name);
+            Label about = Text_(Describe(mode), 12, Dim);
+            about.style.whiteSpace = WhiteSpace.Normal;
+            about.style.marginTop = 8;
+            tile.Add(about);
+            return tile;
+        }
+
+        /// <summary>Lights the tile of the chosen mode.</summary>
+        void RefreshModeTiles()
+        {
+            int chosen = _modeField != null ? _modeField.index : 0;
+            for (int i = 0; i < _modeTiles.Count; i++) _modeTiles[i].EnableInClassList("mode-tile--chosen", i == chosen);
+            if (_modeTitle != null) _modeTitle.text = MatchSettings.Title(SelectedMode).ToUpperInvariant();
+        }
+
+        // ------------------------------------------------------------------ the backdrop
+
+        /// <summary>A left-to-right shade over the art, made once: dark behind the buttons, clearing towards the right.</summary>
+        static Texture2D MenuShade()
+        {
+            if (_shade != null) return _shade;
+            const int width = 128;
+            _shade = new Texture2D(width, 1, TextureFormat.RGBA32, false)
             {
-                // Five to a row: share it out evenly.
-                button.style.minWidth = 0;
-                button.style.flexGrow = 1;
-                button.style.marginLeft = 6;
-                bottom.Add(button);
-            }
-            _cancelButton.style.marginLeft = 0;
-            card.Add(bottom);
-
-            // Friends and party, to the right of the menu.
-            if (_services != null && _services.Social != null)
+                name = "Menu Shade",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+                hideFlags = HideFlags.DontSave,
+            };
+            var pixels = new Color32[width];
+            for (int x = 0; x < width; x++)
             {
-                _social = new SocialPanel(_menu, _services.Social, _services.Account);
-                _social.Root.style.marginLeft = 6;
-                _services.Social.Changed += OnSocialChanged;
+                float t = x / (width - 1f);
+                float alpha = Mathf.Lerp(0.9f, 0.15f, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.18f, 0.7f, t)));
+                pixels[x] = new Color(0.012f, 0.018f, 0.03f, alpha);
             }
+            _shade.SetPixels32(pixels);
+            _shade.Apply(false, true);
+            return _shade;
+        }
 
-            OnModeChanged();
+        /// <summary>If the art is missing: a dark field with a cool glow off to the right, drawn in code.</summary>
+        static Texture2D FallbackBackdrop()
+        {
+            if (_fallbackArt != null) return _fallbackArt;
+            const int w = 192, h = 108;
+            _fallbackArt = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            {
+                name = "Menu Backdrop (fallback)",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+                hideFlags = HideFlags.DontSave,
+            };
+            var pixels = new Color32[w * h];
+            Color deep = new Color(0.02f, 0.03f, 0.05f), glow = new Color(0.05f, 0.32f, 0.42f), warm = new Color(0.35f, 0.14f, 0.05f);
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float u = x / (float)w, v = y / (float)h;
+                    float cool = Mathf.Exp(-((u - 0.72f) * (u - 0.72f) * 6f + (v - 0.55f) * (v - 0.55f) * 9f));
+                    float hot = Mathf.Exp(-((u - 0.95f) * (u - 0.95f) * 14f + (v - 0.15f) * (v - 0.15f) * 20f));
+                    Color c = deep + glow * cool * 0.9f + warm * hot * 0.6f;
+                    // Faint lines across the floor, for depth.
+                    if (v < 0.35f && Mathf.Repeat(u * 24f + v * 40f, 1f) < 0.04f) c += new Color(0.03f, 0.05f, 0.06f) * (0.35f - v) * 3f;
+                    pixels[y * w + x] = c;
+                }
+            }
+            _fallbackArt.SetPixels32(pixels);
+            _fallbackArt.Apply(false, true);
+            return _fallbackArt;
+        }
+
+        enum Page { Home, Play }
+
+        /// <summary>Switches the menu between the home screen and the play page.</summary>
+        void ShowPage(Page page)
+        {
+            if (_home == null || _menuCard == null) return;
+            if (_account != null) _account.CloseForms();
+            _page = page;
+            _home.style.display = page == Page.Home ? DisplayStyle.Flex : DisplayStyle.None;
+            _menuCard.style.display = page == Page.Play ? DisplayStyle.Flex : DisplayStyle.None;
+            UiMotion.Enter(page == Page.Home ? _home : _menuCard);
+            if (_crumb != null) _crumb.text = page == Page.Home ? "RECOIL" : "RECOIL  /  PLAY";
+            if (_footerHint != null) _footerHint.text = page == Page.Home ? "" : "ESC   BACK";
+            if (page == Page.Play)
+            {
+                RefreshRanked();
+                RefreshModeTiles();
+            }
+            else
+            {
+                RefreshHomeExtras();
+            }
         }
 
         static DropdownField Dropdown(VisualElement parent, string label, List<string> choices, int index)
@@ -381,6 +941,7 @@ namespace Recoil.Client.Duel
         {
             GameModeKind mode = SelectedMode;
             _modeHint.text = Describe(mode);
+            RefreshModeTiles();
             RefreshRanked();
             if (mode == _optionsFor) return;
             _optionsFor = mode;
@@ -877,34 +1438,38 @@ namespace Recoil.Client.Duel
 
         // ------------------------------------------------------------------ menu
 
-        /// <summary>Shows the menu, ready for input. <paramref name="status"/> is a line of bad news, or empty.</summary>
+        /// <summary>
+        /// Shows the menu, ready for input. <paramref name="status"/> is a line of bad news, or
+        /// empty. Coming back from a match, the menu opens on its home screen; otherwise it
+        /// stays on the page the player was using, so a problem is shown where it happened.
+        /// </summary>
         public void ShowMenu(string status)
         {
             if (_menu == null) return;
-            if (_menu.style.display == DisplayStyle.None) UiMotion.Enter(_menuCard);
+            bool wasHidden = _menu.style.display == DisplayStyle.None;
             _menu.style.display = DisplayStyle.Flex;
-            _menuStatus.text = status ?? "";
-            _menuStatus.style.color = Bad;
             SetBusy(false);
+            if (wasHidden) ShowPage(Page.Home);
+            SetStatus(status, Bad);
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
 
-        /// <summary>Shows the menu with a line of good news, such as how the last match went.</summary>
+        /// <summary>Shows the menu's home screen with a line of good news, such as how the last match went.</summary>
         public void ShowMenuResult(string text)
         {
             ShowMenu("");
-            _menuStatus.text = text ?? "";
-            _menuStatus.style.color = Good;
+            if (_page != Page.Home) ShowPage(Page.Home);
+            SetStatus(text, Good);
         }
 
-        /// <summary>Shows the menu with its buttons off while a match is being found or joined.</summary>
+        /// <summary>Shows the play page with its buttons off while a match is being found or joined.</summary>
         public void ShowConnecting(string status)
         {
             if (_menu == null) return;
             _menu.style.display = DisplayStyle.Flex;
-            _menuStatus.text = status ?? "";
-            _menuStatus.style.color = Text;
+            if (_page != Page.Play) ShowPage(Page.Play);
+            SetStatus(status, Text);
             SetBusy(true);
         }
 
@@ -917,6 +1482,17 @@ namespace Recoil.Client.Duel
 
         public bool MenuVisible => _menu != null && _menu.resolvedStyle.display != DisplayStyle.None;
 
+        /// <summary>The menu's line of news, on both pages so it is seen whichever is up.</summary>
+        void SetStatus(string text, Color color)
+        {
+            foreach (Label label in new[] { _menuStatus, _homeStatus })
+            {
+                if (label == null) continue;
+                label.text = text ?? "";
+                label.style.color = color;
+            }
+        }
+
         void SetBusy(bool busy)
         {
             _busy = busy;
@@ -926,12 +1502,28 @@ namespace Recoil.Client.Duel
             _joinButton.SetEnabled(!busy);
             _rangeButton.SetEnabled(!busy);
             _customizeButton.SetEnabled(!busy);
+            _playButton.SetEnabled(!busy);
+            _backButton.SetEnabled(!busy);
+            _modeGrid.SetEnabled(!busy);
             _nameField.SetEnabled(!busy);
             _addressField.SetEnabled(!busy);
             _modeField.SetEnabled(!busy);
             _rankedToggle.SetEnabled(!busy && RankedAllowed(out _));
             _progressButton.SetEnabled(!busy);
             _cancelButton.style.display = busy ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        /// <summary>Esc on the play page goes back to the home screen, unless it was meant for a screen open on top.</summary>
+        void UpdateMenuKeys()
+        {
+            bool overlayOpen = SettingsScreen.IsOpen || CustomizeScreen.IsOpen || ProgressScreen.IsOpen ||
+                               PlayersScreen.IsOpen || ReportDialog.IsOpen || TextEntry.Active;
+            // A screen that closed on this same Esc counts as still open, so one press does one thing.
+            bool blocked = overlayOpen || _overlayOpenLastFrame;
+            _overlayOpenLastFrame = overlayOpen;
+            if (blocked || !MenuVisible || _busy || _page != Page.Play) return;
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) ShowPage(Page.Home);
         }
 
         // ------------------------------------------------------------------ match
@@ -1350,6 +1942,7 @@ namespace Recoil.Client.Duel
         void Update()
         {
             UpdateChat();
+            UpdateMenuKeys();
             if (_medalTimer > 0f)
             {
                 _medalTimer -= Time.unscaledDeltaTime;

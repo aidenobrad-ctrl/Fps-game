@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Recoil.Shared.Combat;
 using Recoil.Shared.Cosmetics;
@@ -23,6 +24,11 @@ namespace Recoil.Shared.Net
         Look = 4,
         /// <summary>Reliable. Something to say, to everyone or to the team.</summary>
         Chat = 5,
+        /// <summary>
+        /// Reliable. Which players the client saw its bullets hit, for one tick's shots. The
+        /// server checks each one against where that player really was before it counts.
+        /// </summary>
+        HitClaims = 6,
 
         // Server to client.
         Welcome = 16,
@@ -44,6 +50,15 @@ namespace Recoil.Shared.Net
         Hurt = 27,
         /// <summary>Reliable. A line of chat, to whoever it was for.</summary>
         ChatLine = 28,
+    }
+
+    /// <summary>One bullet the shooter saw land on another player.</summary>
+    public struct HitClaim
+    {
+        /// <summary>Which of that tick's shots, in the order the weapon fired them.</summary>
+        public byte Shot;
+        public byte Target;
+        public HitZone Zone;
     }
 
     public struct WelcomeMessage
@@ -376,6 +391,42 @@ namespace Recoil.Shared.Net
             }
             look.weaponSkins = skins;
             return reader.Failed ? new CharacterLook() : LookRules.Sanitize(look);
+        }
+
+        /// <summary>The most claims one tick can carry: enough for every pellet of a shotgun blast.</summary>
+        public const int MaxHitClaims = 24;
+
+        /// <param name="tick">The command tick the shots were fired on.</param>
+        public static void WriteHitClaims(NetWriter writer, int tick, List<HitClaim> claims)
+        {
+            int count = Mathf.Min(claims.Count, MaxHitClaims);
+            writer.WriteByte((byte)NetMessage.HitClaims);
+            writer.WriteInt(tick);
+            writer.WriteByte((byte)count);
+            for (int i = 0; i < count; i++)
+            {
+                writer.WriteByte(claims[i].Shot);
+                writer.WriteByte(claims[i].Target);
+                writer.WriteByte((byte)claims[i].Zone);
+            }
+        }
+
+        /// <returns>How many claims were read into <paramref name="into"/>; 0 if the message was bad.</returns>
+        public static int ReadHitClaims(NetReader reader, out int tick, HitClaim[] into)
+        {
+            tick = reader.ReadInt();
+            int count = reader.ReadByte();
+            if (count > into.Length || count > MaxHitClaims)
+            {
+                reader.Fail();
+                return 0;
+            }
+            for (int i = 0; i < count; i++)
+            {
+                into[i] = new HitClaim { Shot = reader.ReadByte(), Target = reader.ReadByte(), Zone = (HitZone)reader.ReadByte() };
+                if (into[i].Zone > HitZone.Limb) reader.Fail();
+            }
+            return reader.Failed ? 0 : count;
         }
 
         public static void WriteLoadoutChange(NetWriter writer, LoadoutData loadout)

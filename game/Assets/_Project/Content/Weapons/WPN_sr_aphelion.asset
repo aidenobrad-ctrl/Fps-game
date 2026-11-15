@@ -59,7 +59,7 @@ MonoBehaviour:
     adsTime: 0.42
     adsZoom: 6
     hipMoveMultiplier: 0.93
-    adsMoveMultiplier: 0.42
+    adsMoveMultiplier: 0.71
     sprintToFireTime: 0.24
     equipTime: 0.55
     holsterTime: 0.3

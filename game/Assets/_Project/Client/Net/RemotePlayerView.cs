@@ -1,6 +1,7 @@
 using UnityEngine;
 using Recoil.Client.Audio;
 using Recoil.Client.Visuals;
+using Recoil.Shared.Combat;
 using Recoil.Shared.Cosmetics;
 using Recoil.Shared.Match;
 using Recoil.Shared.Movement;
@@ -26,6 +27,7 @@ namespace Recoil.Client.Net
         ClientSession _session;
         int _playerId;
         UnityCharacterBody _body;
+        RemoteTarget _target;
         CharacterLookView _look;
         Transform _weapon;
         MeshRenderer _weaponRenderer;
@@ -69,6 +71,8 @@ namespace Recoil.Client.Net
             // Whether a shot really hit is decided on the server.
             _body = new UnityCharacterBody("Remote " + _playerId, movement, withController: false, server: false);
             _body.Root.SetParent(transform, false);
+            _target = new RemoteTarget(_playerId);
+            _body.SetOwner(_target);
             _look = new CharacterLookView(_body);
 
             _weaponMaterial = new Material(GreyboxMaterials.Flat(new Color(0.2f, 0.2f, 0.22f)));
@@ -151,6 +155,7 @@ namespace Recoil.Client.Net
             ClientPlayer local = _session.Local;
             ClientPlayer player = _session.Players[_playerId];
             bool friendly = local != null && _session.Settings.TeamBased && player.Team != Teams.None && player.Team == local.Team;
+            _target.Friendly = friendly;
             if (friendly != _friendly || !_marker.gameObject.activeSelf && friendly)
             {
                 _friendly = friendly;
@@ -192,5 +197,24 @@ namespace Recoil.Client.Net
             if (_weaponMaterial != null) Destroy(_weaponMaterial);
             if (_markerMaterial != null) Destroy(_markerMaterial);
         }
+    }
+
+    /// <summary>
+    /// Who a drawn body belongs to, so a bullet traced on this client knows whom it struck. It
+    /// never takes damage itself: the server decides that.
+    /// </summary>
+    public sealed class RemoteTarget : IDamageable
+    {
+        public readonly int PlayerId;
+        /// <summary>On our side: our bullets pass them by, as they do on the server.</summary>
+        public bool Friendly;
+
+        public RemoteTarget(int playerId)
+        {
+            PlayerId = playerId;
+        }
+
+        public bool IsAlive => true;
+        public DamageResult ApplyDamage(in DamageInfo info) => default;
     }
 }

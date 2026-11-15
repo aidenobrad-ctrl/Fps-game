@@ -58,13 +58,9 @@ namespace Recoil.Shared.Match
             rigidbody.isKinematic = true;
             rigidbody.useGravity = false;
 
-            // The same proportions as the firing range's target dummy.
-            AddPart("Head", HitZone.Head, true, new Vector3(0f, 1.63f, 0f), new Vector3(0.25f, 0.27f, 0.25f), layer);
-            AddPart("Torso", HitZone.Body, false, new Vector3(0f, 1.17f, 0f), new Vector3(0.44f, 0.62f, 0.26f), layer);
-            AddPart("ArmL", HitZone.Limb, false, new Vector3(-0.3f, 1.17f, 0f), new Vector3(0.12f, 0.6f, 0.14f), layer);
-            AddPart("ArmR", HitZone.Limb, false, new Vector3(0.3f, 1.17f, 0f), new Vector3(0.12f, 0.6f, 0.14f), layer);
-            AddPart("LegL", HitZone.Limb, false, new Vector3(-0.115f, 0.43f, 0f), new Vector3(0.17f, 0.86f, 0.19f), layer);
-            AddPart("LegR", HitZone.Limb, false, new Vector3(0.115f, 0.43f, 0f), new Vector3(0.17f, 0.86f, 0.19f), layer);
+            // The same shapes as the firing range's dummies and the server's own hit check.
+            foreach (BodyShapes.Part part in BodyShapes.Parts)
+                AddPart(part.Name, part.Zone, part.Round, part.Offset, part.Size, layer);
 
             SetPose(new BodyPose { EyeHeight = _standEyeHeight });
         }
@@ -112,14 +108,13 @@ namespace Recoil.Shared.Match
         {
             _root.SetPositionAndRotation(pose.Position, Quaternion.Euler(0f, pose.Yaw, 0f));
 
-            float squash = Mathf.Clamp(pose.EyeHeight / _standEyeHeight, 0.3f, 1.2f);
-            foreach (Part part in _parts)
+            float squash = BodyShapes.Squash(pose.EyeHeight, _standEyeHeight);
+            for (int i = 0; i < _parts.Count; i++)
             {
-                part.Transform.localPosition = new Vector3(
-                    part.Offset.x, part.Offset.y * squash, part.Offset.z);
-                part.Transform.localScale = part.Round
-                    ? part.Size
-                    : new Vector3(part.Size.x, part.Size.y * squash, part.Size.z);
+                Part part = _parts[i];
+                BodyShapes.Part shape = BodyShapes.Parts[i];
+                part.Transform.localPosition = BodyShapes.LocalCentre(shape, squash);
+                part.Transform.localScale = BodyShapes.LocalSize(shape, squash);
             }
         }
 

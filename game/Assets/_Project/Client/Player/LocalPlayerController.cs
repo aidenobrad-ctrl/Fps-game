@@ -57,6 +57,7 @@ namespace Recoil.Client.Player
         // The last two simulated states, blended for presentation.
         MotorState _previousMotor, _currentMotor;
         Vector2 _previousRecoil, _currentRecoil;
+        readonly List<HitClaim> _claims = new List<HitClaim>(8);
         // Where the player is drawn, minus where the simulation has them. Not zero just after
         // the server corrects a prediction: the view then slides to the truth instead of jumping.
         Vector3 _viewError;
@@ -356,13 +357,15 @@ namespace Recoil.Client.Player
         }
 
         /// <summary>
-        /// Online: draws where our bullets went, straight away. Whether they hurt anyone is
-        /// for the server to say; projectiles appear when the server launches them.
+        /// Online: draws where our bullets went, straight away, and tells the server whom they
+        /// were seen to hit. Whether they hurt anyone is for the server to say; projectiles
+        /// appear when the server launches them.
         /// </summary>
         void DrawPredictedShots(in PlayerInputCmd cmd, WeaponSimulator weapon, WeaponBuild build)
         {
             Vector3 origin = _currentMotor.EyePosition;
             bool synced = false;
+            _claims.Clear();
 
             for (int i = 0; i < weapon.Shots.Count; i++)
             {
@@ -375,7 +378,10 @@ namespace Recoil.Client.Player
                     synced = true;
                 }
                 Vector3 direction = AimMath.Direction(cmd.Yaw + shot.AimOffset.x, cmd.Pitch - shot.AimOffset.y);
-                HitscanHit end = Hitscan.Trace(origin, direction, weapon.Stats.maxRange);
+                HitscanHit end = TraceSeen(origin, direction, weapon.Stats.maxRange);
+                if (end.Hitbox != null && end.Hitbox.Owner is RemoteTarget target && _claims.Count < NetMessages.MaxHitClaims)
+                    _claims.Add(new HitClaim { Shot = (byte)i, Target = (byte)target.PlayerId, Zone = end.Hitbox.zone });
+
                 ShotFired?.Invoke(new ShotPresentation
                 {
                     Origin = origin,
@@ -386,6 +392,25 @@ namespace Recoil.Client.Player
                     Build = build,
                 });
             }
+
+            if (_claims.Count > 0) _session.ClaimHits(cmd.Tick, _claims);
+        }
+
+        /// <summary>A bullet against the world as drawn here. Like the server's, it passes through teammates.</summary>
+        static HitscanHit TraceSeen(Vector3 origin, Vector3 direction, float range)
+        {
+            float travelled = 0f;
+            HitscanHit hit = default;
+            for (int step = 0; step < 6; step++)
+            {
+                hit = Hitscan.Trace(origin + direction * travelled, direction, range - travelled);
+                hit.Distance += travelled;
+                if (!hit.HasHit || hit.Hitbox == null || !(hit.Hitbox.Owner is RemoteTarget target) || !target.Friendly) return hit;
+                travelled = hit.Distance + 0.02f;
+                if (travelled >= range) break;
+            }
+            hit.Hitbox = null;
+            return hit;
         }
 
         void ResolveShots(in PlayerInputCmd cmd, WeaponSimulator weapon, WeaponBuild build)

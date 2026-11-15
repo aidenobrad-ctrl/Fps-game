@@ -110,7 +110,7 @@ namespace Recoil.Shared.Weapons
         [Tooltip("Movement speed multiplier while carrying this weapon.")]
         [Range(0.5f, 1.2f)] public float hipMoveMultiplier = 1f;
         [Tooltip("Movement speed multiplier while fully aimed.")]
-        [Range(0.3f, 1.2f)] public float adsMoveMultiplier = 0.72f;
+        [Range(0.3f, 1.2f)] public float adsMoveMultiplier = 0.86f;
         [Tooltip("Delay after sprinting before the weapon can fire.")]
         [Min(0f)] public float sprintToFireTime = 0.14f;
         [Tooltip("Time to bring the weapon up.")]
@@ -265,7 +265,8 @@ namespace Recoil.Shared.Weapons
             adsTime = Mathf.Max(adsTime, 0.01f);
             adsZoom = Mathf.Max(adsZoom, 1f);
             hipMoveMultiplier = Mathf.Clamp(hipMoveMultiplier, 0.3f, 1.3f);
-            adsMoveMultiplier = Mathf.Clamp(adsMoveMultiplier, 0.2f, 1.3f);
+            // Aiming never makes anyone faster than carrying the same weapon lowered, or than a normal run.
+            adsMoveMultiplier = Mathf.Clamp(adsMoveMultiplier, 0.2f, Mathf.Min(1f, hipMoveMultiplier));
             sprintToFireTime = Mathf.Max(sprintToFireTime, 0f);
             equipTime = Mathf.Max(equipTime, 0f);
             holsterTime = Mathf.Max(holsterTime, 0f);

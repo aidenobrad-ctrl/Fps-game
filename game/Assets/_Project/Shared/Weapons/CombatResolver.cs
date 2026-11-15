@@ -70,12 +70,21 @@ namespace Recoil.Shared.Weapons
         public static bool ApplyHit(WeaponStats stats, string weaponId, Hitbox hitbox, Vector3 point, Vector3 direction,
             float distance, float damageScale, int tick, out HitReport report, IDamageable attacker = null)
         {
+            return ApplyDirectHit(stats, weaponId, hitbox.Owner, hitbox.zone, point, direction, distance, damageScale, tick, out report, attacker);
+        }
+
+        /// <summary>
+        /// A bullet striking a target's <paramref name="zone"/>, however that was worked out:
+        /// with range falloff and the body part's multiplier.
+        /// </summary>
+        public static bool ApplyDirectHit(WeaponStats stats, string weaponId, IDamageable target, HitZone zone, Vector3 point,
+            Vector3 direction, float distance, float damageScale, int tick, out HitReport report, IDamageable attacker = null)
+        {
             report = default;
-            IDamageable target = hitbox.Owner;
             if (target == null || !target.IsAlive || target == attacker) return false;
 
-            float amount = DamageCalculator.Compute(stats, distance, hitbox.zone) * damageScale;
-            report = Deliver(target, amount, hitbox.zone, point, direction, distance, weaponId, tick, attacker);
+            float amount = DamageCalculator.Compute(stats, distance, zone) * damageScale;
+            report = Deliver(target, amount, zone, point, direction, distance, weaponId, tick, attacker);
             return report.Damage > 0f || report.Killed;
         }
 

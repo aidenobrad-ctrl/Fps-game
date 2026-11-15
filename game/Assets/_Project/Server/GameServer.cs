@@ -115,6 +115,9 @@ namespace Recoil.Server
         readonly NetWriter _handshake = new NetWriter(64);
         readonly NetWriter _out = new NetWriter(1400);
         readonly PlayerInputCmd[] _inputs = new PlayerInputCmd[NetMessages.MaxInputsPerMessage];
+        readonly HitClaim[] _claimsIn = new HitClaim[NetMessages.MaxHitClaims];
+        ClaimTally _claimTally;
+        int _claimLogTick;
         readonly List<HitReport> _reports = new List<HitReport>(8);
         readonly bool[] _aliveAtTickStart = new bool[MaxPlayers];
         readonly Action<NetReader> _onMessage;
@@ -777,6 +780,17 @@ namespace Recoil.Server
                     if (!reader.Failed && player.Ready) OnChat(player, text, teamOnly);
                     break;
                 }
+                case NetMessage.HitClaims:
+                {
+                    int count = NetMessages.ReadHitClaims(reader, out int tick, _claimsIn);
+                    if (reader.Failed || !player.Ready || player.IsBot) break;
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (player.PendingClaims.Count >= ServerPlayer.MaxPendingClaims) player.PendingClaims.RemoveAt(0);
+                        player.PendingClaims.Add((tick, _claimsIn[i]));
+                    }
+                    break;
+                }
             }
         }
 
@@ -956,6 +970,7 @@ namespace Recoil.Server
                 player.Body.SetPose(BodyPose.From(player.Sim.Motor.State));
                 ResolveShots(player, cmd);
             }
+            if (player.PendingClaims.Count > 0) SettleClaims(player);
 
             if (!player.Spawned) return;
             player.Sim.Capture(player.State);
@@ -980,10 +995,10 @@ namespace Recoil.Server
                 // world as it is, so it never needs to look back.
                 bool rewound = false;
                 for (int i = 0; i < weapon.Shots.Count && !rewound && !player.IsBot; i++) rewound = weapon.Shots[i].Kind != ShotKind.Projectile;
+                float viewTick = Mathf.Clamp(cmd.ViewTick, Tick - _config.maxRewindSeconds * SimConstants.TickRate, Tick);
                 if (rewound)
                 {
-                    float oldest = Tick - _config.maxRewindSeconds * SimConstants.TickRate;
-                    _lag.Rewind(player, Mathf.Clamp(cmd.ViewTick, oldest, Tick), _players);
+                    _lag.Rewind(player, viewTick, _players);
                     _world.SyncPhysics();
                 }
 
@@ -1000,6 +1015,14 @@ namespace Recoil.Server
                             HitscanHit end = CombatResolver.FireBullet(origin, direction, stats, weaponId, shot.DamageScale,
                                 Tick, _reports, player.Vitals);
                             for (int r = 0; r < _reports.Count; r++) SendHit(player, _reports[r]);
+                            if (!player.IsBot)
+                            {
+                                player.RememberShot(new ShotRecord
+                                {
+                                    Tick = cmd.Tick, Index = i, ViewTick = viewTick, Origin = origin, Direction = direction,
+                                    Stats = stats, WeaponId = weaponId, DamageScale = shot.DamageScale, Landed = _reports.Count > 0,
+                                });
+                            }
                             SendShot(player, slot, shot, origin, end.Point, end.Normal, end.HasHit && end.Hitbox == null);
                             break;
                         }
@@ -1032,6 +1055,123 @@ namespace Recoil.Server
                 Vector3 direction = AimMath.Direction(cmd.Yaw, cmd.Pitch - item.tossPitch);
                 Launch(player, origin, direction, item.projectile, item.utilityId, 1f, ProjectileSpawnMessage.UtilityBase + thrown);
             }
+        }
+
+        // ------------------------------------------------------------------ hits the shooter saw
+
+        /// <summary>The least room a reported hit is given, in metres, around the body part it names.</summary>
+        const float ClaimSlack = 0.12f;
+        /// <summary>More room for a target on the move: this many seconds of their speed, up to <see cref="MaxClaimSlack"/>.</summary>
+        const float ClaimSlackSeconds = 0.05f, MaxClaimSlack = 0.45f;
+        /// <summary>A reported hit waits at most this long for its shot, in ticks.</summary>
+        const int ClaimPatienceTicks = 90;
+
+        struct ClaimTally
+        {
+            public int Accepted, AlreadyCounted, NoShot, NotThere, BehindCover, Other;
+            public int Total => Accepted + AlreadyCounted + NoShot + NotThere + BehindCover + Other;
+        }
+
+        /// <summary>
+        /// A player's game says some of their bullets hit someone. Each claim is for a bullet
+        /// this server fired too, so it already knows exactly where that bullet went: it only
+        /// checks that the target was really there, within a few centimetres, at the moment the
+        /// shooter was looking at, and that no wall was in the way. Then the hit counts, as if
+        /// the server's own trace had found it.
+        ///
+        /// This puts what the shooter saw first. Without it, a hit could be lost to the small
+        /// differences between the picture on the shooter's screen and the server's record.
+        /// </summary>
+        void SettleClaims(ServerPlayer shooter)
+        {
+            List<(int Tick, HitClaim Claim)> claims = shooter.PendingClaims;
+            for (int i = 0; i < claims.Count; i++)
+            {
+                (int tick, HitClaim claim) = claims[i];
+                if (tick > shooter.LastProcessedTick)
+                {
+                    // Its shot is still to come; give up on it if it never does.
+                    if (tick - shooter.LastProcessedTick <= ClaimPatienceTicks) continue;
+                    _claimTally.NoShot++;
+                }
+                else if (!shooter.FindShot(tick, claim.Shot, out ShotRecord shot))
+                {
+                    _claimTally.NoShot++;
+                }
+                else
+                {
+                    SettleClaim(shooter, shot, claim);
+                }
+                claims.RemoveAt(i--);
+            }
+            ReportClaims();
+        }
+
+        void SettleClaim(ServerPlayer shooter, in ShotRecord shot, in HitClaim claim)
+        {
+            // The server's own trace already decided this bullet.
+            if (shot.Landed)
+            {
+                _claimTally.AlreadyCounted++;
+                return;
+            }
+
+            ServerPlayer target = claim.Target < MaxPlayers ? _players[claim.Target] : null;
+            if (target == null || target == shooter || !target.Alive || !shooter.Alive && !_aliveAtTickStart[shooter.Id])
+            {
+                _claimTally.Other++;
+                return;
+            }
+            if (!_lag.TryPose(target.Id, shot.ViewTick, out BodyPose pose, out float speed))
+            {
+                _claimTally.NotThere++;
+                return;
+            }
+
+            // The part they named, with a little room; failing that, any part, but never a headshot they did not see.
+            float slack = Mathf.Min(MaxClaimSlack, ClaimSlack + speed * ClaimSlackSeconds);
+            float stand = _movement.standEyeHeight;
+            HitZone zone = claim.Zone;
+            if (!BodyShapes.Raycast(pose, stand, shot.Origin, shot.Direction, shot.Stats.maxRange, slack, claim.Zone, out float distance, out _))
+            {
+                if (!BodyShapes.Raycast(pose, stand, shot.Origin, shot.Direction, shot.Stats.maxRange, slack, null, out distance, out zone) ||
+                    zone == HitZone.Head)
+                {
+                    _claimTally.NotThere++;
+                    return;
+                }
+            }
+
+            // Nothing solid between the muzzle and the hit.
+            if (distance > 0.1f && Physics.Raycast(shot.Origin, shot.Direction, out _, distance - 0.05f, GameLayers.WorldMask, QueryTriggerInteraction.Ignore))
+            {
+                _claimTally.BehindCover++;
+                return;
+            }
+
+            Vector3 point = shot.Origin + shot.Direction * distance;
+            if (CombatResolver.ApplyDirectHit(shot.Stats, shot.WeaponId, target.Vitals, zone, point, shot.Direction, distance,
+                    shot.DamageScale, Tick, out HitReport report, shooter.Vitals))
+            {
+                SendHit(shooter, report);
+                _claimTally.Accepted++;
+            }
+            else
+            {
+                // A teammate, someone protected, or someone already down.
+                _claimTally.Other++;
+            }
+        }
+
+        /// <summary>Now and then, a line in the log on how reported hits have been going, for anyone looking into hit registration.</summary>
+        void ReportClaims()
+        {
+            if (Tick - _claimLogTick < 30 * SimConstants.TickRate || _claimTally.Total == 0) return;
+            _claimLogTick = Tick;
+            ClaimTally t = _claimTally;
+            Log("Reported hits in the last half minute: " + t.Accepted + " counted, " + t.AlreadyCounted + " already counted, " +
+                t.NotThere + " not where the target was, " + t.BehindCover + " behind cover, " + t.NoShot + " for no shot, " + t.Other + " other.");
+            _claimTally = default;
         }
 
         void Launch(ServerPlayer player, Vector3 origin, Vector3 direction, WeaponStats stats, string weaponId, float damageScale, int source)

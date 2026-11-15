@@ -325,6 +325,12 @@ Because the other player is drawn in the past, a client aiming straight at them 
 
 Measured in the harness, firing at a strafing target at about 170 ms round trip: 39 of 39 shots hit with the rewind, 4 of 39 without it.
 
+### Hits the shooter saw
+
+On top of the rewind, the shooter's game reports which players its bullets were seen to hit (`HitClaims`: the command tick, which of that tick's shots, the target and the body part). The server already fired the same bullet from the same command, so it knows exactly where the bullet went; it only checks, with plain geometry rather than the physics engine (`BodyShapes`), that the named target stood across that line at the tick the shooter was looking at, give or take 12 cm plus a little for a moving target (at most 45 cm), and that no wall was in between. A bullet the server's own trace already counted is never counted twice, and a body shot reported as a headshot counts as a body shot. This puts what the shooter saw first: a hit is not lost to the small differences between the picture on screen and the server's record. Every 30 seconds the server logs how many reported hits it accepted and why it turned others down.
+
+The physics hitboxes, the firing range's dummies and this check are all built from one table in `BodyShapes`, a little larger than the bare body so a shot on a helmet or a shoulder pad counts.
+
 Projectiles are not rewound. They are launched when the server runs the command, fly in server time, and everyone is shown the same flight.
 
 ### What the server refuses
@@ -338,6 +344,7 @@ There is no separate anti-cheat pass; the server simply does not ask the client 
 | Fire faster, or without ammunition | The server runs the weapon itself |
 | Claim a hit | Clients do not report hits. The server traces every shot, with spread drawn from the same seed |
 | Rewind further than it should | The view tick is clamped to the last 0.3 s |
+| Report hits that did not happen | Each is checked against the server's own copy of the bullet, the target's recorded position and the walls |
 | Equip something it should not have | `LoadoutRules` replaces it, as it would on loading a save |
 | Send malformed or hostile packets | `NetReader` fails closed: a bad length, a number that is not a number or a truncated message is dropped. Tested with several thousand random packets and messages |
 | Learn the opponent's ammunition or cooldowns | Only a player's own snapshot carries their full state |

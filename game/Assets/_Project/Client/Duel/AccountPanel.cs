@@ -164,6 +164,12 @@ namespace Recoil.Client.Duel
             _services.Notice -= ShowNotice;
         }
 
+        /// <summary>Puts away any open form, as when the menu changes page.</summary>
+        public void CloseForms()
+        {
+            if (_form != Form.None) Show(Form.None);
+        }
+
         // ------------------------------------------------------------------ the summary
 
         /// <summary>Redraws the summary line for whoever is signed in now.</summary>

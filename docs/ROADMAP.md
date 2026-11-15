@@ -69,6 +69,7 @@ The game is built in phases. Each one ends with something you can run and judge,
 - A server that owns the match. It can run on its own (a dedicated server) or inside the game of a player who hosts.
 - Client-side prediction: your own movement and shooting happen at once, and are checked against the server and corrected if they differ.
 - Lag compensation: instant shots are judged against where the target was on the shooter's screen.
+- Hits the shooter saw: the client reports its bullets that landed, and the server checks each against its own copy of the shot before it counts.
 - The other player drawn smoothly from snapshots, as a placeholder body holding a block for a weapon, with tracers and shot sounds.
 - Projectiles and utility items simulated on the server and drawn on both clients.
 - The server runs movement, fire rate and ammunition itself, limits how fast a client can send commands, and checks every loadout with the same rules the client uses.

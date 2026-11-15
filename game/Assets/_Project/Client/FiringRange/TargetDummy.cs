@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Recoil.Shared.Match;
 using Recoil.Client.Visuals;
 using Recoil.Shared.Combat;
 using Recoil.Shared.Simulation;
@@ -67,12 +68,10 @@ namespace Recoil.Client.FiringRange
             _headMaterial = new Material(GreyboxMaterials.Flat(HeadColor));
             _barMaterial = new Material(GreyboxMaterials.Unlit(Color.green));
 
-            BodyPart("Head", PrimitiveType.Sphere, HitZone.Head, new Vector3(0f, 1.63f, 0f), new Vector3(0.25f, 0.27f, 0.25f), _headMaterial);
-            BodyPart("Torso", PrimitiveType.Cube, HitZone.Body, new Vector3(0f, 1.17f, 0f), new Vector3(0.44f, 0.62f, 0.26f), _bodyMaterial);
-            BodyPart("ArmL", PrimitiveType.Cube, HitZone.Limb, new Vector3(-0.3f, 1.17f, 0f), new Vector3(0.12f, 0.6f, 0.14f), _bodyMaterial);
-            BodyPart("ArmR", PrimitiveType.Cube, HitZone.Limb, new Vector3(0.3f, 1.17f, 0f), new Vector3(0.12f, 0.6f, 0.14f), _bodyMaterial);
-            BodyPart("LegL", PrimitiveType.Cube, HitZone.Limb, new Vector3(-0.115f, 0.43f, 0f), new Vector3(0.17f, 0.86f, 0.19f), _bodyMaterial);
-            BodyPart("LegR", PrimitiveType.Cube, HitZone.Limb, new Vector3(0.115f, 0.43f, 0f), new Vector3(0.17f, 0.86f, 0.19f), _bodyMaterial);
+            // The same shapes as a player's body, so practice here carries over to a match.
+            foreach (BodyShapes.Part part in BodyShapes.Parts)
+                BodyPart(part.Name, part.Round ? PrimitiveType.Sphere : PrimitiveType.Cube, part.Zone, part.Offset, part.Size,
+                    part.Zone == HitZone.Head ? _headMaterial : _bodyMaterial);
 
             GameObject bar = GreyboxKit.Visual(transform, "HealthBar", PrimitiveType.Cube,
                 new Vector3(0f, 1.95f, 0f), new Vector3(BarWidth, 0.05f, 0.03f), _barMaterial, castShadows: false);

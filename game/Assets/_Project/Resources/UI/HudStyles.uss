@@ -801,10 +801,12 @@
 
 /* ---------------------------------------------------------------- Phase 9: motion and feedback */
 
-/* Buttons and tabs ease between states instead of snapping, and give a little when pressed. */
+/* Buttons and tabs ease between states instead of snapping, and give a little when pressed.
+   Never transition colour or opacity here: text that starts a transition invisible can stay
+   that way until something redraws it. */
 .pause-button, .armory-tab, .menu-button, .unity-button {
-    transition-property: background-color, color, scale, translate;
-    transition-duration: 0.12s, 0.12s, 0.08s, 0.12s;
+    transition-property: background-color, scale, translate;
+    transition-duration: 0.12s, 0.08s, 0.12s;
     transition-timing-function: ease-out;
 }
 
@@ -831,15 +833,15 @@
     transition-timing-function: ease-out;
 }
 
-/* Cards and screens fade and rise in: add "enter", then take it away a frame later. */
+/* Cards and screens rise into place: add "enter", then take it away a frame later. They slide
+   only; they never fade, so their text is always drawn. */
 .pause-card, .screen-panel {
-    transition-property: opacity, translate;
+    transition-property: translate;
     transition-duration: 0.22s;
     transition-timing-function: ease-out-cubic;
 }
 
 .enter {
-    opacity: 0;
     translate: 0 18px;
 }
 
@@ -890,14 +892,13 @@
 
 /* Announcements punch in. */
 .banner-pop {
-    transition-property: scale, opacity;
+    transition-property: scale;
     transition-duration: 0.25s;
     transition-timing-function: ease-out-back;
 }
 
 .banner-pop--start {
     scale: 1.5 1.5;
-    opacity: 0;
 }
 
 /* Medals: a short line under the crosshair for a headshot, a multi-kill or a streak. */
@@ -912,13 +913,13 @@
     -unity-font-style: bold;
     color: rgb(255, 214, 92);
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
-    transition-property: scale, opacity;
+    transition-property: scale;
     transition-duration: 0.2s;
     transition-timing-function: ease-out-back;
 }
 
 .medal--hidden {
-    opacity: 0;
+    visibility: hidden;
     scale: 0.6 0.6;
 }
 
@@ -926,4 +927,129 @@
     font-size: 18px;
     color: rgb(240, 244, 250);
     letter-spacing: 2px;
+}
+
+/* ---------------------------------------------------------------- the main menu */
+
+/* The menu covers the whole screen. Its layout is set in code; this is the look. */
+.main-menu .pause-card {
+    border-top-width: 2px;
+}
+
+.home-title {
+    -unity-font-style: bold;
+    color: rgb(240, 244, 250);
+    text-shadow: 0 6px 24px rgba(0, 0, 0, 0.7);
+}
+
+.home-button {
+    margin: 0 0 8px 0;
+    padding-left: 24px;
+    padding-right: 16px;
+    background-color: rgba(10, 14, 20, 0.72);
+    border-width: 0;
+    border-left-width: 4px;
+    border-left-color: rgba(255, 255, 255, 0.16);
+    border-radius: 3px;
+    transition-property: background-color, translate, border-left-color, scale;
+    transition-duration: 0.14s, 0.14s, 0.14s, 0.08s;
+    transition-timing-function: ease-out;
+}
+
+.home-button:hover {
+    background-color: rgba(38, 216, 255, 0.16);
+    border-left-color: rgb(38, 216, 255);
+    translate: 10px 0;
+}
+
+.home-button.primary {
+    background-color: rgb(38, 216, 255);
+    border-left-color: rgb(255, 255, 255);
+}
+
+.home-button.primary:hover {
+    background-color: rgb(120, 232, 255);
+}
+
+.home-button:active {
+    scale: 0.98 0.98;
+}
+
+.home {
+    transition-property: translate;
+    transition-duration: 0.22s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.play-page {
+    transition-property: translate;
+    transition-duration: 0.22s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.menu-panel {
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.06);
+    border-right-color: rgba(255, 255, 255, 0.06);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.menu-panel .unity-base-field {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.menu-panel .unity-base-field__label {
+    min-width: 150px;
+    color: rgb(240, 244, 250);
+}
+
+/* Mode tiles on the play page. */
+.mode-tile {
+    background-color: rgba(10, 14, 20, 0.78);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    border-top-width: 3px;
+    border-top-color: rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    transition-property: background-color, translate, border-top-color, scale;
+    transition-duration: 0.14s, 0.14s, 0.14s, 0.08s;
+    transition-timing-function: ease-out;
+}
+
+.mode-tile:hover {
+    background-color: rgba(26, 38, 52, 0.9);
+    border-top-color: rgba(38, 216, 255, 0.7);
+    translate: 0 -3px;
+}
+
+.mode-tile--chosen {
+    background-color: rgba(18, 62, 78, 0.92);
+    border-color: rgba(38, 216, 255, 0.55);
+    border-top-color: rgb(38, 216, 255);
+}
+
+.mode-tile--chosen:hover {
+    background-color: rgba(22, 74, 92, 0.95);
+}
+
+.mode-tile:active {
+    scale: 0.98 0.98;
+}
+
+.find-button {
+    letter-spacing: 6px;
+    -unity-font-style: bold;
+}
+
+.back-button {
+    letter-spacing: 2px;
+    background-color: rgba(10, 14, 20, 0.75);
+}
+
+/* The menu's art fills the screen whatever its shape, cropping rather than stretching. */
+.menu-backdrop {
+    -unity-background-scale-mode: scale-and-crop;
 }

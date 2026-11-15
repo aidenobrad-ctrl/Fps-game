@@ -82,6 +82,31 @@ namespace Recoil.Server
         public int LastProcessedTick;
         public float CommandCredit;
 
+        /// <summary>This player's recent bullets, for checking the hits their game reports.</summary>
+        public readonly ShotRecord[] Shots = new ShotRecord[ShotHistory];
+        public int ShotCount;
+        /// <summary>Hits their game saw, waiting for the shot they belong to to be fired here.</summary>
+        public readonly List<(int Tick, HitClaim Claim)> PendingClaims = new List<(int, HitClaim)>(MaxPendingClaims);
+
+        public const int ShotHistory = 128, MaxPendingClaims = 64;
+
+        /// <summary>Remembers a bullet fired here, overwriting the oldest.</summary>
+        public void RememberShot(in ShotRecord shot) => Shots[ShotCount++ % ShotHistory] = shot;
+
+        /// <summary>The bullet fired on a command tick, by its place among that tick's shots.</summary>
+        public bool FindShot(int tick, int index, out ShotRecord shot)
+        {
+            int oldest = System.Math.Max(0, ShotCount - ShotHistory);
+            for (int i = ShotCount - 1; i >= oldest; i--)
+            {
+                shot = Shots[i % ShotHistory];
+                if (shot.Tick == tick && shot.Index == index) return true;
+                if (shot.Tick < tick) break;
+            }
+            shot = default;
+            return false;
+        }
+
         public bool IsBot => Connection == null;
         public bool Alive => Spawned && Vitals.IsAlive;
         public PlayerStats Stats => new PlayerStats { Team = Team, Kills = Kills, Deaths = Deaths, Score = Score };
@@ -101,5 +126,21 @@ namespace Recoil.Server
             GunLevel = 0;
             RespawnTick = -1;
         }
+    }
+
+    /// <summary>One bullet a person fired, as the server fired it.</summary>
+    public struct ShotRecord
+    {
+        /// <summary>The command tick it was fired on, and its place among that tick's shots.</summary>
+        public int Tick;
+        public int Index;
+        /// <summary>The moment the shooter was looking at, in server ticks.</summary>
+        public float ViewTick;
+        public UnityEngine.Vector3 Origin, Direction;
+        public Recoil.Shared.Weapons.WeaponStats Stats;
+        public string WeaponId;
+        public float DamageScale;
+        /// <summary>The server's own trace already hurt someone with it.</summary>
+        public bool Landed;
     }
 }

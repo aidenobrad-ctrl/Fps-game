@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Recoil.Shared.Match;
+using Recoil.Shared.Simulation;
 
 namespace Recoil.Server
 {
@@ -85,6 +86,34 @@ namespace Recoil.Server
                 player.Body.SetHittable(player.Alive);
                 player.Body.SetPose(BodyPose.Lerp(a.Pose, b.Pose, blend));
             }
+        }
+
+        /// <summary>
+        /// Where a player stood at <paramref name="viewTick"/>, which may fall between two
+        /// ticks, worked out from the record alone. False if they were not there to be hit
+        /// then, or nothing that old is remembered.
+        /// </summary>
+        public bool TryPose(int player, float viewTick, out BodyPose pose, out float speed)
+        {
+            pose = default;
+            speed = 0f;
+            int earlier = Mathf.FloorToInt(viewTick);
+            float blend = viewTick - earlier;
+
+            bool hasA = Find(player, earlier, out Sample a);
+            bool hasB = Find(player, earlier + 1, out Sample b);
+            if (!hasA && !hasB) return false;
+            if (!hasA) a = b;
+            if (!hasB) b = a;
+            if (!a.Hittable && !b.Hittable) return false;
+            if (!a.Hittable) a = b;
+            if (!b.Hittable || a.SpawnCount != b.SpawnCount) b = a;
+
+            pose = BodyPose.Lerp(a.Pose, b.Pose, blend);
+            // How fast they were going: the further they moved, the more a small difference in timing matters.
+            if (Find(player, earlier - 2, out Sample before) && before.Hittable && before.SpawnCount == a.SpawnCount)
+                speed = Vector3.Distance(before.Pose.Position, b.Pose.Position) / (3f * SimConstants.TickDelta);
+            return true;
         }
 
         /// <summary>Puts everyone back where they are now.</summary>

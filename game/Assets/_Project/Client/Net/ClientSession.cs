@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Recoil.Shared.Cosmetics;
 using Recoil.Shared.Loadouts;
@@ -346,6 +347,18 @@ namespace Recoil.Client.Net
             if (Match.Phase == MatchPhase.Countdown && CommandArrivalTick <= Match.PhaseEndTick)
                 MatchRules.Freeze(ref cmd);
             return cmd;
+        }
+
+        /// <summary>
+        /// Tells the server which players our bullets were seen to hit on one command tick. It
+        /// checks each against its own record before anything counts.
+        /// </summary>
+        public void ClaimHits(int tick, List<HitClaim> claims)
+        {
+            if (Status != ClientStatus.Connected || claims.Count == 0) return;
+            _out.Reset();
+            NetMessages.WriteHitClaims(_out, tick, claims);
+            _connection.Send(_out, true);
         }
 
         /// <summary>Records the command and the state it led to, ready to be sent and later checked.</summary>
