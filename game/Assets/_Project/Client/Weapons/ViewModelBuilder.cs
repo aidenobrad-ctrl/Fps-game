@@ -16,24 +16,38 @@ namespace Recoil.Client.Weapons
         public Vector3 HipEuler;
         /// <summary>Aimed pose: puts the sight line through the centre of the screen.</summary>
         public Vector3 AdsPosition;
+        /// <summary>Where the hands go: the pistol grip, and the handguard (null for a one-handed weapon).</summary>
+        public Transform Grip, Support;
+        /// <summary>How far behind the weapon's origin its back end is: the butt of the stock. Negative.</summary>
+        public float RearZ;
     }
 
     /// <summary>
-    /// Builds a placeholder first-person model for any weapon out of boxes, from the
-    /// proportions in its <see cref="WeaponViewProfile"/> and the attachments fitted to it. So
-    /// every weapon looks different in the hands, and fitting a suppressor or a drum
-    /// magazine is visible, before any real art exists.
+    /// Builds the model of any weapon from the proportions in its <see cref="WeaponViewProfile"/>
+    /// and the attachments fitted to it, so every weapon looks different and fitting a
+    /// suppressor or a drum magazine shows. Each part (receiver, handguard, barrel, stock,
+    /// grip, magazine, sights...) is a detailed Blender-made piece from the "GunParts" models,
+    /// stretched to the size the layout asks for; without that file, plain boxes stand in.
+    ///
+    /// The same model serves the first-person view and, at the same scale, the gun in other
+    /// players' hands.
     /// </summary>
     public static class ViewModelBuilder
     {
         // The skin of the model being built. Building happens all at once on the main thread,
         // so it is set for the length of one Build call.
         static CosmeticItem _skin;
+        static Material _dark, _accent;
+        static bool _shadows;
 
         /// <param name="skin">The weapon skin to wear, or null (or the factory skin) for the weapon's own colours.</param>
-        public static ViewModelLayout Build(Transform parent, WeaponBuild build, CosmeticItem skin = null)
+        /// <param name="castShadows">True for a gun out in the world; the first-person view casts none.</param>
+        public static ViewModelLayout Build(Transform parent, WeaponBuild build, CosmeticItem skin = null, bool castShadows = false)
         {
             _skin = skin;
+            _shadows = castShadows;
+            _dark = DarkMaterial(build.Weapon.view);
+            _accent = AccentMaterial(build.Weapon.view);
             try
             {
                 return BuildModel(parent, build);
@@ -41,6 +55,8 @@ namespace Recoil.Client.Weapons
             finally
             {
                 _skin = null;
+                _dark = _accent = null;
+                _shadows = false;
             }
         }
 
@@ -204,6 +220,10 @@ namespace Recoil.Client.Weapons
             }
 
             layout.Muzzle = Anchor(root, "Muzzle", new Vector3(0f, barrelY, muzzleZ));
+            layout.Grip = Anchor(root, "Grip Hold", new Vector3(0f, -0.075f * b, -length * 0.28f));
+            bool oneHanded = p.stockLength <= 0.01f && length < 0.22f;
+            layout.Support = oneHanded ? null : Anchor(root, "Support Hold", new Vector3(0f, underY, underZ + (grip == AttachmentVisual.None ? 0.02f : 0f)));
+            layout.RearZ = -front - (p.stockLength > 0.01f && stock != AttachmentVisual.NoStock ? p.stockLength : 0f);
 
             // Handguns are held out at arm's length; long guns sit against the shoulder.
             bool handgun = p.stockLength <= 0.01f && length < 0.22f;
@@ -218,8 +238,14 @@ namespace Recoil.Client.Weapons
         {
             const float baseHeight = 0.012f, wall = 0.005f;
             float bottom = top + baseHeight;
+            if (ModelLibrary.Get(GunSet, "SightFrame") != null)
+            {
+                // One piece: the base, the posts and the top, hollow in the middle.
+                Vector3 size = new Vector3(width + wall * 2f, baseHeight + height + wall, depth);
+                Part(root, "SightFrame", new Vector3(0f, top + size.y * 0.5f, z), size, material);
+                return bottom + height * 0.5f;
+            }
             float pillarX = width * 0.5f + wall * 0.5f;
-
             Part(root, "SightBase", new Vector3(0f, top + baseHeight * 0.5f, z), new Vector3(width + wall * 2f, baseHeight, depth), material);
             Part(root, "SightL", new Vector3(-pillarX, bottom + height * 0.5f, z), new Vector3(wall, height, depth), material);
             Part(root, "SightR", new Vector3(pillarX, bottom + height * 0.5f, z), new Vector3(wall, height, depth), material);
@@ -246,6 +272,9 @@ namespace Recoil.Client.Weapons
             Part(root, "Sight", new Vector3(-0.07f * b, 0.07f * b, 0f), new Vector3(0.008f, 0.05f, 0.06f), dark);
 
             layout.Muzzle = Anchor(root, "Muzzle", new Vector3(0f, 0f, length * 0.5f + 0.03f));
+            layout.Grip = Anchor(root, "Grip Hold", new Vector3(0f, -0.1f * b, -length * 0.05f));
+            layout.Support = Anchor(root, "Support Hold", new Vector3(0f, -0.06f * b, length * 0.25f));
+            layout.RearZ = -length * 0.5f;
             layout.HipPosition = new Vector3(0.2f, -0.15f, 0.28f + length * 0.15f);
             // A launcher stays on the shoulder when aimed; the crosshair does the aiming.
             layout.AdsPosition = new Vector3(0.12f, -0.11f, 0.24f + length * 0.15f);
@@ -261,6 +290,7 @@ namespace Recoil.Client.Weapons
             Part(root, "Blade", new Vector3(0f, 0f, 0.085f + length * 0.5f), new Vector3(0.006f, 0.036f * p.bulk, length), BodyMaterial(p));
 
             layout.Muzzle = Anchor(root, "Tip", new Vector3(0f, 0f, 0.085f + length));
+            layout.Grip = Anchor(root, "Grip Hold", Vector3.zero);
             layout.HipPosition = new Vector3(0.2f, -0.2f, 0.3f);
             layout.HipEuler = new Vector3(-38f, -14f, 22f);
             layout.AdsPosition = layout.HipPosition;
@@ -276,6 +306,7 @@ namespace Recoil.Client.Weapons
             Part(root, "Ring", new Vector3(0f, 0f, -0.05f), new Vector3(0.006f, 0.022f, 0.012f), AccentMaterial(p));
 
             layout.Muzzle = Anchor(root, "Tip", new Vector3(0f, 0f, 0.045f + length));
+            layout.Grip = Anchor(root, "Grip Hold", Vector3.zero);
             layout.HipPosition = new Vector3(0.19f, -0.13f, 0.36f);
             layout.HipEuler = new Vector3(-58f, -6f, 8f);
             layout.AdsPosition = new Vector3(0.15f, -0.1f, 0.36f);
@@ -291,8 +322,52 @@ namespace Recoil.Client.Weapons
 
         static Color Darken(Color color) => new Color(color.r * 0.55f, color.g * 0.55f, color.b * 0.55f, 1f);
 
-        static Transform Part(Transform root, string name, Vector3 position, Vector3 size, Material material) =>
-            GreyboxKit.Visual(root, name, PrimitiveType.Cube, position, size, material, castShadows: false).transform;
+        public const string GunSet = "GunParts";
+
+        /// <summary>Which detailed model each part of the layout uses. Anything not listed is a bevelled box.</summary>
+        public static string ModelFor(string part)
+        {
+            switch (part)
+            {
+                case "Receiver": case "Handguard": case "Barrel": case "Suppressor": case "MuzzleDevice": case "Stock":
+                case "Grip": case "Magazine": case "Drum": case "VerticalGrip": case "AngledGrip": case "Laser":
+                case "SightFrame": case "Scope": case "ScopeMount": case "Tube": case "Mouth": case "Tail": case "Band":
+                case "Blade": case "Handle":
+                    return part;
+                case "RearSightL": case "RearSightR": case "FrontSight": case "Sight":
+                    return "Post";
+                case "Ring":
+                    return "Band";
+                default:
+                    return "Box";
+            }
+        }
+
+        /// <summary>One part of the weapon, a detailed model stretched to <paramref name="size"/>, in <paramref name="material"/>.</summary>
+        static Transform Part(Transform root, string name, Vector3 position, Vector3 size, Material material)
+        {
+            ModelMesh model = ModelLibrary.Get(GunSet, ModelFor(name));
+            if (model == null)
+                return GreyboxKit.Visual(root, name, PrimitiveType.Cube, position, size, material, castShadows: _shadows).transform;
+
+            var go = new GameObject(name);
+            go.transform.SetParent(root, false);
+            go.transform.localPosition = position;
+            go.transform.localScale = size;
+            Material dark = _dark != null ? _dark : material;
+            Material accent = _accent != null ? _accent : material;
+            ModelLibrary.Attach(go, model, zone =>
+            {
+                switch (zone)
+                {
+                    case ModelZone.Dark: return dark;
+                    case ModelZone.Metal: return ModelMaterials.Metal;
+                    case ModelZone.Glow: return accent;
+                    default: return material;
+                }
+            }, _shadows);
+            return go.transform;
+        }
 
         static Transform Anchor(Transform root, string name, Vector3 position)
         {

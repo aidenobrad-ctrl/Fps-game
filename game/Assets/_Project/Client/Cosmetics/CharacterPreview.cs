@@ -49,10 +49,18 @@ namespace Recoil.Client.Cosmetics
             _look.SetSide(false, false);
             Pose();
 
-            _hand = new GameObject("Hand").transform;
-            _hand.SetParent(_body.Root, false);
-            _hand.localPosition = new Vector3(0.24f, 1.2f, 0.22f);
-            _hand.localRotation = Quaternion.Euler(4f, -6f, 0f);
+            if (_look.Soldier != null)
+            {
+                // The soldier holds the weapon properly, at the shoulder.
+                _hand = _look.Soldier.WeaponMount;
+            }
+            else
+            {
+                _hand = new GameObject("Hand").transform;
+                _hand.SetParent(_body.Root, false);
+                _hand.localPosition = new Vector3(0.24f, 1.2f, 0.22f);
+                _hand.localRotation = Quaternion.Euler(4f, -6f, 0f);
+            }
 
             GreyboxKit.Visual(transform, "Plinth", PrimitiveType.Cylinder, new Vector3(0f, -0.05f, 0f), new Vector3(1.6f, 0.05f, 1.6f),
                 GreyboxMaterials.Flat(new Color(0.1f, 0.12f, 0.16f)));
@@ -98,10 +106,24 @@ namespace Recoil.Client.Cosmetics
             _skin = skin;
             if (_weaponModel != null) Destroy(_weaponModel.gameObject);
             _weaponModel = null;
-            if (weapon == null) return;
-            _weaponModel = ViewModelBuilder.Build(_hand, weapon, skin).Root;
-            _weaponModel.localPosition = Vector3.zero;
+            SoldierView soldier = _look.Soldier;
+            if (weapon == null)
+            {
+                soldier?.Hold(null, null);
+                return;
+            }
+            ViewModelLayout layout = ViewModelBuilder.Build(_hand, weapon, skin, castShadows: soldier != null);
+            _weaponModel = layout.Root;
             _weaponModel.localRotation = Quaternion.identity;
+            if (soldier == null)
+            {
+                _weaponModel.localPosition = Vector3.zero;
+                return;
+            }
+            bool handgun = layout.Support == null;
+            _weaponModel.localPosition = handgun ? new Vector3(-0.14f, -0.06f, 0.36f) : new Vector3(0f, 0f, -layout.RearZ - 0.03f);
+            if (layout.Kind == ViewModelKind.Blade || layout.Kind == ViewModelKind.Thrown) _weaponModel.localRotation = Quaternion.Euler(-60f, 0f, 0f);
+            soldier.Hold(layout.Grip, layout.Support);
         }
 
         /// <summary>Turns the character as the player drags across the picture.</summary>
@@ -128,6 +150,16 @@ namespace Recoil.Client.Cosmetics
         {
             _body.SetPose(new BodyPose { Position = transform.position, Yaw = _yaw, EyeHeight = _movement.standEyeHeight });
             _look.Follow();
+            // Standing at ease, the weapon a little low.
+            _look.Animate(new SoldierMotion
+            {
+                Yaw = _yaw,
+                Pitch = 14f,
+                EyeHeight = _movement.standEyeHeight,
+                StandEyeHeight = _movement.standEyeHeight,
+                Stance = Stance.Standing,
+                Grounded = true,
+            }, Time.unscaledDeltaTime);
         }
 
         void PlaceCamera(float weapon)

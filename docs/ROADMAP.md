@@ -156,6 +156,7 @@ You asked for this next, ahead of progression, with everything free to pick for 
 - **The Customize screen** from the main menu and the Esc menu, with a live preview that turns, and Randomize and Reset.
 - **Seen online:** your look travels with you into a match and changes there straight away; the server passes on at most two changes a second per player. Bots wear random looks.
 - **Fair by construction:** cosmetics have no colliders and never touch the hitboxes, and team-coloured shoulder pads sit on every outfit.
+- **Models (later):** an original armoured soldier and detailed weapon parts, built in Blender from code (`art/blender`), with a procedural walk, crouch, slide and jump, arms solved to the gun, and first-person gloves.
 - Saved on your computer (`cosmetics.json`). With accounts on, it would follow the account like loadouts do; that wiring is for when accounts are switched on.
 
 **You can test:** open Customize, dress up, check your weapon skin in first person on the range, then join a match (two copies, or bots) and see each other's looks.

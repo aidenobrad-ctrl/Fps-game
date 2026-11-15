@@ -483,8 +483,8 @@ A player's look is a `CharacterLook`: the id of the item chosen for each slot (s
 | Catalog and rules | `CosmeticCatalog`, `CharacterLook`, `LookRules` (Shared) | What exists, what a legal look is, random looks for bots |
 | Saved look | `CosmeticsLibrary` (Client/Cosmetics) | `cosmetics.json` beside the loadouts; raises `Changed` |
 | On the wire | `NetMessages.WriteLook`/`ReadLook` | Each slot as its item's position in the catalog (one byte), then the per-weapon skins; at most about a kilobyte. Sent in the hello, in every `PlayerInfo`, and in a `Look` message when it changes |
-| Drawing a character | `CharacterLookView`, `LookMaterials` (Client/Visuals) | Materials on the body parts, headgear and back items from simple shapes on anchors that follow the head and torso, patterns drawn into small textures in code |
-| Weapon skins | `ViewModelBuilder` (first person), `RemotePlayerView` (others) | The skin's materials in place of the weapon's own colours |
+| Drawing a character | `SoldierView`, `CharacterLookView`, `LookMaterials` (Client/Visuals) | The Blender-made armoured soldier in the suit, trim, helmet and visor colours; headgear and back items on anchors that move with the head and torso; patterns drawn into small textures in code |
+| Weapon skins | `ViewModelBuilder` (first person and others' hands), `RemotePlayerView` | The skin's materials in place of the weapon's own colours |
 | The screen | `CustomizeScreen` (Client/UI), `CharacterPreview` | Categories, item tiles, and a character on a stage far below the level filmed into a render texture |
 
 Catalog lists are append-only, because the wire format sends positions: add new items at the end and retire old ones by hiding them. The server passes a player's new look on at most twice a second, always ending on the latest.
@@ -579,4 +579,18 @@ These files may use nothing but `System`, so they compile in both.
 - Data that designers tune lives in ScriptableObject assets under `Content/`, never as constants in code.
 - Physics layers are referenced by index through `GameLayers`: `Character` (8) for movement capsules, `Hitbox` (9) for per-body-part damage colliders, and `ServerCharacter` (10) and `ServerHitbox` (11) for the server's copies. Bullets hit the world and hitboxes; movement collides with the world.
 - Units are metres, seconds and degrees.
-- Levels, props and weapon models are built from code (`GreyboxKit`, `RangeLayout`, `ArenaLayout`, `ViewModelBuilder`) because there is no art yet. They are stand-ins for authored scenes and prefabs, which replace them as content arrives.
+- Levels and props are built from code (`GreyboxKit`, `RangeLayout`, `ArenaLayout`) because there is no level art yet. Characters and weapons use Blender-made models (see "Models" below).
+
+### Models
+
+`art/blender/recoil_models.py` builds the game's models in Blender from code and exports them to `Resources/Models/*.bytes`, a small format `ModelFile` reads (positions, normals, UVs and one submesh per material zone):
+
+    blender -b --python art/blender/recoil_models.py -- --out game/Assets/_Project/Resources/Models --preview <folder>
+    blender -b --python art/blender/recoil_models.py -- --out /tmp/x --backdrop <file.png> --samples 128
+
+- **The soldier** is an original armoured operator in fifteen rigid segments (pelvis, torso, head, upper arms, forearms, hands, thighs, shins, boots), each modelled around its joint. `SoldierView` hangs them from each other and poses them every frame: legs walk and run with the speed, step sideways when strafing, bend to crouch, tuck in the air and stretch out in a slide; torso, head and gun share the view's pitch; each arm is solved (two-bone IK) to the gun's grip and handguard. Zones take the player's suit pattern, trim, a darker helmet, the visor's glow and the team's colour on the shoulder pads.
+- **Weapons** are still laid out by `ViewModelBuilder` from each weapon's proportions and attachments, but every part (receiver with rail and ejection port, vented handguard, barrel, suppressor, muzzle device, stock, grip, magazines, drum, foregrips, laser, sight frame, scope, launcher and blade parts) is a detailed model made to fill a unit box, stretched to the size the layout asks for. The same model is the first-person view and the gun in other players' hands.
+- **First-person arms** (`FirstPersonArms`) put the soldier's gloves and forearms on the weapon in the player's colours.
+- **The menu's backdrop** (`Resources/UI/MenuBackdrop.png`) is rendered from the same models.
+
+The script also renders previews (the soldier, every part, assembled guns, a posed soldier using the game's own rig rules, and the first-person view), which is how the models were checked. Without the model files the game falls back to the simple shapes. Hitboxes are unchanged and separate: no pose or outfit makes anyone easier or harder to hit.

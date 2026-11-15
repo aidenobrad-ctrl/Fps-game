@@ -1,0 +1,3 @@
+# Model data and images must reach Unity byte for byte, whatever the line-ending settings.
+*.bytes binary
+*.png binary

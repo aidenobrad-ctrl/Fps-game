@@ -92,6 +92,7 @@ namespace Recoil.Client.Weapons
 
             _shownBuild = build;
             _layout = ViewModelBuilder.Build(transform, build, CosmeticsLibrary.SkinFor(build.Weapon.weaponId));
+            FirstPersonArms.Attach(_layout, CosmeticsLibrary.Local?.Look);
             _kick = _kickVelocity = 0f;
             _swing = 0f;
             _reloadBlend = 0f;

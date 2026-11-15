@@ -7,9 +7,11 @@ using Recoil.Shared.Match;
 namespace Recoil.Client.Visuals
 {
     /// <summary>
-    /// Dresses a character body in a <see cref="CharacterLook"/>: the suit's colour and pattern
-    /// on the torso and legs, the trim colour on the arms, a visor across the face, and
-    /// headgear and a back item built from simple shapes.
+    /// Dresses a character body in a <see cref="CharacterLook"/>. The body is the
+    /// Blender-made armoured soldier (<see cref="SoldierView"/>): the suit's colour and pattern
+    /// on its armour, the trim colour on its pads and guards, a darker helmet with the visor
+    /// glowing in the chosen colour, and headgear and a back item on top. If the model file
+    /// is missing, the hitbox shapes themselves are coloured instead.
     ///
     /// Everything added here is for looking at only. It has no colliders, so it can never be
     /// hit or block a shot, and nobody is harder or easier to hit for what they wear. Team
@@ -29,9 +31,27 @@ namespace Recoil.Client.Visuals
         Color _suitTint = Color.white, _trimBase = Color.white, _helmetBase = Color.white;
         GameObject _headItems, _backItems;
         CharacterLook _shown;
+        readonly SoldierView _soldier;
+
+        /// <summary>The animated soldier, or null when the model file is missing and the simple shapes are shown.</summary>
+        public SoldierView Soldier => _soldier;
 
         public CharacterLookView(UnityCharacterBody body)
         {
+            if (SoldierView.Available)
+            {
+                _soldier = new SoldierView(body.Root, castShadows: true);
+                _headAnchor = new GameObject("Head Gear").transform;
+                _headAnchor.SetParent(_soldier.HeadAnchor, false);
+                _backAnchor = new GameObject("Back Gear").transform;
+                _backAnchor.SetParent(_soldier.BackAnchor, false);
+                _backAnchor.localPosition = new Vector3(0f, 0f, -0.03f);
+                _padsAnchor = new GameObject("Team Pads (on the model)").transform;
+                _padsAnchor.SetParent(body.Root, false);
+                Apply(new CharacterLook());
+                return;
+            }
+
             foreach (UnityCharacterBody.Part part in body.Parts)
             {
                 GameObject go = part.Transform.gameObject;
@@ -89,6 +109,14 @@ namespace Recoil.Client.Visuals
             foreach (MeshRenderer renderer in _suitRenderers) renderer.sharedMaterial = _suit;
             foreach (MeshRenderer renderer in _trimRenderers) renderer.sharedMaterial = _trim;
             if (_headRenderer != null) _headRenderer.sharedMaterial = _helmet;
+            if (_soldier != null)
+            {
+                // Armour takes a little shine; the visor glows in its own colour.
+                ModelMaterials.Tune(_suit, 0.05f, 0.42f);
+                ModelMaterials.Tune(_trim, 0.25f, 0.5f);
+                ModelMaterials.Tune(_helmet, 0.1f, 0.55f);
+                _soldier.SetMaterials(_suit, _trim, _helmet, glow);
+            }
 
             if (_headItems != null) Object.Destroy(_headItems);
             if (_backItems != null) Object.Destroy(_backItems);
@@ -98,7 +126,8 @@ namespace Recoil.Client.Visuals
             _backItems.transform.SetParent(_backAnchor, false);
 
             var headgear = (HeadgearKind)look.Item(CosmeticSlot.Headgear).Shape;
-            BuildVisor(_headItems.transform, headgear, glow);
+            // The soldier's helmet has its own visor.
+            if (_soldier == null) BuildVisor(_headItems.transform, headgear, glow);
             BuildHeadgear(_headItems.transform, headgear, trimShared, suitShared, glow);
             BuildBack(_backItems.transform, (BackKind)look.Item(CosmeticSlot.Back).Shape, trimShared, suitShared, glow);
         }
@@ -106,6 +135,11 @@ namespace Recoil.Client.Visuals
         /// <summary>Team pads: blue for a teammate, red for an opponent, or none (the preview, or nobody to tell apart).</summary>
         public void SetSide(bool show, bool friendly)
         {
+            if (_soldier != null)
+            {
+                _soldier.SetTeam(show ? GreyboxMaterials.Unlit(friendly ? new Color(0.25f, 0.6f, 1f) : new Color(1f, 0.25f, 0.2f)) : null);
+                return;
+            }
             if (_padsAnchor.gameObject.activeSelf != show) _padsAnchor.gameObject.SetActive(show);
             if (show) GreyboxMaterials.SetColor(_pads, friendly ? new Color(0.25f, 0.6f, 1f) : new Color(1f, 0.25f, 0.2f));
         }
@@ -119,9 +153,13 @@ namespace Recoil.Client.Visuals
             GreyboxMaterials.SetColor(_helmet, Color.Lerp(_helmetBase, Color.white, amount));
         }
 
+        /// <summary>Poses the soldier for how its player is moving. Nothing to do for the simple shapes.</summary>
+        public void Animate(in SoldierMotion motion, float dt) => _soldier?.Animate(motion, dt);
+
         /// <summary>Keeps the accessories on the head and back as the body crouches and stands. Call after posing the body.</summary>
         public void Follow()
         {
+            if (_soldier != null) return;
             if (_headPart != null) _headAnchor.localPosition = _headPart.localPosition;
             if (_torsoPart == null) return;
             _backAnchor.localPosition = _torsoPart.localPosition;
@@ -132,6 +170,7 @@ namespace Recoil.Client.Visuals
         {
             Release();
             if (_pads != null) Object.Destroy(_pads);
+            _soldier?.Destroy();
         }
 
         // ------------------------------------------------------------------ the parts

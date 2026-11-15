@@ -1,6 +1,7 @@
 using UnityEngine;
 using Recoil.Client.Audio;
 using Recoil.Client.Visuals;
+using Recoil.Client.Weapons;
 using Recoil.Shared.Combat;
 using Recoil.Shared.Cosmetics;
 using Recoil.Shared.Match;
@@ -28,6 +29,8 @@ namespace Recoil.Client.Net
         int _playerId;
         UnityCharacterBody _body;
         RemoteTarget _target;
+        Transform _gun, _gunMuzzle;
+        float _standEyeHeight;
         CharacterLookView _look;
         Transform _weapon;
         MeshRenderer _weaponRenderer;
@@ -46,8 +49,8 @@ namespace Recoil.Client.Net
         public int PlayerId => _playerId;
         public bool Visible { get; private set; }
 
-        /// <summary>The front of the weapon block, where tracers start.</summary>
-        public Vector3 Muzzle => _weapon.TransformPoint(new Vector3(0f, 0f, 0.5f));
+        /// <summary>The front of the weapon, where tracers start.</summary>
+        public Vector3 Muzzle => _gunMuzzle != null ? _gunMuzzle.position : _weapon.TransformPoint(new Vector3(0f, 0f, 0.5f));
 
         /// <summary>Where they stand, as last drawn.</summary>
         public Vector3 Feet => _body.Root.position;
@@ -74,11 +77,14 @@ namespace Recoil.Client.Net
             _target = new RemoteTarget(_playerId);
             _body.SetOwner(_target);
             _look = new CharacterLookView(_body);
+            _standEyeHeight = movement.standEyeHeight;
 
             _weaponMaterial = new Material(GreyboxMaterials.Flat(new Color(0.2f, 0.2f, 0.22f)));
             GameObject weapon = GreyboxKit.Visual(_body.Root, "Weapon", PrimitiveType.Cube, Vector3.zero, new Vector3(0.07f, 0.1f, 0.6f), _weaponMaterial);
             _weapon = weapon.transform;
             _weaponRenderer = weapon.GetComponent<MeshRenderer>();
+            // The soldier carries a full model of the gun instead of a block.
+            if (_look.Soldier != null) weapon.SetActive(false);
 
             _markerMaterial = new Material(GreyboxMaterials.Unlit(MarkerColor));
             _marker = GreyboxKit.Visual(_body.Root, "Team Marker", PrimitiveType.Cube, Vector3.zero,
@@ -109,11 +115,24 @@ namespace Recoil.Client.Net
             _body.SetPose(view.Pose);
             _look.Follow();
             UpdateSide(view.Pose.EyeHeight);
-
-            // The weapon sits at the right shoulder and tips with where they are looking.
-            _weapon.localPosition = new Vector3(0.2f, view.Pose.EyeHeight - 0.22f, 0.3f);
-            _weapon.localRotation = Quaternion.Euler(view.Pitch, 0f, 0f);
             ShowWeapon(view.ActiveSlot);
+            _look.Animate(new SoldierMotion
+            {
+                Velocity = view.Velocity,
+                Yaw = view.Pose.Yaw,
+                Pitch = view.Pitch,
+                EyeHeight = view.Pose.EyeHeight,
+                StandEyeHeight = _standEyeHeight,
+                Stance = view.Stance,
+                Grounded = Mathf.Abs(view.Velocity.y) < 0.6f,
+            }, Time.deltaTime);
+
+            // Without the soldier, a block at the right shoulder that tips with where they are looking.
+            if (_look.Soldier == null)
+            {
+                _weapon.localPosition = new Vector3(0.2f, view.Pose.EyeHeight - 0.22f, 0.3f);
+                _weapon.localRotation = Quaternion.Euler(view.Pitch, 0f, 0f);
+            }
 
             if (_flash > 0f)
             {
@@ -176,6 +195,23 @@ namespace Recoil.Client.Net
 
             WeaponBuild build = player.Loadout != null && slot >= 0 && slot < player.Loadout.Weapons.Length ? player.Loadout.Weapons[slot] : null;
             if (build == null) return;
+
+            SoldierView soldier = _look.Soldier;
+            if (soldier != null)
+            {
+                // The real thing, in their skin, butt against the shoulder (or held out, for a handgun).
+                if (_gun != null) Destroy(_gun.gameObject);
+                ViewModelLayout layout = ViewModelBuilder.Build(soldier.WeaponMount, build, player.Look.SkinFor(build.Weapon.weaponId), castShadows: true);
+                _gun = layout.Root;
+                _gunMuzzle = layout.Muzzle;
+                bool handgun = layout.Support == null;
+                _gun.localPosition = handgun ? new Vector3(-0.14f, -0.06f, 0.36f) : new Vector3(0f, 0f, -layout.RearZ - 0.03f);
+                _gun.localRotation = layout.Kind == ViewModelKind.Blade || layout.Kind == ViewModelKind.Thrown
+                    ? Quaternion.Euler(-60f, 0f, 0f) : Quaternion.identity;
+                soldier.Hold(layout.Grip, layout.Support);
+                return;
+            }
+
             WeaponViewProfile look = build.Weapon.view;
             float length = Mathf.Clamp(look.bodyLength + look.barrelLength + look.stockLength, 0.2f, 1.1f);
             _weapon.localScale = new Vector3(0.07f, 0.1f, length);
