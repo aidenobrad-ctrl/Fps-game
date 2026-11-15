@@ -449,6 +449,8 @@ Bots fall back to the nearest walkable spot the threat cannot see (rings of cand
 
 Every sound is generated in code when the game starts (`SfxSynth`), so the project carries no audio files and every sound is the game's own. `SoundBank` makes and keeps the clips; its `Sfx` list is the catalogue.
 
+Gunshots, impacts and the sounds around them come from `GunshotSynth`, which builds each one the way the real thing is made: the muzzle blast as a Friedlander pressure pulse (its length sets how big the gun sounds), a rifle round's supersonic N-wave crack, the roar of the propellant gas, a low punch that drops in pitch, the bolt or slide cycling a moment later, and the arena answering with early echoes and a reverb tail (four damped comb filters and two all-passes). Each weapon's class and audio profile choose the recipe; a suppressor swallows the blast and leaves the action audible. There are three takes of every shot so a burst never repeats one sound, and a distant version for gunfire more than 45 m away: duller, mostly echo, with a rifle's crack arriving well before its boom. Bullets striking the level crack and scatter grit (and now and then ricochet), a confirmed hit lands with a dull smack where it struck, spent cases ring on the floor after your own shots, and reloads have the magazine sliding out and seating home. A loadout's gunshots are made when it is equipped, about 10 ms a take.
+
 | Piece | Job |
 | --- | --- |
 | `SfxPlayer` | On the player's camera. Flat voices for our own sounds; twenty voices out in the world for everyone else's, each with distance falloff and a low-pass filter that closes with distance and much further when a wall is in the way (one line check per sound) |

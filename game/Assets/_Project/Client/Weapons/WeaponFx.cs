@@ -261,6 +261,7 @@ namespace Recoil.Client.Weapons
         public void PlayImpact(Vector3 point, Vector3 normal, Vector3 travel)
         {
             if (normal.sqrMagnitude < 0.0001f) return;
+            if (Recoil.Client.Audio.SfxPlayer.Current != null) Recoil.Client.Audio.SfxPlayer.Current.PlayImpact(point);
             _holes.Place(point, normal, Random.Range(0.06f, 0.09f), Color.white);
             Vector3 bounce = Vector3.Reflect(travel.normalized, normal);
             int sparks = Random.Range(4, 8);

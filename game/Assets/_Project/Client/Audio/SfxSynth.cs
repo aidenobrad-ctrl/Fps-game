@@ -14,43 +14,49 @@ namespace Recoil.Client.Audio
         const int SampleRate = 44100;
         const float Tau = 2f * Mathf.PI;
 
-        /// <summary>A weapon's firing sound, shaped by its audio profile.</summary>
-        public static AudioClip Shot(WeaponAudioProfile profile, bool suppressed, string name)
+        /// <summary>A weapon's firing sound, shaped by its audio profile and class.</summary>
+        /// <param name="take">Which of several takes: each is a little different.</param>
+        /// <param name="distant">As heard from far away.</param>
+        public static AudioClip Shot(WeaponDefinition weapon, bool suppressed, int take, bool distant, string name)
         {
+            WeaponAudioProfile profile = weapon.audio;
             switch (profile.kind)
             {
-                case ShotSoundKind.Energy: return EnergyShot(profile, name);
-                case ShotSoundKind.Thump: return LauncherShot(profile, name);
+                case ShotSoundKind.Energy: return Distance(EnergyShot(profile, name), distant, profile.tail);
+                case ShotSoundKind.Thump: return Distance(LauncherShot(profile, name), distant, profile.tail);
                 case ShotSoundKind.Swing: return Whoosh(name, Mathf.Max(profile.tail, 0.12f), 0.5f);
                 case ShotSoundKind.Twang: return Twang(profile, name);
-                default: return BallisticShot(profile, suppressed, name);
+                default:
+                    GunshotRecipe recipe = GunshotSynth.Recipe(profile, weapon.weaponClass, weapon.stats.fireMode, suppressed);
+                    return FromSamples(name, GunshotSynth.Render(recipe, take, distant));
             }
         }
 
-        static AudioClip BallisticShot(WeaponAudioProfile profile, bool suppressed, string name)
+        /// <summary>Puts a synthesised sound in the arena: early echoes and a tail, and far away, the top taken off.</summary>
+        static AudioClip Distance(AudioClip clip, bool distant, float tail)
         {
-            var random = new System.Random(7);
-            float lowpassed = 0f, phase = 0f;
-            float tail = Mathf.Max(profile.tail, 0.06f);
-            // Rates are tuned for a quarter-second rifle shot and stretch with the tail.
-            float stretch = 0.25f / tail;
-            float filter = suppressed ? 0.08f : 0.35f;
-
-            return Build(name, tail, t =>
+            var dry = new float[clip.samples + Mathf.RoundToInt((0.35f + tail) * SampleRate)];
+            var source = new float[clip.samples];
+            clip.GetData(source, 0);
+            Array.Copy(source, dry, source.Length);
+            if (distant)
             {
-                float noise = (float)random.NextDouble() * 2f - 1f;
-                lowpassed += (noise - lowpassed) * filter;
+                float state = 0f, a = 1f - Mathf.Exp(-Tau * 1500f / SampleRate);
+                for (int i = 0; i < dry.Length; i++) dry[i] = state += (dry[i] - state) * a;
+            }
+            float[] wet = GunshotSynth.Room(dry, distant ? 0.8f : 0.4f, 0.6f + tail, new System.Random(3));
+            GunshotSynth.Finish(wet, 1.2f);
+            return FromSamples(clip.name, wet);
+        }
 
-                float crack = suppressed ? 0f : noise * Mathf.Exp(-t * 90f * stretch) * 0.55f;
-                float body = lowpassed * Mathf.Exp(-t * 26f * stretch) * (suppressed ? 1.6f : 0.9f);
-
-                // A thump that drops in pitch, which is what gives the shot weight.
-                float frequency = Mathf.Max(45f, (150f - 260f * t * stretch) * profile.pitch);
-                phase += Tau * frequency / SampleRate;
-                float thump = Mathf.Sin(phase) * Mathf.Exp(-t * 20f * stretch) * 0.9f * profile.weight;
-
-                return SoftClip((crack + body + thump) * 0.9f);
-            });
+        /// <summary>An AudioClip from samples made elsewhere, scaled by <paramref name="volume"/>.</summary>
+        public static AudioClip FromSamples(string name, float[] samples, float volume = 1f)
+        {
+            if (volume != 1f)
+                for (int i = 0; i < samples.Length; i++) samples[i] *= volume;
+            AudioClip clip = AudioClip.Create(name, samples.Length, 1, SampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
         }
 
         /// <summary>A falling "pew".</summary>

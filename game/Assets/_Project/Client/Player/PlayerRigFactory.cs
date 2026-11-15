@@ -89,6 +89,15 @@ namespace Recoil.Client.Player
             player.RoundInserted += () => sfx.Play(Sfx.RoundIn, 0.7f, 0.04f);
             player.ReloadFinished += () => sfx.Play(Sfx.ReloadEnd, 0.8f);
             player.DryFired += () => sfx.Play(Sfx.DryFire, 0.7f);
+            // Make this loadout's gunshots now, while nothing is happening, rather than on the first shot.
+            void PrewarmShots()
+            {
+                Loadout carried = player.Loadout;
+                if (carried == null) return;
+                foreach (WeaponBuild build in carried.Weapons) SoundBank.PrewarmShots(build);
+            }
+            player.LoadoutChanged += PrewarmShots;
+            PrewarmShots();
 
             projectiles.Happened += projectileEvent =>
             {

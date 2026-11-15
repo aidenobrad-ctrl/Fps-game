@@ -31,9 +31,14 @@ namespace Recoil.Client.Audio
             public float StartedAt;
         }
 
-        AudioSource[] _flat;
+        AudioSource[] _flat, _casings;
         WorldVoice[] _world;
-        int _nextFlat;
+        int _nextFlat, _nextCasing, _take;
+        /// <summary>Sounds waiting to be played a moment from now: spent cases landing.</summary>
+        readonly System.Collections.Generic.List<(float At, Sfx Sound, float Volume)> _later = new System.Collections.Generic.List<(float, Sfx, float)>(8);
+
+        /// <summary>Beyond this, someone else's gun is heard as distant fire: duller, mostly echo, a rifle's crack ahead of its boom.</summary>
+        const float DistantShot = 45f;
 
         void Awake()
         {
@@ -44,6 +49,16 @@ namespace Recoil.Client.Audio
                 voice.playOnAwake = false;
                 voice.spatialBlend = 0f;
                 _flat[i] = voice;
+            }
+
+            // Spent cases get voices of their own, so they never cut off a gunshot.
+            _casings = new AudioSource[3];
+            for (int i = 0; i < _casings.Length; i++)
+            {
+                AudioSource voice = gameObject.AddComponent<AudioSource>();
+                voice.playOnAwake = false;
+                voice.spatialBlend = 0f;
+                _casings[i] = voice;
             }
 
             // The world voices live outside the camera, each moved to where its sound is.
@@ -85,9 +100,35 @@ namespace Recoil.Client.Audio
         public void Play(Sfx sfx, float volume = 1f, float pitchVariation = 0f) =>
             PlayFlat(SoundBank.Get(sfx), volume * SoundBank.Volume(SoundBank.BusOf(sfx)), pitchVariation);
 
-        /// <summary>Our own weapon firing.</summary>
-        public void PlayShot(WeaponBuild build, float volumeScale = 1f) =>
-            PlayFlat(SoundBank.Shot(build), build.Weapon.audio.volume * (build.Suppressed ? 0.55f : 1f) * volumeScale * SoundBank.Volume(AudioBus.Effects), 0.04f);
+        /// <summary>Our own weapon firing, and a moment later its spent case hitting the floor.</summary>
+        public void PlayShot(WeaponBuild build, float volumeScale = 1f)
+        {
+            float effects = SoundBank.Volume(AudioBus.Effects);
+            PlayFlat(SoundBank.Shot(build, _take++), build.Weapon.audio.volume * (build.Suppressed ? 0.55f : 1f) * volumeScale * effects, 0.03f);
+
+            WeaponDefinition weapon = build.Weapon;
+            if (weapon.audio.kind != ShotSoundKind.Ballistic || weapon.weaponClass == WeaponClass.Melee) return;
+            bool shell = weapon.weaponClass == WeaponClass.Shotgun;
+            // A full-auto weapon drops a case every shot; hearing every one would be a wind chime.
+            if (weapon.stats.fireMode == FireMode.Automatic && Random.value > 0.45f) return;
+            _later.Add((Time.unscaledTime + Random.Range(0.38f, 0.55f), shell ? Sfx.ShellCasing : Sfx.Casing, 0.35f * effects));
+        }
+
+        void Update()
+        {
+            float now = Time.unscaledTime;
+            for (int i = _later.Count - 1; i >= 0; i--)
+            {
+                if (_later[i].At > now) continue;
+                AudioSource voice = _casings[_nextCasing];
+                _nextCasing = (_nextCasing + 1) % _casings.Length;
+                voice.pitch = Random.Range(0.92f, 1.1f);
+                voice.clip = SoundBank.Get(_later[i].Sound);
+                voice.volume = Mathf.Clamp01(_later[i].Volume);
+                voice.Play();
+                _later.RemoveAt(i);
+            }
+        }
 
         void PlayFlat(AudioClip clip, float volume, float pitchVariation)
         {
@@ -108,12 +149,23 @@ namespace Recoil.Client.Audio
         public void PlayAt(Sfx sfx, Vector3 position, float volume = 1f, float pitchVariation = 0f, float near = 2f, float far = 0f) =>
             PlayWorld(SoundBank.Get(sfx), position, volume * SoundBank.Volume(SoundBank.BusOf(sfx)), pitchVariation, near, far);
 
-        /// <summary>Someone else's weapon firing, heard from where they stand.</summary>
+        /// <summary>Someone else's weapon firing, heard from where they stand: as distant fire when they are far off.</summary>
         public void PlayShotAt(WeaponBuild build, Vector3 position)
         {
             float volume = build.Weapon.audio.volume * (build.Suppressed ? 0.5f : 1f) * SoundBank.Volume(AudioBus.Effects);
+            bool distant = !build.Suppressed && Vector3.Distance(transform.position, position) > DistantShot;
             // A suppressed weapon carries much less far.
-            PlayWorld(SoundBank.Shot(build), position, volume, 0.04f, build.Suppressed ? 2f : 5f, build.Suppressed ? 45f : 0f);
+            PlayWorld(SoundBank.Shot(build, _take++, distant), position, volume * (distant ? 1.4f : 1f), 0.03f,
+                build.Suppressed ? 2f : distant ? 12f : 5f, build.Suppressed ? 45f : 0f);
+        }
+
+        /// <summary>A bullet striking the level where it landed; now and then it glances off with a whine.</summary>
+        public void PlayImpact(Vector3 point)
+        {
+            float effects = SoundBank.Volume(AudioBus.Effects);
+            PlayWorld(SoundBank.Impact(), point, 0.55f * effects, 0.08f, 1.5f, 45f);
+            if (Random.value < 0.12f && Vector3.Distance(transform.position, point) < 30f)
+                PlayWorld(SoundBank.Get(Sfx.Ricochet), point, 0.45f * effects, 0.12f, 2f, 40f);
         }
 
         public void PlayWorld(AudioClip clip, Vector3 position, float volume, float pitchVariation, float near, float far)

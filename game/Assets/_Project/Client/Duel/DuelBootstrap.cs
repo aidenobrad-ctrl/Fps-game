@@ -1004,6 +1004,8 @@ namespace Recoil.Client.Duel
                 return;
             }
             if (_remotes[player.Id] == null) _remotes[player.Id] = RemotePlayerView.Create(_session, player.Id, movement);
+            // Their guns' sounds, ready before the first shot rings out.
+            if (player.Loadout != null) foreach (WeaponBuild build in player.Loadout.Weapons) SoundBank.PrewarmShots(build);
             // Someone arriving mid-fight shimmers in; everyone appearing for a new round does not.
             if (_rig != null && _session.Match.Phase == MatchPhase.Live)
             {
@@ -1097,7 +1099,11 @@ namespace Recoil.Client.Duel
         {
             if (hit.Victim < _remotes.Length && _remotes[hit.Victim] != null) _remotes[hit.Victim].Flash();
             if (_rig != null && hit.Victim < _session.Players.Length)
+            {
                 _rig.Fx.PlayBodyHit(hit.Point, hit.Point - _rig.Camera.transform.position, TrimOf(hit.Victim), hit.Zone == Shared.Combat.HitZone.Head);
+                // The round landing, from where it landed.
+                _rig.Sfx.PlayAt(Sfx.BodyHit, hit.Point, 0.8f, 0.1f, 2f, 40f);
+            }
         }
 
         /// <summary>We were hurt: a sound, an arc pointing at the source, a red edge and a flinch.</summary>

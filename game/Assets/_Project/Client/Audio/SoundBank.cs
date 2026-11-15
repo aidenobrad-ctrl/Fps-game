@@ -31,6 +31,10 @@ namespace Recoil.Client.Audio
         Heartbeat,
         Whiz,
         Spawn,
+        Ricochet,
+        BodyHit,
+        Casing,
+        ShellCasing,
         // Interface: menus, countdowns, the objective.
         CountdownTick,
         CountdownGo,
@@ -63,9 +67,13 @@ namespace Recoil.Client.Audio
     public static class SoundBank
     {
         const int FootstepVariants = 4;
+        /// <summary>How many takes of each gunshot and impact there are, so a burst never repeats one sound exactly.</summary>
+        public const int ShotTakes = 3;
+        const int ImpactVariants = 4;
 
         static AudioClip[] _clips;
-        static AudioClip[] _steps;
+        static AudioClip[] _steps, _impacts;
+        static int _lastImpact = -1;
         static readonly Dictionary<string, AudioClip> Shots = new Dictionary<string, AudioClip>();
         static int _lastStep = -1;
 
@@ -74,6 +82,7 @@ namespace Recoil.Client.Audio
         {
             _clips = null;
             _steps = null;
+            _impacts = null;
             Shots.Clear();
         }
 
@@ -113,23 +122,49 @@ namespace Recoil.Client.Audio
             return _steps[_lastStep];
         }
 
-        /// <summary>A weapon's firing sound, from its audio profile.</summary>
-        public static AudioClip Shot(WeaponBuild build)
+        /// <summary>
+        /// A weapon's firing sound, from its audio profile and class: one of several takes,
+        /// close up or as heard from far away.
+        /// </summary>
+        public static AudioClip Shot(WeaponBuild build, int take = 0, bool distant = false)
         {
             bool suppressed = build.Suppressed;
-            string key = build.Weapon.weaponId + (suppressed ? "|s" : "");
+            take = ((take % ShotTakes) + ShotTakes) % ShotTakes;
+            string key = build.Weapon.weaponId + (suppressed ? "|s" : "") + (distant ? "|far" : "") + "|" + take;
             if (!Shots.TryGetValue(key, out AudioClip clip))
             {
-                clip = SfxSynth.Shot(build.Weapon.audio, suppressed, build.Weapon.weaponId);
+                clip = SfxSynth.Shot(build.Weapon, suppressed, take, distant, key);
                 Shots[key] = clip;
             }
             return clip;
+        }
+
+        /// <summary>Makes a loadout's gunshots now, so the first shot of a match does not have to wait for them.</summary>
+        public static void PrewarmShots(WeaponBuild build)
+        {
+            if (build == null || build.Weapon == null) return;
+            for (int take = 0; take < ShotTakes; take++) Shot(build, take);
+        }
+
+        /// <summary>A bullet striking the level: one of several, never the same twice running.</summary>
+        public static AudioClip Impact()
+        {
+            if (_impacts == null)
+            {
+                _impacts = new AudioClip[ImpactVariants];
+                for (int i = 0; i < ImpactVariants; i++) _impacts[i] = SfxSynth.FromSamples("Impact" + i, GunshotSynth.Impact(i));
+            }
+            int pick = UnityEngine.Random.Range(0, ImpactVariants - 1);
+            if (pick >= _lastImpact) pick++;
+            _lastImpact = pick % ImpactVariants;
+            return _impacts[_lastImpact];
         }
 
         /// <summary>Makes every effect now, rather than the first time each is heard.</summary>
         public static void Prewarm()
         {
             foreach (Sfx sfx in (Sfx[])Enum.GetValues(typeof(Sfx))) Get(sfx);
+            Impact();
         }
 
         static AudioClip Make(Sfx sfx)
@@ -140,10 +175,10 @@ namespace Recoil.Client.Audio
                 case Sfx.Headshot: return SfxSynth.Headshot();
                 case Sfx.Kill: return SfxSynth.Kill();
                 case Sfx.KillHeadshot: return SfxSynth.Chime("KillHeadshot", 0.07f, 0.22f, 0.32f, 1350f, 1800f, 2700f);
-                case Sfx.DryFire: return SfxSynth.Click("DryFire", 900f, 0.04f, 0.35f);
-                case Sfx.ReloadStart: return SfxSynth.Click("ReloadStart", 320f, 0.12f, 0.5f);
-                case Sfx.ReloadEnd: return SfxSynth.DoubleClick("ReloadEnd", 520f, 0.2f, 0.5f);
-                case Sfx.RoundIn: return SfxSynth.Click("RoundIn", 640f, 0.06f, 0.45f);
+                case Sfx.DryFire: return SfxSynth.FromSamples("DryFire", GunshotSynth.DryFire(), 0.5f);
+                case Sfx.ReloadStart: return SfxSynth.FromSamples("ReloadStart", GunshotSynth.MagazineOut(), 0.6f);
+                case Sfx.ReloadEnd: return SfxSynth.FromSamples("ReloadEnd", GunshotSynth.MagazineIn(), 0.65f);
+                case Sfx.RoundIn: return SfxSynth.FromSamples("RoundIn", GunshotSynth.RoundIn(), 0.55f);
                 case Sfx.Swap: return SfxSynth.Whoosh("Swap", 0.16f, 0.16f);
                 case Sfx.Jump: return SfxSynth.Thump("Jump", 0.1f, 45f, 0.25f, 0f);
                 case Sfx.Land: return SfxSynth.Thump("Land", 0.16f, 28f, 0.6f, 0.5f);
@@ -158,6 +193,10 @@ namespace Recoil.Client.Audio
                 case Sfx.Heartbeat: return SfxSynth.Heartbeat();
                 case Sfx.Whiz: return SfxSynth.Whiz();
                 case Sfx.Spawn: return SfxSynth.Spawn();
+                case Sfx.Ricochet: return SfxSynth.FromSamples("Ricochet", GunshotSynth.Ricochet(0), 0.7f);
+                case Sfx.BodyHit: return SfxSynth.FromSamples("BodyHit", GunshotSynth.BodyHit(0), 0.8f);
+                case Sfx.Casing: return SfxSynth.FromSamples("Casing", GunshotSynth.Casing(0, false), 0.5f);
+                case Sfx.ShellCasing: return SfxSynth.FromSamples("ShellCasing", GunshotSynth.Casing(0, true), 0.5f);
                 case Sfx.CountdownTick: return SfxSynth.Beep("CountdownTick", 880f, 0.14f, 0.45f);
                 case Sfx.CountdownGo: return SfxSynth.Beep("CountdownGo", 1320f, 0.45f, 0.5f);
                 case Sfx.ZoneCaptured: return SfxSynth.Chime("ZoneCaptured", 0.1f, 0.5f, 0.35f, SfxSynth.Note(15), SfxSynth.Note(22));
