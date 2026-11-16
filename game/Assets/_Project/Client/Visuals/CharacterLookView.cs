@@ -7,33 +7,30 @@ using Recoil.Shared.Match;
 namespace Recoil.Client.Visuals
 {
     /// <summary>
-    /// Dresses a character body in a <see cref="CharacterLook"/>. The body is the
-    /// Blender-made armoured soldier (<see cref="SoldierView"/>): the suit's colour and pattern
-    /// on its armour, the trim colour on its pads and guards, a darker helmet with the visor
-    /// glowing in the chosen colour, and headgear and a back item on top. If the model file
-    /// is missing, the hitbox shapes themselves are coloured instead.
+    /// Dresses a character body in a <see cref="CharacterLook"/>. The body is the Blender-made
+    /// soldier (<see cref="SoldierView"/>): the uniform in its colour and pattern, the plate
+    /// carrier, pads, helmet and pack in the gear colour, the face and neck in the skin tone,
+    /// and the chosen headgear and back item from the "Gear" models. If the model files are
+    /// missing, the hitbox shapes themselves are coloured instead.
     ///
     /// Everything added here is for looking at only. It has no colliders, so it can never be
     /// hit or block a shot, and nobody is harder or easier to hit for what they wear. Team
-    /// shoulder pads (blue for a teammate, red for anyone else) sit on top of any outfit, so a
-    /// player can always be told apart from the other side.
+    /// armbands (blue for a teammate, red for anyone else) are on every outfit, so a player
+    /// can always be told apart from the other side.
     /// </summary>
     public sealed class CharacterLookView
     {
-        readonly Transform _headAnchor, _backAnchor, _padsAnchor;
-        readonly Transform _headPart, _torsoPart;
-        readonly List<Material> _owned = new List<Material>();
-        readonly List<MeshRenderer> _suitRenderers = new List<MeshRenderer>();
-        readonly List<MeshRenderer> _trimRenderers = new List<MeshRenderer>();
-        MeshRenderer _headRenderer;
-        readonly Material _pads;
-        Material _suit, _trim, _helmet;
-        Color _suitTint = Color.white, _trimBase = Color.white, _helmetBase = Color.white;
-        GameObject _headItems, _backItems;
-        CharacterLook _shown;
-        readonly SoldierView _soldier;
+        public const string GearSet = "Gear";
 
-        /// <summary>The animated soldier, or null when the model file is missing and the simple shapes are shown.</summary>
+        readonly SoldierView _soldier;
+        readonly List<(MeshRenderer Renderer, HitZone Zone)> _boxes = new List<(MeshRenderer, HitZone)>();
+        readonly List<Material> _owned = new List<Material>();
+        readonly List<GameObject> _worn = new List<GameObject>();
+        Material _uniform, _gear, _skin, _lips;
+        Color _uniformTint = Color.white, _gearBase = Color.white, _skinBase = Color.white;
+        CharacterLook _shown;
+
+        /// <summary>The animated soldier, or null when the model files are missing and the simple shapes are shown.</summary>
         public SoldierView Soldier => _soldier;
 
         public CharacterLookView(UnityCharacterBody body)
@@ -41,46 +38,16 @@ namespace Recoil.Client.Visuals
             if (SoldierView.Available)
             {
                 _soldier = new SoldierView(body.Root, castShadows: true);
-                _headAnchor = new GameObject("Head Gear").transform;
-                _headAnchor.SetParent(_soldier.HeadAnchor, false);
-                _backAnchor = new GameObject("Back Gear").transform;
-                _backAnchor.SetParent(_soldier.BackAnchor, false);
-                _backAnchor.localPosition = new Vector3(0f, 0f, -0.03f);
-                _padsAnchor = new GameObject("Team Pads (on the model)").transform;
-                _padsAnchor.SetParent(body.Root, false);
-                Apply(new CharacterLook());
-                return;
             }
-
-            foreach (UnityCharacterBody.Part part in body.Parts)
+            else
             {
-                GameObject go = part.Transform.gameObject;
-                go.AddComponent<MeshFilter>().sharedMesh = GreyboxKit.PrimitiveMesh(part.Round ? PrimitiveType.Sphere : PrimitiveType.Cube);
-                var renderer = go.AddComponent<MeshRenderer>();
-                if (part.Zone == HitZone.Head)
+                foreach (UnityCharacterBody.Part part in body.Parts)
                 {
-                    _headRenderer = renderer;
-                    _headPart = part.Transform;
+                    GameObject go = part.Transform.gameObject;
+                    go.AddComponent<MeshFilter>().sharedMesh = GreyboxKit.PrimitiveMesh(part.Round ? PrimitiveType.Sphere : PrimitiveType.Cube);
+                    _boxes.Add((go.AddComponent<MeshRenderer>(), part.Zone));
                 }
-                else if (go.name.StartsWith("Arm")) _trimRenderers.Add(renderer);
-                else _suitRenderers.Add(renderer);
-                if (go.name == "Torso") _torsoPart = part.Transform;
             }
-
-            // Accessories hang from anchors that follow the head and torso, not from the parts
-            // themselves: the parts are scaled to their size and would stretch anything on them.
-            _headAnchor = new GameObject("Head Gear").transform;
-            _headAnchor.SetParent(body.Root, false);
-            _backAnchor = new GameObject("Back Gear").transform;
-            _backAnchor.SetParent(body.Root, false);
-            _padsAnchor = new GameObject("Team Pads").transform;
-            _padsAnchor.SetParent(body.Root, false);
-
-            _pads = new Material(GreyboxMaterials.Unlit(Color.red));
-            GreyboxKit.Visual(_padsAnchor, "Pad L", PrimitiveType.Cube, new Vector3(-0.3f, 0.3f, 0f), new Vector3(0.16f, 0.06f, 0.18f), _pads, castShadows: false);
-            GreyboxKit.Visual(_padsAnchor, "Pad R", PrimitiveType.Cube, new Vector3(0.3f, 0.3f, 0f), new Vector3(0.16f, 0.06f, 0.18f), _pads, castShadows: false);
-            _padsAnchor.gameObject.SetActive(false);
-
             Apply(new CharacterLook());
         }
 
@@ -91,210 +58,124 @@ namespace Recoil.Client.Visuals
             if (ReferenceEquals(look, _shown)) return;
             _shown = look;
 
-            CosmeticItem suit = look.Item(CosmeticSlot.SuitColor), trim = look.Item(CosmeticSlot.TrimColor);
-            CosmeticItem pattern = look.Item(CosmeticSlot.Pattern), visor = look.Item(CosmeticSlot.Visor);
-            _suitTint = pattern.Pattern == PatternKind.Plain ? suit.Color : Color.white;
-            _trimBase = trim.Color;
-            _helmetBase = Color.Lerp(suit.Color, Color.black, 0.35f);
+            CosmeticItem uniform = look.Item(CosmeticSlot.SuitColor), gear = look.Item(CosmeticSlot.TrimColor);
+            CosmeticItem pattern = look.Item(CosmeticSlot.Pattern), skin = look.Item(CosmeticSlot.Skin);
+            _uniformTint = pattern.Pattern == PatternKind.Plain ? uniform.Color : Color.white;
+            _gearBase = gear.Color;
+            _skinBase = skin.Color;
 
             // Each view has its own copies, so a hit flash on one player does not light up another.
             Release();
-            _suit = Own(LookMaterials.Patterned(pattern.Pattern, suit.Color, Shade(suit.Color, trim.Color)));
-            _trim = Own(LookMaterials.Patterned(PatternKind.Plain, trim.Color, trim.Color));
-            _helmet = Own(LookMaterials.Patterned(PatternKind.Plain, _helmetBase, _helmetBase));
-            Material glow = GreyboxMaterials.Unlit(visor.Color);
-            Material trimShared = LookMaterials.Patterned(PatternKind.Plain, trim.Color, trim.Color);
-            Material suitShared = LookMaterials.Patterned(PatternKind.Plain, Color.Lerp(suit.Color, Color.black, 0.2f), suit.Color);
+            _uniform = Own(LookMaterials.Patterned(pattern.Pattern, uniform.Color, Shade(uniform.Color, gear.Color)));
+            _gear = Own(LookMaterials.Patterned(PatternKind.Plain, gear.Color, gear.Color));
+            _skin = Own(GreyboxMaterials.Flat(skin.Color));
+            _lips = Own(GreyboxMaterials.Flat(Lips(skin.Color)));
+            // Cloth is matte, gear a little less so, skin has a soft sheen.
+            ModelMaterials.Tune(_uniform, 0f, 0.14f);
+            ModelMaterials.Tune(_gear, 0f, 0.24f);
+            ModelMaterials.Tune(_skin, 0f, 0.36f);
+            ModelMaterials.Tune(_lips, 0f, 0.45f);
 
-            foreach (MeshRenderer renderer in _suitRenderers) renderer.sharedMaterial = _suit;
-            foreach (MeshRenderer renderer in _trimRenderers) renderer.sharedMaterial = _trim;
-            if (_headRenderer != null) _headRenderer.sharedMaterial = _helmet;
-            if (_soldier != null)
+            if (_soldier == null)
             {
-                // Armour takes a little shine; the visor glows in its own colour.
-                ModelMaterials.Tune(_suit, 0.05f, 0.42f);
-                ModelMaterials.Tune(_trim, 0.25f, 0.5f);
-                ModelMaterials.Tune(_helmet, 0.1f, 0.55f);
-                _soldier.SetMaterials(_suit, _trim, _helmet, glow);
-            }
-
-            if (_headItems != null) Object.Destroy(_headItems);
-            if (_backItems != null) Object.Destroy(_backItems);
-            _headItems = new GameObject("Head Items");
-            _headItems.transform.SetParent(_headAnchor, false);
-            _backItems = new GameObject("Back Items");
-            _backItems.transform.SetParent(_backAnchor, false);
-
-            var headgear = (HeadgearKind)look.Item(CosmeticSlot.Headgear).Shape;
-            // The soldier's helmet has its own visor.
-            if (_soldier == null) BuildVisor(_headItems.transform, headgear, glow);
-            BuildHeadgear(_headItems.transform, headgear, trimShared, suitShared, glow);
-            BuildBack(_backItems.transform, (BackKind)look.Item(CosmeticSlot.Back).Shape, trimShared, suitShared, glow);
-        }
-
-        /// <summary>Team pads: blue for a teammate, red for an opponent, or none (the preview, or nobody to tell apart).</summary>
-        public void SetSide(bool show, bool friendly)
-        {
-            if (_soldier != null)
-            {
-                _soldier.SetTeam(show ? GreyboxMaterials.Unlit(friendly ? new Color(0.25f, 0.6f, 1f) : new Color(1f, 0.25f, 0.2f)) : null);
+                foreach ((MeshRenderer renderer, HitZone zone) in _boxes)
+                    renderer.sharedMaterial = zone == HitZone.Head ? _skin : zone == HitZone.Limb ? _gear : _uniform;
                 return;
             }
-            if (_padsAnchor.gameObject.activeSelf != show) _padsAnchor.gameObject.SetActive(show);
-            if (show) GreyboxMaterials.SetColor(_pads, friendly ? new Color(0.25f, 0.6f, 1f) : new Color(1f, 0.25f, 0.2f));
+
+            _soldier.SetMaterials(_uniform, _gear, _skin, _lips);
+            foreach (GameObject worn in _worn)
+            {
+                if (worn != null) Object.Destroy(worn);
+            }
+            _worn.Clear();
+            foreach (string model in HeadgearModels((HeadgearKind)look.Item(CosmeticSlot.Headgear).Shape)) Wear(model, "Head");
+            string back = BackModel((BackKind)look.Item(CosmeticSlot.Back).Shape);
+            if (back != null) Wear(back, "Torso");
+        }
+
+        /// <summary>The models that make up a piece of headgear. Hair shows under anything that leaves the head bare.</summary>
+        public static string[] HeadgearModels(HeadgearKind kind)
+        {
+            switch (kind)
+            {
+                case HeadgearKind.Cap: return new[] { "Cap" };
+                case HeadgearKind.Helmet: return new[] { "Helmet" };
+                case HeadgearKind.Beanie: return new[] { "Beanie" };
+                case HeadgearKind.Headset: return new[] { "Hair", "Headset" };
+                case HeadgearKind.Boonie: return new[] { "Boonie" };
+                case HeadgearKind.HelmetHeadset: return new[] { "Helmet", "HelmetHeadset" };
+                case HeadgearKind.Bandana: return new[] { "Hair", "Bandana" };
+                default: return new[] { "Hair" };
+            }
+        }
+
+        /// <summary>The model for a back item, or null for nothing.</summary>
+        public static string BackModel(BackKind kind)
+        {
+            switch (kind)
+            {
+                case BackKind.AssaultPack: return "AssaultPack";
+                case BackKind.HydrationPack: return "HydrationPack";
+                case BackKind.RadioPack: return "RadioPack";
+                case BackKind.Rucksack: return "Rucksack";
+                case BackKind.BedrollPack: return "BedrollPack";
+                case BackKind.Scarf: return "Scarf";
+                default: return null;
+            }
+        }
+
+        void Wear(string name, string bone)
+        {
+            ModelMesh model = ModelLibrary.Get(GearSet, name);
+            if (model == null) return;
+            var go = new GameObject(name);
+            go.transform.SetParent(_soldier.Bone(bone), false);
+            go.transform.localPosition = model.Pivot - _soldier.Pivot(bone);
+            ModelLibrary.Attach(go, model, _soldier.ZoneMaterial, castShadows: true);
+            _worn.Add(go);
+        }
+
+        /// <summary>Team armbands: blue for a teammate, red for an opponent, or plain (the preview, or nobody to tell apart).</summary>
+        public void SetSide(bool show, bool friendly)
+        {
+            if (_soldier == null) return;
+            _soldier.SetTeam(show ? GreyboxMaterials.Unlit(friendly ? new Color(0.25f, 0.6f, 1f) : new Color(1f, 0.25f, 0.2f)) : null);
         }
 
         /// <summary>0 for normal colours, 1 for white: the flash when a shot lands.</summary>
         public void Flash(float amount)
         {
-            // A patterned suit is tinted white already; brightening it means lifting the pattern towards white.
-            GreyboxMaterials.SetColor(_suit, Color.Lerp(_suitTint, Color.white * 2f, amount));
-            GreyboxMaterials.SetColor(_trim, Color.Lerp(_trimBase, Color.white, amount));
-            GreyboxMaterials.SetColor(_helmet, Color.Lerp(_helmetBase, Color.white, amount));
+            // A patterned uniform is tinted white already; brightening it means lifting the pattern towards white.
+            GreyboxMaterials.SetColor(_uniform, Color.Lerp(_uniformTint, Color.white * 2f, amount));
+            GreyboxMaterials.SetColor(_gear, Color.Lerp(_gearBase, Color.white, amount));
+            GreyboxMaterials.SetColor(_skin, Color.Lerp(_skinBase, Color.white, amount));
         }
 
         /// <summary>Poses the soldier for how its player is moving. Nothing to do for the simple shapes.</summary>
         public void Animate(in SoldierMotion motion, float dt) => _soldier?.Animate(motion, dt);
 
-        /// <summary>Keeps the accessories on the head and back as the body crouches and stands. Call after posing the body.</summary>
-        public void Follow()
-        {
-            if (_soldier != null) return;
-            if (_headPart != null) _headAnchor.localPosition = _headPart.localPosition;
-            if (_torsoPart == null) return;
-            _backAnchor.localPosition = _torsoPart.localPosition;
-            _padsAnchor.localPosition = _torsoPart.localPosition;
-        }
+        /// <summary>Kept for callers that pose the body and then ask the look to catch up; the soldier's gear moves with its bones.</summary>
+        public void Follow() { }
 
         public void Destroy()
         {
             Release();
-            if (_pads != null) Object.Destroy(_pads);
             _soldier?.Destroy();
-        }
-
-        // ------------------------------------------------------------------ the parts
-
-        void BuildVisor(Transform head, HeadgearKind headgear, Material glow)
-        {
-            if (headgear == HeadgearKind.Wraparound)
-            {
-                // A band all the way round, instead of across the front.
-                GreyboxKit.Visual(head, "Visor", PrimitiveType.Cube, new Vector3(0f, 0.015f, 0f), new Vector3(0.27f, 0.055f, 0.27f), glow, castShadows: false);
-                return;
-            }
-            // In front of whatever covers the head: the bucket, a helmet shell, or the head itself.
-            float front = headgear == HeadgearKind.BucketHelm ? 0.158f
-                : headgear == HeadgearKind.CrestHelm || headgear == HeadgearKind.HornedHelm ? 0.15f
-                : 0.112f;
-            GreyboxKit.Visual(head, "Visor", PrimitiveType.Cube, new Vector3(0f, 0.015f, front), new Vector3(0.19f, 0.05f, 0.04f), glow, castShadows: false);
-        }
-
-        static void BuildHeadgear(Transform head, HeadgearKind kind, Material trim, Material dark, Material glow)
-        {
-            switch (kind)
-            {
-                case HeadgearKind.FieldCap:
-                    GreyboxKit.Visual(head, "Crown", PrimitiveType.Cylinder, new Vector3(0f, 0.09f, -0.005f), new Vector3(0.27f, 0.035f, 0.27f), trim);
-                    GreyboxKit.Visual(head, "Brim", PrimitiveType.Cube, new Vector3(0f, 0.075f, 0.15f), new Vector3(0.21f, 0.015f, 0.12f), trim);
-                    break;
-
-                case HeadgearKind.CrestHelm:
-                    GreyboxKit.Visual(head, "Shell", PrimitiveType.Sphere, new Vector3(0f, 0.035f, -0.01f), new Vector3(0.29f, 0.26f, 0.3f), dark);
-                    GreyboxKit.Visual(head, "Crest", PrimitiveType.Cube, new Vector3(0f, 0.16f, -0.02f), new Vector3(0.035f, 0.11f, 0.3f), trim);
-                    break;
-
-                case HeadgearKind.Halo:
-                    for (int i = 0; i < 14; i++)
-                    {
-                        float angle = i * Mathf.PI * 2f / 14f;
-                        Transform bit = GreyboxKit.Visual(head, "Halo", PrimitiveType.Cube,
-                            new Vector3(Mathf.Sin(angle) * 0.15f, 0.24f, Mathf.Cos(angle) * 0.15f), new Vector3(0.07f, 0.018f, 0.025f), glow, castShadows: false).transform;
-                        bit.localRotation = Quaternion.Euler(0f, angle * Mathf.Rad2Deg + 90f, 0f);
-                    }
-                    break;
-
-                case HeadgearKind.AntennaRig:
-                    for (int side = -1; side <= 1; side += 2)
-                    {
-                        Transform rod = GreyboxKit.Visual(head, "Antenna", PrimitiveType.Cylinder, new Vector3(side * 0.085f, 0.19f, -0.03f),
-                            new Vector3(0.014f, 0.09f, 0.014f), dark).transform;
-                        rod.localRotation = Quaternion.Euler(0f, 0f, -side * 12f);
-                        GreyboxKit.Visual(head, "Tip", PrimitiveType.Sphere, new Vector3(side * 0.105f, 0.285f, -0.03f), Vector3.one * 0.035f, glow, castShadows: false);
-                    }
-                    break;
-
-                case HeadgearKind.HornedHelm:
-                    GreyboxKit.Visual(head, "Shell", PrimitiveType.Sphere, new Vector3(0f, 0.035f, -0.01f), new Vector3(0.29f, 0.26f, 0.3f), dark);
-                    for (int side = -1; side <= 1; side += 2)
-                    {
-                        Transform horn = GreyboxKit.Visual(head, "Horn", PrimitiveType.Cube, new Vector3(side * 0.15f, 0.12f, 0f),
-                            new Vector3(0.035f, 0.15f, 0.035f), trim).transform;
-                        horn.localRotation = Quaternion.Euler(0f, 0f, -side * 38f);
-                    }
-                    break;
-
-                case HeadgearKind.BucketHelm:
-                    GreyboxKit.Visual(head, "Bucket", PrimitiveType.Cube, new Vector3(0f, 0.02f, 0f), new Vector3(0.3f, 0.31f, 0.3f), dark);
-                    GreyboxKit.Visual(head, "Rim", PrimitiveType.Cube, new Vector3(0f, 0.17f, 0f), new Vector3(0.32f, 0.02f, 0.32f), trim);
-                    break;
-            }
-        }
-
-        static void BuildBack(Transform back, BackKind kind, Material trim, Material dark, Material glow)
-        {
-            switch (kind)
-            {
-                case BackKind.FieldPack:
-                    GreyboxKit.Visual(back, "Pack", PrimitiveType.Cube, new Vector3(0f, 0.02f, -0.21f), new Vector3(0.3f, 0.36f, 0.15f), trim);
-                    GreyboxKit.Visual(back, "Flap", PrimitiveType.Cube, new Vector3(0f, 0.15f, -0.29f), new Vector3(0.26f, 0.12f, 0.02f), dark);
-                    break;
-
-                case BackKind.TwinTanks:
-                    for (int side = -1; side <= 1; side += 2)
-                    {
-                        GreyboxKit.Visual(back, "Tank", PrimitiveType.Cylinder, new Vector3(side * 0.08f, 0.02f, -0.2f), new Vector3(0.11f, 0.2f, 0.11f), trim);
-                        GreyboxKit.Visual(back, "Valve", PrimitiveType.Sphere, new Vector3(side * 0.08f, 0.24f, -0.2f), Vector3.one * 0.05f, glow, castShadows: false);
-                    }
-                    break;
-
-                case BackKind.DorsalFin:
-                    Transform fin = GreyboxKit.Visual(back, "Fin", PrimitiveType.Cube, new Vector3(0f, 0.08f, -0.2f), new Vector3(0.03f, 0.42f, 0.2f), trim).transform;
-                    fin.localRotation = Quaternion.Euler(-14f, 0f, 0f);
-                    break;
-
-                case BackKind.SignalMast:
-                    GreyboxKit.Visual(back, "Base", PrimitiveType.Cube, new Vector3(0.1f, 0.12f, -0.17f), new Vector3(0.09f, 0.12f, 0.08f), dark);
-                    GreyboxKit.Visual(back, "Mast", PrimitiveType.Cylinder, new Vector3(0.1f, 0.5f, -0.17f), new Vector3(0.018f, 0.32f, 0.018f), dark);
-                    GreyboxKit.Visual(back, "Light", PrimitiveType.Sphere, new Vector3(0.1f, 0.84f, -0.17f), Vector3.one * 0.045f, glow, castShadows: false);
-                    break;
-
-                case BackKind.JetPack:
-                    GreyboxKit.Visual(back, "Frame", PrimitiveType.Cube, new Vector3(0f, 0.04f, -0.18f), new Vector3(0.26f, 0.3f, 0.08f), dark);
-                    for (int side = -1; side <= 1; side += 2)
-                    {
-                        GreyboxKit.Visual(back, "Thruster", PrimitiveType.Cylinder, new Vector3(side * 0.1f, 0f, -0.25f), new Vector3(0.1f, 0.17f, 0.1f), trim);
-                        GreyboxKit.Visual(back, "Nozzle", PrimitiveType.Cylinder, new Vector3(side * 0.1f, -0.2f, -0.25f), new Vector3(0.07f, 0.03f, 0.07f), glow, castShadows: false);
-                    }
-                    break;
-
-                case BackKind.LongScarf:
-                    GreyboxKit.Visual(back, "Wrap", PrimitiveType.Cube, new Vector3(0f, 0.33f, 0f), new Vector3(0.3f, 0.07f, 0.3f), trim);
-                    Transform tail = GreyboxKit.Visual(back, "Tail", PrimitiveType.Cube, new Vector3(0.09f, 0.06f, -0.17f), new Vector3(0.11f, 0.52f, 0.02f), trim).transform;
-                    tail.localRotation = Quaternion.Euler(12f, 0f, -6f);
-                    break;
-            }
         }
 
         // ------------------------------------------------------------------ helpers
 
-        /// <summary>The pattern's second colour: a shade of the suit, leaning a little towards the trim.</summary>
-        static Color Shade(Color suit, Color trim)
+        /// <summary>The pattern's second colour: a shade of the uniform, leaning a little towards the gear.</summary>
+        static Color Shade(Color uniform, Color gear)
         {
-            Color.RGBToHSV(suit, out float h, out float s, out float v);
-            Color darker = Color.HSVToRGB(h, s, v > 0.5f ? v - 0.28f : v + 0.22f);
-            return Color.Lerp(darker, trim, 0.25f);
+            Color.RGBToHSV(uniform, out float h, out float s, out float v);
+            Color darker = Color.HSVToRGB(h, s, v > 0.5f ? v - 0.28f : v + 0.18f);
+            return Color.Lerp(darker, gear, 0.25f);
         }
+
+        /// <summary>Lips: the skin a shade darker and redder.</summary>
+        static Color Lips(Color skin) => new Color(skin.r * 0.86f, skin.g * 0.68f, skin.b * 0.66f);
 
         Material Own(Material shared)
         {

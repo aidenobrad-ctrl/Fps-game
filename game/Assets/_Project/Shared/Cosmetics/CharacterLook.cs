@@ -13,8 +13,9 @@ namespace Recoil.Shared.Cosmetics
     }
 
     /// <summary>
-    /// How a player looks: their suit, trim, pattern, headgear, visor and back item, and the
-    /// skins on their weapons. Stored and sent by item id, so a save outlives changes to the
+    /// How a player looks: their uniform and gear colours, the uniform's pattern, headgear,
+    /// skin tone and back item, and the skins on their weapons. A colour may be one from the
+    /// list or one the player mixed ("#RRGGBB"). Stored and sent by item id, so a save outlives changes to the
     /// catalog; <see cref="LookRules.Sanitize"/> turns anything unknown back into a default.
     /// It changes nothing about how anyone plays: bodies are shot by the same hitboxes
     /// whatever they wear.
@@ -22,11 +23,13 @@ namespace Recoil.Shared.Cosmetics
     [Serializable]
     public sealed class CharacterLook
     {
-        public string suitColor = "graphite";
-        public string trimColor = "glacier";
+        /// <summary>The uniform.</summary>
+        public string suitColor = "olive";
+        /// <summary>The gear: plate carrier, pouches, pads, helmet, pack.</summary>
+        public string trimColor = "coyote";
         public string pattern = "plain";
-        public string headgear = "none";
-        public string visor = "arc";
+        public string headgear = "helmet";
+        public string skin = "medium";
         public string back = "none";
         /// <summary>The skin on every weapon without one of its own.</summary>
         public string weaponSkin = "factory";
@@ -52,7 +55,7 @@ namespace Recoil.Shared.Cosmetics
                 case CosmeticSlot.TrimColor: return trimColor;
                 case CosmeticSlot.Pattern: return pattern;
                 case CosmeticSlot.Headgear: return headgear;
-                case CosmeticSlot.Visor: return visor;
+                case CosmeticSlot.Skin: return skin;
                 case CosmeticSlot.Back: return back;
                 default: return weaponSkin;
             }
@@ -66,7 +69,7 @@ namespace Recoil.Shared.Cosmetics
                 case CosmeticSlot.TrimColor: trimColor = id; break;
                 case CosmeticSlot.Pattern: pattern = id; break;
                 case CosmeticSlot.Headgear: headgear = id; break;
-                case CosmeticSlot.Visor: visor = id; break;
+                case CosmeticSlot.Skin: skin = id; break;
                 case CosmeticSlot.Back: back = id; break;
                 default: weaponSkin = id; break;
             }

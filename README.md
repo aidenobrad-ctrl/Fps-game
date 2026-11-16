@@ -183,18 +183,20 @@ Gameplay and audio settings follow a signed-in account; video settings stay on t
 
 **Customize** is on the main menu and in the Esc menu (on the range and in a match). Everything is free to pick for now.
 
-Every player is an armoured soldier modelled in Blender (the script that builds the models is in `art/blender`): helmet and visor, chest rig, pads and guards, gloves and boots. Soldiers walk, run, strafe, crouch, slide and jump as they move, aim where they look, and hold their gun in both hands. Guns are built from detailed parts (railed receivers, vented handguards, suppressors, magazines, sights and scopes) in each weapon's proportions, and you see your own gloves and sleeves on the gun in first person.
+Every player is a soldier modelled in Blender (the script that builds the models is in `art/blender`): a human with a face, in a combat uniform, plate carrier with pouches, belt, gloves, knee pads and boots, with the chosen headgear and pack. The body is one smooth, skinned mesh, so soldiers walk, run, strafe, crouch, slide and jump without seams at the joints, aim where they look, and hold their gun in both hands. Guns are built from detailed parts (railed receivers, vented handguards, suppressors, magazines, sights and scopes) in each weapon's proportions, and you see your own sleeves and gloves on the gun in first person.
 
-- **Suit** and **Trim**: fifteen colours each. The suit covers your armour; the trim your pads, guards, headgear and back item.
-- **Pattern** printed on the suit: Racing Stripes, Chevrons, Honeycomb, Splinter, Pixel Camo, Dotwork, Weave, Tiger or Circuit.
-- **Headgear**: Field Cap, Crest Helm, Halo, Antenna Rig, Horned Helm, Bucket Helm or Wraparound visor.
-- **Visor**: the glow across your face, in seven colours.
-- **Back**: Field Pack, Twin Tanks, Dorsal Fin, Signal Mast, Jet Pack or Long Scarf.
+- **Uniform**: the colour of your shirt and trousers. Field colours (olive drab, ranger green, coyote, khaki, graphite, black...) and brighter ones.
+- **Gear**: the colour of your plate carrier, pouches, knee pads, helmet or hat, and pack.
+- **Pattern** printed on the uniform: Splinter, Digital, Tiger Stripe, Diagonal, Chevrons, Honeycomb, Dotwork, Weave or Circuit.
+- **Headgear**: Combat Helmet, Bare Head, Field Cap, Beanie, Headset, Boonie Hat, Helmet and Headset, or Bandana.
+- **Skin tone**: nine to pick from.
+- **Back**: Assault Pack, Hydration Pack, Radio Pack, Rucksack, Pack and Bedroll, or a Scarf.
+- **Mix your own colour**: under the uniform, gear and skin-tone lists, three sliders (hue, saturation, brightness) make any colour at all, and you wear it as you mix it.
 - **Weapon skins**: twelve (Carbon, Arctic, Woodland, Sandstorm, Tiger, Gilded, Mirror, Neon Grid, Magma, Nebula, Bubblegum, Redline) plus the factory finish. Pick **Every weapon** to skin them all, or a single weapon to give it a skin of its own. You see your skins on your own weapon in first person; others see them in your hands.
 
 The preview in the middle shows the result and turns by itself; drag it to turn it yourself. **Randomize** rolls a new outfit (keeping your weapon skins), and **Reset to default** starts over. Choices are saved as you make them, in `cosmetics.json` beside your loadouts.
 
-In a match everyone sees your look, and a change shows up for them straight away. Bots wear random looks. **Looks never change how anyone plays:** helmets and back items are not part of the body that bullets hit, so everyone is exactly as easy to hit whatever they wear. Coloured shoulder pads on every player (blue for your team, red for the other) keep sides readable whatever the outfit.
+In a match everyone sees your look, and a change shows up for them straight away. Bots wear random looks. **Looks never change how anyone plays:** helmets and back items are not part of the body that bullets hit, so everyone is exactly as easy to hit whatever they wear. Coloured armbands on every player (blue for your team, red for the other) keep sides readable whatever the outfit.
 
 ## Controls
 

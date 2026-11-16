@@ -17,9 +17,10 @@ namespace Recoil.Client.Visuals
     }
 
     /// <summary>
-    /// A player's body as the Blender-made armoured soldier: rigid segments (pelvis, torso,
-    /// head, two-part arms and legs, hands and boots) hung from each other at their joints,
-    /// and posed every frame from how the player is moving.
+    /// A player's body as the Blender-made soldier: one skinned mesh (uniform, plate carrier,
+    /// gloves, boots, a face) over a fifteen-bone skeleton, posed every frame from how the
+    /// player is moving. Near the joints the skin follows two bones, so elbows, knees,
+    /// shoulders and hips bend smoothly.
     ///
     /// The legs walk and run with the speed, step sideways when strafing, bend to crouch,
     /// tuck in the air and stretch out in a slide. The torso and head share the view's pitch,
@@ -27,39 +28,49 @@ namespace Recoil.Client.Visuals
     /// right hand on the pistol grip, the left under the handguard, elbows down and out.
     ///
     /// Purely for looking at: no colliders, and the hitboxes are a separate, fixed set of
-    /// shapes, so no pose makes anyone easier or harder to hit.
+    /// shapes, so no pose or outfit makes anyone easier or harder to hit.
     /// </summary>
     public sealed class SoldierView
     {
         public const string Set = "Soldier";
 
-        /// <summary>The model file is there and readable.</summary>
-        public static bool Available => ModelLibrary.Has(Set);
-
-        /// <summary>Every segment the soldier is made of, as named in the model file.</summary>
+        /// <summary>The bones the animation drives, as named in the model file.</summary>
         public static readonly string[] Names =
         {
             "Pelvis", "Torso", "Head", "ThighL", "ShinL", "FootL", "ThighR", "ShinR", "FootR",
             "UpperArmL", "ForearmL", "HandL", "UpperArmR", "ForearmR", "HandR",
         };
 
+        /// <summary>The model file is there, readable, and has the body and every bone.</summary>
+        public static bool Available
+        {
+            get
+            {
+                if (ModelLibrary.Get(Set, "Body") == null) return false;
+                var present = new HashSet<string>();
+                foreach (ModelBone bone in ModelLibrary.Bones(Set)) present.Add(bone.Name);
+                foreach (string name in Names)
+                {
+                    if (!present.Contains(name)) return false;
+                }
+                return true;
+            }
+        }
+
         readonly Transform _root;
         readonly Dictionary<string, Transform> _bones = new Dictionary<string, Transform>();
-        readonly Dictionary<string, ModelMesh> _models = new Dictionary<string, ModelMesh>();
-        readonly List<(MeshRenderer Renderer, ModelZone[] Zones)> _renderers = new List<(MeshRenderer, ModelZone[])>();
+        readonly Dictionary<string, Vector3> _pivots = new Dictionary<string, Vector3>();
+        readonly SkinnedMeshRenderer _body;
+        readonly ModelZone[] _zones;
         readonly Vector3 _pelvisRest;
-        readonly float _thigh, _shin, _upperArm, _forearm;
+        readonly float _thigh, _shin, _upperArm, _forearm, _ankle, _hipDrop;
         readonly Vector3 _upperRestL, _upperRestR, _foreRestL, _foreRestR;
 
-        Material _suit, _trim, _helmet, _glow, _team;
+        Material _uniform, _gear, _skin, _lips, _team;
         float _phase, _gait, _air, _slide;
         Transform _grip, _support;
 
         public Transform Root => _root;
-        /// <summary>At the centre of the helmet, turning with the head: for headgear.</summary>
-        public Transform HeadAnchor { get; }
-        /// <summary>At the middle of the back plate, moving with the torso: for back items.</summary>
-        public Transform BackAnchor { get; }
         /// <summary>Where a gun's origin goes. It turns with the view's pitch.</summary>
         public Transform WeaponMount { get; }
         readonly Transform _weaponPivot;
@@ -69,91 +80,95 @@ namespace Recoil.Client.Visuals
             _root = new GameObject("Soldier").transform;
             _root.SetParent(parent, false);
 
-            foreach (string name in Names)
+            // The skeleton, from the file: each bone at its joint, hanging from its parent.
+            IReadOnlyList<ModelBone> skeleton = ModelLibrary.Bones(Set);
+            var transforms = new Transform[skeleton.Count];
+            for (int i = 0; i < skeleton.Count; i++)
             {
-                ModelMesh model = ModelLibrary.Get(Set, name);
-                _models[name] = model;
-                var bone = new GameObject(name).transform;
-                _bones[name] = bone;
-                if (model == null) continue;
-                MeshRenderer renderer = ModelLibrary.Attach(bone.gameObject, model, Zone, castShadows);
-                _renderers.Add((renderer, model.Zones));
+                ModelBone bone = skeleton[i];
+                var t = new GameObject(bone.Name).transform;
+                Transform holder = bone.Parent < 0 ? _root : transforms[bone.Parent];
+                t.SetParent(holder, false);
+                t.localPosition = bone.Pivot - (bone.Parent < 0 ? Vector3.zero : skeleton[bone.Parent].Pivot);
+                transforms[i] = t;
+                _bones[bone.Name] = t;
+                _pivots[bone.Name] = bone.Pivot;
             }
 
-            // Each segment hangs from the one it is jointed to, at its own pivot.
-            Hang("Pelvis", null);
-            Hang("Torso", "Pelvis");
-            Hang("Head", "Torso");
-            foreach (string side in new[] { "L", "R" })
-            {
-                Hang("Thigh" + side, "Pelvis");
-                Hang("Shin" + side, "Thigh" + side);
-                Hang("Foot" + side, "Shin" + side);
-                Hang("UpperArm" + side, "Torso");
-                Hang("Forearm" + side, "UpperArm" + side);
-                Hang("Hand" + side, "Forearm" + side);
-            }
+            ModelMesh model = ModelLibrary.Get(Set, "Body");
+            var bodyObject = new GameObject("Body");
+            bodyObject.transform.SetParent(_root, false);
+            _body = bodyObject.AddComponent<SkinnedMeshRenderer>();
+            _body.sharedMesh = model.Mesh;
+            _body.bones = transforms;
+            _body.rootBone = _bones["Pelvis"];
+            // Generous, so a crouch or a slide never takes the body outside its bounds.
+            _body.localBounds = new Bounds(Vector3.zero, new Vector3(2.4f, 2.8f, 2.4f));
+            _body.shadowCastingMode = castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
+            _body.receiveShadows = castShadows;
+            _zones = model.Zones;
+            Refresh();
+
             _pelvisRest = _bones["Pelvis"].localPosition;
-
             _thigh = Length("ThighL", "ShinL");
             _shin = Length("ShinL", "FootL");
             _upperArm = Length("UpperArmL", "ForearmL");
             _forearm = Length("ForearmL", "HandL");
-            _upperRestL = Pivot("ForearmL") - Pivot("UpperArmL");
-            _upperRestR = Pivot("ForearmR") - Pivot("UpperArmR");
-            _foreRestL = Pivot("HandL") - Pivot("ForearmL");
-            _foreRestR = Pivot("HandR") - Pivot("ForearmR");
+            _ankle = _pivots["FootL"].y;
+            _hipDrop = _pivots["Pelvis"].y - _pivots["ThighL"].y;
+            _upperRestL = _pivots["ForearmL"] - _pivots["UpperArmL"];
+            _upperRestR = _pivots["ForearmR"] - _pivots["UpperArmR"];
+            _foreRestL = _pivots["HandL"] - _pivots["ForearmL"];
+            _foreRestR = _pivots["HandR"] - _pivots["ForearmR"];
 
-            Transform head = _bones["Head"], torso = _bones["Torso"];
-            HeadAnchor = new GameObject("Head Anchor").transform;
-            HeadAnchor.SetParent(head, false);
-            HeadAnchor.localPosition = new Vector3(0f, 0.165f, 0f);
-            BackAnchor = new GameObject("Back Anchor").transform;
-            BackAnchor.SetParent(torso, false);
-            BackAnchor.localPosition = new Vector3(0f, 0.15f, 0f);
             // The gun's pivot is the right shoulder pocket.
             _weaponPivot = new GameObject("Weapon Pivot").transform;
-            _weaponPivot.SetParent(torso, false);
+            _weaponPivot.SetParent(_bones["Torso"], false);
             _weaponPivot.localPosition = new Vector3(0.13f, 0.36f, 0.05f);
             WeaponMount = new GameObject("Weapon Mount").transform;
             WeaponMount.SetParent(_weaponPivot, false);
         }
 
-        Vector3 Pivot(string name) => _models[name] != null ? _models[name].Pivot : Vector3.zero;
-        float Length(string from, string to) => Mathf.Max(0.05f, (Pivot(to) - Pivot(from)).magnitude);
+        float Length(string from, string to) => Mathf.Max(0.05f, (_pivots[to] - _pivots[from]).magnitude);
 
-        void Hang(string name, string parent)
-        {
-            Transform bone = _bones[name];
-            bone.SetParent(parent == null ? _root : _bones[parent], false);
-            bone.localPosition = Pivot(name) - (parent == null ? Vector3.zero : Pivot(parent));
-        }
+        /// <summary>A bone of the skeleton, for hanging things on.</summary>
+        public Transform Bone(string name) => _bones[name];
 
-        Material Zone(ModelZone zone)
+        /// <summary>Where a bone's joint is in the model's rest pose.</summary>
+        public Vector3 Pivot(string name) => _pivots[name];
+
+        /// <summary>The material a zone of the soldier, or of anything they wear, takes.</summary>
+        public Material ZoneMaterial(ModelZone zone)
         {
             switch (zone)
             {
                 case ModelZone.Dark: return ModelMaterials.Dark;
                 case ModelZone.Metal: return ModelMaterials.Metal;
-                case ModelZone.Glow: return _glow ?? GreyboxMaterials.Unlit(new Color(0.2f, 0.9f, 1f));
-                case ModelZone.Trim: return _trim ?? ModelMaterials.Metal;
+                case ModelZone.Trim:
+                case ModelZone.Helmet: return _gear ?? ModelMaterials.Dark;
                 case ModelZone.Team: return _team ?? ModelMaterials.Dark;
-                case ModelZone.Helmet: return _helmet ?? ModelMaterials.Dark;
-                default: return _suit ?? ModelMaterials.Dark;
+                case ModelZone.Skin: return _skin ?? ModelMaterials.Dark;
+                case ModelZone.Lips: return _lips ?? _skin ?? ModelMaterials.Dark;
+                case ModelZone.Hair: return ModelMaterials.Hair;
+                case ModelZone.Eye: return ModelMaterials.EyeWhite;
+                case ModelZone.Iris: return ModelMaterials.Iris;
+                case ModelZone.Boots: return ModelMaterials.Boots;
+                case ModelZone.Glow: return ModelMaterials.Dark;
+                default: return _uniform ?? ModelMaterials.Dark;
             }
         }
 
-        /// <summary>Dresses the soldier: the suit's colour and pattern, its trim, the helmet, and the visor's glow.</summary>
-        public void SetMaterials(Material suit, Material trim, Material helmet, Material glow)
+        /// <summary>Dresses the soldier: the uniform's colour and pattern, the gear's colour, and the skin tone.</summary>
+        public void SetMaterials(Material uniform, Material gear, Material skin, Material lips)
         {
-            _suit = suit;
-            _trim = trim;
-            _helmet = helmet;
-            _glow = glow;
+            _uniform = uniform;
+            _gear = gear;
+            _skin = skin;
+            _lips = lips;
             Refresh();
         }
 
-        /// <summary>The shoulder pads' colour: the team's, or null for plain dark pads.</summary>
+        /// <summary>The armbands' colour: the team's, or null for plain dark ones.</summary>
         public void SetTeam(Material team)
         {
             if (ReferenceEquals(team, _team)) return;
@@ -163,12 +178,9 @@ namespace Recoil.Client.Visuals
 
         void Refresh()
         {
-            foreach ((MeshRenderer renderer, ModelZone[] zones) in _renderers)
-            {
-                var materials = new Material[zones.Length];
-                for (int i = 0; i < zones.Length; i++) materials[i] = Zone(zones[i]);
-                renderer.sharedMaterials = materials;
-            }
+            var materials = new Material[_zones.Length];
+            for (int i = 0; i < _zones.Length; i++) materials[i] = ZoneMaterial(_zones[i]);
+            _body.sharedMaterials = materials;
         }
 
         public void SetVisible(bool visible)
@@ -216,7 +228,7 @@ namespace Recoil.Client.Visuals
             float bob = amplitude * 0.035f * Mathf.Abs(Mathf.Cos(_phase));
             Transform pelvis = _bones["Pelvis"];
             pelvis.localPosition = _pelvisRest - new Vector3(0f, drop + bob, 0f);
-            float hipHeight = _pelvisRest.y - 0.03f - drop - bob;
+            float hipHeight = _pelvisRest.y - _hipDrop - drop - bob;
             LegBend(hipHeight, out float thighBase, out float kneeBase);
 
             Leg("L", _phase, thighBase, kneeBase, amplitude, forward, sideways, front: false);
@@ -235,8 +247,7 @@ namespace Recoil.Client.Visuals
         /// <summary>Hip and knee angles that put the ankle straight under a hip at this height.</summary>
         void LegBend(float hipHeight, out float thigh, out float knee)
         {
-            const float ankle = 0.09f;
-            float reach = Mathf.Clamp(hipHeight - ankle, 0.25f, _thigh + _shin - 0.005f);
+            float reach = Mathf.Clamp(hipHeight - _ankle, 0.25f, _thigh + _shin - 0.005f);
             float hip = Mathf.Acos(Mathf.Clamp((_thigh * _thigh + reach * reach - _shin * _shin) / (2f * _thigh * reach), -1f, 1f));
             float inner = Mathf.Acos(Mathf.Clamp((_thigh * _thigh + _shin * _shin - reach * reach) / (2f * _thigh * _shin), -1f, 1f));
             // The thigh swings forward (negative about x) and the shin folds back.

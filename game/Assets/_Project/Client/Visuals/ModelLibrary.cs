@@ -14,7 +14,8 @@ namespace Recoil.Client.Visuals
 
     /// <summary>
     /// The game's Blender-made models (Resources/Models/*.bytes), read once and kept. Sets:
-    /// "Soldier", the segments of a player's body; "GunParts", the detailed parts weapons are
+    /// "Soldier", a player's skinned body and skeleton (and the first-person sleeves and
+    /// gloves); "Gear", headgear and back items; "GunParts", the detailed parts weapons are
     /// built from.
     ///
     /// If a file is missing or unreadable the game carries on with its simple shapes: callers
@@ -23,9 +24,21 @@ namespace Recoil.Client.Visuals
     public static class ModelLibrary
     {
         static readonly Dictionary<string, Dictionary<string, ModelMesh>> Sets = new Dictionary<string, Dictionary<string, ModelMesh>>();
+        static readonly Dictionary<string, List<ModelBone>> Skeletons = new Dictionary<string, List<ModelBone>>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => Sets.Clear();
+        static void ResetStatics()
+        {
+            Sets.Clear();
+            Skeletons.Clear();
+        }
+
+        /// <summary>A set's skeleton, in order (a bone always after its parent), or an empty list.</summary>
+        public static IReadOnlyList<ModelBone> Bones(string set)
+        {
+            Load(set);
+            return Skeletons.TryGetValue(set, out List<ModelBone> bones) ? bones : (IReadOnlyList<ModelBone>)new ModelBone[0];
+        }
 
         /// <summary>A model from a set, or null if there is no such model.</summary>
         public static ModelMesh Get(string set, string name)
@@ -50,7 +63,9 @@ namespace Recoil.Client.Visuals
                 try
                 {
                     models = new Dictionary<string, ModelMesh>();
-                    foreach (ModelData data in ModelFile.Parse(asset.bytes)) models[data.Name] = ToMesh(data);
+                    ModelSet file = ModelFile.ParseSet(asset.bytes);
+                    Skeletons[set] = file.Bones;
+                    foreach (ModelData data in file.Models) models[data.Name] = ToMesh(data, file.Bones);
                 }
                 catch (System.Exception e)
                 {
@@ -63,7 +78,7 @@ namespace Recoil.Client.Visuals
             return models;
         }
 
-        static ModelMesh ToMesh(ModelData data)
+        static ModelMesh ToMesh(ModelData data, List<ModelBone> bones)
         {
             var mesh = new Mesh { name = data.Name };
             mesh.vertices = data.Positions;
@@ -71,6 +86,25 @@ namespace Recoil.Client.Visuals
             mesh.uv = data.Uvs;
             mesh.subMeshCount = data.Indices.Length;
             for (int i = 0; i < data.Indices.Length; i++) mesh.SetTriangles(data.Indices[i], i, false);
+            if (data.Skinned)
+            {
+                // Each vertex follows one bone, or two near a joint. The bones rest at their
+                // joints, unturned, so the bind pose only moves the joint to the origin.
+                var weights = new BoneWeight[data.Positions.Length];
+                for (int v = 0; v < weights.Length; v++)
+                {
+                    float second = data.Bone1[v] == data.Bone0[v] ? 0f : data.Weight1[v];
+                    weights[v] = new BoneWeight
+                    {
+                        boneIndex0 = data.Bone0[v], weight0 = 1f - second,
+                        boneIndex1 = data.Bone1[v], weight1 = second,
+                    };
+                }
+                mesh.boneWeights = weights;
+                var bindposes = new Matrix4x4[bones.Count];
+                for (int b = 0; b < bones.Count; b++) bindposes[b] = Matrix4x4.Translate(-bones[b].Pivot);
+                mesh.bindposes = bindposes;
+            }
             mesh.RecalculateBounds();
             mesh.UploadMeshData(true);
             return new ModelMesh { Name = data.Name, Pivot = data.Pivot, Mesh = mesh, Zones = data.Zones };
@@ -90,34 +124,27 @@ namespace Recoil.Client.Visuals
         }
     }
 
-    /// <summary>The fixed materials models share: bare metal, dark rubber and webbing.</summary>
+    /// <summary>The fixed materials models share: bare metal, dark rubber and webbing, hair, eyes, boot leather.</summary>
     public static class ModelMaterials
     {
-        static Material _metal, _dark;
+        static Material _metal, _dark, _hair, _eye, _iris, _boots;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => _metal = _dark = null;
+        static void ResetStatics() => _metal = _dark = _hair = _eye = _iris = _boots = null;
 
-        public static Material Metal
-        {
-            get
-            {
-                if (_metal != null) return _metal;
-                _metal = new Material(GreyboxMaterials.Flat(new Color(0.42f, 0.43f, 0.45f))) { name = "Model Metal" };
-                Tune(_metal, metallic: 0.75f, smoothness: 0.58f);
-                return _metal;
-            }
-        }
+        public static Material Metal => Make(ref _metal, "Model Metal", new Color(0.42f, 0.43f, 0.45f), 0.75f, 0.58f);
+        public static Material Dark => Make(ref _dark, "Model Dark", new Color(0.075f, 0.08f, 0.088f), 0f, 0.3f);
+        public static Material Hair => Make(ref _hair, "Model Hair", new Color(0.07f, 0.05f, 0.035f), 0f, 0.3f);
+        public static Material EyeWhite => Make(ref _eye, "Model Eye", new Color(0.86f, 0.85f, 0.81f), 0f, 0.75f);
+        public static Material Iris => Make(ref _iris, "Model Iris", new Color(0.09f, 0.06f, 0.04f), 0f, 0.85f);
+        public static Material Boots => Make(ref _boots, "Model Boots", new Color(0.12f, 0.09f, 0.065f), 0f, 0.38f);
 
-        public static Material Dark
+        static Material Make(ref Material cache, string name, Color colour, float metallic, float smoothness)
         {
-            get
-            {
-                if (_dark != null) return _dark;
-                _dark = new Material(GreyboxMaterials.Flat(new Color(0.075f, 0.08f, 0.088f))) { name = "Model Dark" };
-                Tune(_dark, metallic: 0f, smoothness: 0.32f);
-                return _dark;
-            }
+            if (cache != null) return cache;
+            cache = new Material(GreyboxMaterials.Flat(colour)) { name = name };
+            Tune(cache, metallic, smoothness);
+            return cache;
         }
 
         public static void Tune(Material material, float metallic, float smoothness)

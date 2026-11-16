@@ -31,7 +31,7 @@ namespace Recoil.Tests
             foreach (CosmeticSlot slot in CosmeticCatalog.Slots)
                 Assert.That(CosmeticCatalog.Find(slot, look.Get(slot)), Is.Not.Null, slot + " default '" + look.Get(slot) + "' is not in the catalog");
             Assert.That(CosmeticCatalog.Default(CosmeticSlot.WeaponSkin).Factory, Is.True, "weapons start in their own colours");
-            Assert.That(CosmeticCatalog.Default(CosmeticSlot.Headgear).Shape, Is.EqualTo((byte)HeadgearKind.None));
+            Assert.That(CosmeticCatalog.Default(CosmeticSlot.Headgear).Shape, Is.EqualTo((byte)HeadgearKind.Helmet), "soldiers start in a helmet");
         }
 
         [Test]
@@ -57,7 +57,7 @@ namespace Recoil.Tests
             CharacterLook clean = LookRules.Sanitize(messy);
             Assert.That(clean.suitColor, Is.EqualTo(CosmeticCatalog.Default(CosmeticSlot.SuitColor).Id));
             Assert.That(clean.pattern, Is.EqualTo("tiger"));
-            Assert.That(clean.headgear, Is.EqualTo("none"));
+            Assert.That(clean.headgear, Is.EqualTo("helmet"));
             Assert.That(clean.weaponSkins.Length, Is.EqualTo(1));
             Assert.That(clean.SkinFor("ar_hadron").Id, Is.EqualTo("carbon"));
             Assert.That(clean.SkinFor("smg_sprocket").Id, Is.EqualTo("gilded"));
@@ -93,14 +93,14 @@ namespace Recoil.Tests
         {
             var look = new CharacterLook
             {
-                suitColor = "cobalt", trimColor = "saffron", pattern = "circuit", headgear = "horned_helm", visor = "magenta",
-                back = "long_scarf", weaponSkin = "carbon",
+                suitColor = "#3A5F1C", trimColor = "saffron", pattern = "circuit", headgear = "boonie", skin = "#6B4A33",
+                back = "scarf", weaponSkin = "carbon",
             };
             for (int i = 0; i < LookRules.MaxWeaponSkins; i++) look.SetSkin("weapon_number_" + i.ToString("00"), i % 2 == 0 ? "tiger" : "nebula");
 
             var writer = new NetWriter(64);
             NetMessages.WriteLook(writer, look);
-            Assert.That(writer.Length, Is.LessThan(1100), "a look must fit in a player's info with room to spare");
+            Assert.That(writer.Length, Is.LessThan(1110), "a look must fit in a player's info with room to spare");
 
             var reader = new NetReader();
             reader.Reset(writer.Data, 0, writer.Length);
@@ -127,7 +127,29 @@ namespace Recoil.Tests
             reader.Reset(odd.Data, 0, odd.Length);
             CharacterLook unknown = NetMessages.ReadLook(reader);
             Assert.That(reader.Failed, Is.False);
-            Assert.That(unknown.headgear, Is.EqualTo("none"));
+            Assert.That(unknown.headgear, Is.EqualTo("helmet"));
+        }
+
+        [Test]
+        public void MixedColours_AreKept_ForTheUniformGearAndSkin_ButNothingElse()
+        {
+            Assert.That(CosmeticCatalog.TryParseColour("#3a5F1c", out UnityEngine.Color colour), Is.True);
+            Assert.That(colour.g, Is.EqualTo(0x5F / 255f).Within(0.001f));
+            foreach (string bad in new[] { "#12345", "123456", "#12345G", "#1234567", "", null })
+                Assert.That(CosmeticCatalog.TryParseColour(bad, out _), Is.False, bad ?? "null");
+
+            CosmeticItem mixed = CosmeticCatalog.FindOrDefault(CosmeticSlot.SuitColor, "#3A5F1C");
+            Assert.That(mixed.Custom, Is.True);
+            Assert.That(mixed.Id, Is.EqualTo("#3A5F1C"));
+            Assert.That(CosmeticCatalog.CustomColour(CosmeticSlot.Skin, colour).Id, Is.EqualTo("#3A5F1C"), "the id is the colour");
+
+            var look = new CharacterLook { suitColor = "#3a5f1c", trimColor = "#FFFFFF", skin = "#6B4A33", pattern = "#123456", headgear = "#ABCDEF" };
+            CharacterLook clean = LookRules.Sanitize(look);
+            Assert.That(clean.suitColor, Is.EqualTo("#3A5F1C"), "written the one way");
+            Assert.That(clean.trimColor, Is.EqualTo("#FFFFFF"));
+            Assert.That(clean.skin, Is.EqualTo("#6B4A33"));
+            Assert.That(clean.pattern, Is.EqualTo("plain"), "patterns cannot be mixed");
+            Assert.That(clean.headgear, Is.EqualTo("helmet"));
         }
 
         [Test]
@@ -158,18 +180,20 @@ namespace Recoil.Tests
                 int changes = 0;
                 library.Changed += () => changes++;
 
-                library.Edit(look => look.Set(CosmeticSlot.Headgear, "halo"));
+                library.Edit(look => look.Set(CosmeticSlot.Headgear, "beanie"));
+                library.Edit(look => look.Set(CosmeticSlot.SuitColor, "#204060"));
                 library.Edit(look => look.SetSkin("ar_hadron", "gilded"));
-                Assert.That(changes, Is.EqualTo(2));
+                Assert.That(changes, Is.EqualTo(3));
                 Assert.That(library.Look.updatedAt, Is.GreaterThanOrEqualTo(now));
 
                 var again = new CosmeticsLibrary(file, () => now);
-                Assert.That(again.Look.headgear, Is.EqualTo("halo"));
+                Assert.That(again.Look.headgear, Is.EqualTo("beanie"));
+                Assert.That(again.Look.suitColor, Is.EqualTo("#204060"));
                 Assert.That(again.Look.SkinFor("ar_hadron").Id, Is.EqualTo("gilded"));
 
                 File.WriteAllText(file, "{ this is not json");
                 var broken = new CosmeticsLibrary(file, () => now);
-                Assert.That(broken.Look.headgear, Is.EqualTo("none"));
+                Assert.That(broken.Look.headgear, Is.EqualTo("helmet"));
                 Assert.That(File.Exists(file + ".unreadable"), Is.True);
             }
             finally

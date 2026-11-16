@@ -6,11 +6,14 @@ namespace Recoil.Shared.Cosmetics
     /// <summary>The parts of a look a player chooses. Each has its own list of items.</summary>
     public enum CosmeticSlot : byte
     {
+        /// <summary>The uniform: shirt and trousers.</summary>
         SuitColor,
+        /// <summary>The gear: plate carrier, pouches, pads, helmet and pack.</summary>
         TrimColor,
         Pattern,
         Headgear,
-        Visor,
+        /// <summary>Skin tone.</summary>
+        Skin,
         Back,
         WeaponSkin,
     }
@@ -31,25 +34,26 @@ namespace Recoil.Shared.Cosmetics
 
     public enum HeadgearKind : byte
     {
+        /// <summary>No hat: short hair.</summary>
         None,
-        FieldCap,
-        CrestHelm,
-        Halo,
-        AntennaRig,
-        HornedHelm,
-        BucketHelm,
-        Wraparound,
+        Cap,
+        Helmet,
+        Beanie,
+        Headset,
+        Boonie,
+        HelmetHeadset,
+        Bandana,
     }
 
     public enum BackKind : byte
     {
         None,
-        FieldPack,
-        TwinTanks,
-        DorsalFin,
-        SignalMast,
-        JetPack,
-        LongScarf,
+        AssaultPack,
+        HydrationPack,
+        RadioPack,
+        Rucksack,
+        BedrollPack,
+        Scarf,
     }
 
     /// <summary>One thing a player can wear, or a skin for their weapons. Purely visual: nothing here changes how anyone plays.</summary>
@@ -73,6 +77,9 @@ namespace Recoil.Shared.Cosmetics
 
         /// <summary>Where the item sits in its slot's list. Sent over the network instead of the id.</summary>
         public int Index;
+
+        /// <summary>A colour the player mixed themselves, rather than one from the list.</summary>
+        public bool Custom => Index == CosmeticCatalog.CustomIndex;
     }
 
     /// <summary>
@@ -89,13 +96,20 @@ namespace Recoil.Shared.Cosmetics
 
         static CosmeticCatalog()
         {
-            // Colours for the suit and the trim: the same palette, chosen separately.
+            // Uniform and gear colours: the same list, chosen separately. Field colours first,
+            // then brighter ones. Any colour at all can be mixed as well (see CustomColour).
             (string id, string name, Color color)[] palette =
             {
+                ("olive", "Olive Drab", new Color(0.24f, 0.27f, 0.17f)),
+                ("ranger", "Ranger Green", new Color(0.19f, 0.22f, 0.16f)),
+                ("coyote", "Coyote", new Color(0.5f, 0.41f, 0.29f)),
+                ("khaki", "Khaki", new Color(0.66f, 0.6f, 0.45f)),
                 ("graphite", "Graphite", new Color(0.22f, 0.24f, 0.27f)),
                 ("slate", "Slate", new Color(0.36f, 0.42f, 0.5f)),
+                ("onyx", "Black", new Color(0.08f, 0.08f, 0.09f)),
                 ("bone", "Bone", new Color(0.86f, 0.83f, 0.76f)),
-                ("glacier", "Glacier", new Color(0.62f, 0.82f, 0.92f)),
+                ("snow", "Snow", new Color(0.95f, 0.96f, 0.97f)),
+                ("navy", "Navy", new Color(0.12f, 0.16f, 0.28f)),
                 ("cobalt", "Cobalt", new Color(0.16f, 0.32f, 0.72f)),
                 ("teal", "Teal", new Color(0.1f, 0.55f, 0.55f)),
                 ("moss", "Moss", new Color(0.33f, 0.45f, 0.22f)),
@@ -103,51 +117,58 @@ namespace Recoil.Shared.Cosmetics
                 ("saffron", "Saffron", new Color(0.95f, 0.7f, 0.12f)),
                 ("ember", "Ember", new Color(0.9f, 0.42f, 0.12f)),
                 ("crimson", "Crimson", new Color(0.66f, 0.1f, 0.14f)),
+                ("maroon", "Maroon", new Color(0.38f, 0.1f, 0.1f)),
                 ("orchid", "Orchid", new Color(0.7f, 0.38f, 0.8f)),
                 ("violet", "Violet", new Color(0.36f, 0.22f, 0.6f)),
-                ("onyx", "Onyx", new Color(0.08f, 0.08f, 0.09f)),
-                ("snow", "Snow", new Color(0.95f, 0.96f, 0.97f)),
+                ("glacier", "Glacier", new Color(0.62f, 0.82f, 0.92f)),
             };
             foreach (var colour in palette) Add(new CosmeticItem { Id = colour.id, Name = colour.name, Slot = CosmeticSlot.SuitColor, Color = colour.color });
-            foreach (var colour in palette) Add(new CosmeticItem { Id = colour.id, Name = colour.name, Slot = CosmeticSlot.TrimColor, Color = colour.color });
+            // Gear defaults to coyote, against an olive uniform.
+            Add(new CosmeticItem { Id = "coyote", Name = "Coyote", Slot = CosmeticSlot.TrimColor, Color = new Color(0.5f, 0.41f, 0.29f) });
+            foreach (var colour in palette)
+            {
+                if (colour.id != "coyote") Add(new CosmeticItem { Id = colour.id, Name = colour.name, Slot = CosmeticSlot.TrimColor, Color = colour.color });
+            }
 
-            // Patterns printed on the suit, in the suit colour and a shade of it.
+            // Patterns printed on the uniform, in its colour and a shade of it.
             Pattern("plain", "Plain", PatternKind.Plain);
-            Pattern("stripes", "Racing Stripes", PatternKind.Stripes);
+            Pattern("splinter", "Splinter", PatternKind.Splinter);
+            Pattern("pixel", "Digital", PatternKind.Pixel);
+            Pattern("tiger", "Tiger Stripe", PatternKind.Tiger);
+            Pattern("stripes", "Diagonal", PatternKind.Stripes);
             Pattern("chevrons", "Chevrons", PatternKind.Chevrons);
             Pattern("honeycomb", "Honeycomb", PatternKind.Honeycomb);
-            Pattern("splinter", "Splinter", PatternKind.Splinter);
-            Pattern("pixel", "Pixel Camo", PatternKind.Pixel);
             Pattern("dots", "Dotwork", PatternKind.Dots);
             Pattern("weave", "Weave", PatternKind.Weave);
-            Pattern("tiger", "Tiger", PatternKind.Tiger);
             Pattern("circuit", "Circuit", PatternKind.Circuit);
 
-            Headgear("none", "Bare", HeadgearKind.None);
-            Headgear("field_cap", "Field Cap", HeadgearKind.FieldCap);
-            Headgear("crest_helm", "Crest Helm", HeadgearKind.CrestHelm);
-            Headgear("halo", "Halo", HeadgearKind.Halo);
-            Headgear("antenna_rig", "Antenna Rig", HeadgearKind.AntennaRig);
-            Headgear("horned_helm", "Horned Helm", HeadgearKind.HornedHelm);
-            Headgear("bucket_helm", "Bucket Helm", HeadgearKind.BucketHelm);
-            Headgear("wraparound", "Wraparound", HeadgearKind.Wraparound);
+            Headgear("helmet", "Combat Helmet", HeadgearKind.Helmet);
+            Headgear("none", "Bare Head", HeadgearKind.None);
+            Headgear("cap", "Field Cap", HeadgearKind.Cap);
+            Headgear("beanie", "Beanie", HeadgearKind.Beanie);
+            Headgear("headset", "Headset", HeadgearKind.Headset);
+            Headgear("boonie", "Boonie Hat", HeadgearKind.Boonie);
+            Headgear("helmet_headset", "Helmet and Headset", HeadgearKind.HelmetHeadset);
+            Headgear("bandana", "Bandana", HeadgearKind.Bandana);
 
-            // The glowing band across the face.
-            Visor("arc", "Arc", new Color(0.15f, 0.85f, 1f));
-            Visor("lime", "Lime", new Color(0.55f, 1f, 0.2f));
-            Visor("amber", "Amber", new Color(1f, 0.68f, 0.1f));
-            Visor("magenta", "Magenta", new Color(1f, 0.2f, 0.75f));
-            Visor("ice", "Ice", new Color(0.88f, 0.95f, 1f));
-            Visor("ultraviolet", "Ultraviolet", new Color(0.55f, 0.3f, 1f));
-            Visor("blackout", "Blackout", new Color(0.05f, 0.05f, 0.06f));
+            // Skin tones. Any tone at all can be mixed as well.
+            SkinTone("medium", "Medium", new Color(0.72f, 0.52f, 0.4f));
+            SkinTone("porcelain", "Porcelain", new Color(0.93f, 0.8f, 0.72f));
+            SkinTone("fair", "Fair", new Color(0.87f, 0.7f, 0.59f));
+            SkinTone("light", "Light", new Color(0.8f, 0.61f, 0.48f));
+            SkinTone("olive", "Olive", new Color(0.66f, 0.5f, 0.35f));
+            SkinTone("tan", "Tan", new Color(0.58f, 0.41f, 0.29f));
+            SkinTone("brown", "Brown", new Color(0.44f, 0.29f, 0.2f));
+            SkinTone("deep", "Deep", new Color(0.3f, 0.19f, 0.13f));
+            SkinTone("ebony", "Ebony", new Color(0.2f, 0.13f, 0.09f));
 
             Back("none", "Nothing", BackKind.None);
-            Back("field_pack", "Field Pack", BackKind.FieldPack);
-            Back("twin_tanks", "Twin Tanks", BackKind.TwinTanks);
-            Back("dorsal_fin", "Dorsal Fin", BackKind.DorsalFin);
-            Back("signal_mast", "Signal Mast", BackKind.SignalMast);
-            Back("jet_pack", "Jet Pack", BackKind.JetPack);
-            Back("long_scarf", "Long Scarf", BackKind.LongScarf);
+            Back("assault_pack", "Assault Pack", BackKind.AssaultPack);
+            Back("hydration", "Hydration Pack", BackKind.HydrationPack);
+            Back("radio", "Radio Pack", BackKind.RadioPack);
+            Back("rucksack", "Rucksack", BackKind.Rucksack);
+            Back("bedroll", "Pack and Bedroll", BackKind.BedrollPack);
+            Back("scarf", "Scarf", BackKind.Scarf);
 
             // Weapon skins: a base, a second colour for the pattern, and how much it shines.
             Skin("factory", "Factory", Color.gray, Color.gray, PatternKind.Plain, 0f, factory: true);
@@ -178,8 +199,8 @@ namespace Recoil.Shared.Cosmetics
         static void Headgear(string id, string name, HeadgearKind kind) =>
             Add(new CosmeticItem { Id = id, Name = name, Slot = CosmeticSlot.Headgear, Shape = (byte)kind, Color = Color.white });
 
-        static void Visor(string id, string name, Color glow) =>
-            Add(new CosmeticItem { Id = id, Name = name, Slot = CosmeticSlot.Visor, Color = glow });
+        static void SkinTone(string id, string name, Color tone) =>
+            Add(new CosmeticItem { Id = id, Name = name, Slot = CosmeticSlot.Skin, Color = tone });
 
         static void Back(string id, string name, BackKind kind) =>
             Add(new CosmeticItem { Id = id, Name = name, Slot = CosmeticSlot.Back, Shape = (byte)kind, Color = Color.white });
@@ -199,7 +220,7 @@ namespace Recoil.Shared.Cosmetics
         /// <summary>What a slot holds when nothing else is chosen: the first item in its list.</summary>
         public static CosmeticItem Default(CosmeticSlot slot) => BySlot[slot][0];
 
-        /// <summary>The item with this id, or null.</summary>
+        /// <summary>The item with this id, or null. In a colour slot, "#RRGGBB" is a colour the player mixed.</summary>
         public static CosmeticItem Find(CosmeticSlot slot, string id)
         {
             if (string.IsNullOrEmpty(id)) return null;
@@ -207,7 +228,64 @@ namespace Recoil.Shared.Cosmetics
             {
                 if (item.Id == id) return item;
             }
-            return null;
+            return Mixable(slot) && TryParseColour(id, out Color colour) ? CustomColour(slot, colour) : null;
+        }
+
+        // ------------------------------------------------------------------ mixed colours
+
+        /// <summary>The index a mixed colour goes by on the network, in place of a place in the list.</summary>
+        public const int CustomIndex = 255;
+
+        /// <summary>The slots a player can mix any colour for: the uniform, the gear and the skin.</summary>
+        public static bool Mixable(CosmeticSlot slot) =>
+            slot == CosmeticSlot.SuitColor || slot == CosmeticSlot.TrimColor || slot == CosmeticSlot.Skin;
+
+        static readonly Dictionary<string, CosmeticItem> Mixed = new Dictionary<string, CosmeticItem>();
+
+        /// <summary>The item for a colour the player mixed. Its id is the colour as "#RRGGBB".</summary>
+        public static CosmeticItem CustomColour(CosmeticSlot slot, Color colour)
+        {
+            byte r = Channel(colour.r), g = Channel(colour.g), b = Channel(colour.b);
+            string id = "#" + r.ToString("X2") + g.ToString("X2") + b.ToString("X2");
+            string key = (int)slot + id;
+            lock (Mixed)
+            {
+                if (Mixed.TryGetValue(key, out CosmeticItem known)) return known;
+                var item = new CosmeticItem
+                {
+                    Id = id, Name = "Custom", Slot = slot, Color = new Color(r / 255f, g / 255f, b / 255f), Index = CustomIndex,
+                };
+                if (Mixed.Count > 4096) Mixed.Clear();
+                Mixed[key] = item;
+                return item;
+            }
+        }
+
+        /// <summary>A colour channel as a byte, rounded to the nearest.</summary>
+        public static byte Channel(float value) => (byte)Mathf.Clamp(Mathf.RoundToInt(value * 255f), 0, 255);
+
+        /// <summary>Reads "#RRGGBB".</summary>
+        public static bool TryParseColour(string id, out Color colour)
+        {
+            colour = default;
+            if (id == null || id.Length != 7 || id[0] != '#') return false;
+            int value = 0;
+            for (int i = 1; i < 7; i++)
+            {
+                int digit = HexDigit(id[i]);
+                if (digit < 0) return false;
+                value = value * 16 + digit;
+            }
+            colour = new Color(((value >> 16) & 255) / 255f, ((value >> 8) & 255) / 255f, (value & 255) / 255f);
+            return true;
+        }
+
+        static int HexDigit(char c)
+        {
+            if (c >= '0' && c <= '9') return c - '0';
+            if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+            if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+            return -1;
         }
 
         /// <summary>The item with this id, or the slot's default if there is none.</summary>
@@ -225,7 +303,7 @@ namespace Recoil.Shared.Cosmetics
         public static readonly CosmeticSlot[] Slots =
         {
             CosmeticSlot.SuitColor, CosmeticSlot.TrimColor, CosmeticSlot.Pattern, CosmeticSlot.Headgear,
-            CosmeticSlot.Visor, CosmeticSlot.Back, CosmeticSlot.WeaponSkin,
+            CosmeticSlot.Skin, CosmeticSlot.Back, CosmeticSlot.WeaponSkin,
         };
     }
 }

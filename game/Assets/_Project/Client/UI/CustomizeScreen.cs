@@ -14,8 +14,9 @@ using Recoil.Shared.Weapons;
 namespace Recoil.Client.UI
 {
     /// <summary>
-    /// Where a player chooses how they look: suit and trim colours, a pattern, headgear, a
-    /// visor, something on their back, and a skin for each weapon (or one for all of them).
+    /// Where a player chooses how they look: the uniform's colour and pattern, the gear's
+    /// colour, headgear, skin tone, something on their back, and a skin for each weapon (or
+    /// one for all of them). Every colour can be picked from the list or mixed freely.
     /// A live preview in the middle shows the result; drag it to turn the character round.
     ///
     /// Every item is free to pick. Choices are saved as they are made, and in a match everyone
@@ -34,11 +35,11 @@ namespace Recoil.Client.UI
 
         static readonly (CosmeticSlot slot, string title)[] Categories =
         {
-            (CosmeticSlot.SuitColor, "SUIT"),
-            (CosmeticSlot.TrimColor, "TRIM"),
+            (CosmeticSlot.SuitColor, "UNIFORM"),
+            (CosmeticSlot.TrimColor, "GEAR"),
             (CosmeticSlot.Pattern, "PATTERN"),
             (CosmeticSlot.Headgear, "HEADGEAR"),
-            (CosmeticSlot.Visor, "VISOR"),
+            (CosmeticSlot.Skin, "SKIN TONE"),
             (CosmeticSlot.Back, "BACK"),
             (CosmeticSlot.WeaponSkin, "WEAPON SKINS"),
         };
@@ -56,6 +57,10 @@ namespace Recoil.Client.UI
         int _category;
         bool _dragging;
         float _dragX;
+        VisualElement _mixer, _mixSwatch;
+        Slider _hue, _saturation, _brightness;
+        Label _mixHex;
+        float _lastMix = -10f;
 
         /// <summary>The screen is showing. Other screens leave Esc to it meanwhile.</summary>
         public static bool IsOpen => _open != null;
@@ -232,6 +237,7 @@ namespace Recoil.Client.UI
             _items.style.flexDirection = FlexDirection.Row;
             _items.style.flexWrap = Wrap.Wrap;
             scroll.Add(_items);
+            BuildMixer(right);
 
             var buttons = Row(card);
             buttons.AddToClassList("pause-buttons");
@@ -243,6 +249,90 @@ namespace Recoil.Client.UI
 
             _cosmetics.Changed += Refresh;
             SelectCategory(0);
+        }
+
+        /// <summary>
+        /// Under the colours: mix any colour at all, by hue, saturation and brightness. It is
+        /// worn as it is mixed.
+        /// </summary>
+        void BuildMixer(VisualElement parent)
+        {
+            _mixer = new VisualElement();
+            _mixer.style.flexDirection = FlexDirection.Row;
+            _mixer.style.alignItems = Align.Center;
+            _mixer.style.marginTop = 10;
+            _mixer.style.paddingLeft = _mixer.style.paddingRight = 14;
+            _mixer.style.paddingTop = _mixer.style.paddingBottom = 12;
+            _mixer.style.backgroundColor = Tile;
+            Round(_mixer, 8);
+            parent.Add(_mixer);
+
+            var swatchColumn = new VisualElement();
+            swatchColumn.style.alignItems = Align.Center;
+            swatchColumn.style.marginRight = 16;
+            _mixer.Add(swatchColumn);
+            var title = new Label("MIX YOUR OWN");
+            title.style.fontSize = 12;
+            title.style.letterSpacing = 2;
+            title.style.color = Accent;
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            title.style.marginBottom = 6;
+            swatchColumn.Add(title);
+            _mixSwatch = new VisualElement();
+            _mixSwatch.style.width = 92;
+            _mixSwatch.style.height = 56;
+            Round(_mixSwatch, 6);
+            swatchColumn.Add(_mixSwatch);
+            _mixHex = new Label();
+            _mixHex.style.fontSize = 12;
+            _mixHex.style.color = Dim;
+            _mixHex.style.marginTop = 4;
+            swatchColumn.Add(_mixHex);
+
+            var sliders = new VisualElement();
+            sliders.style.flexGrow = 1;
+            _mixer.Add(sliders);
+            _hue = MixSlider(sliders, "Hue", 360f);
+            _saturation = MixSlider(sliders, "Saturation", 100f);
+            _brightness = MixSlider(sliders, "Brightness", 100f);
+        }
+
+        Slider MixSlider(VisualElement parent, string label, float max)
+        {
+            var slider = new Slider(label, 0f, max);
+            slider.style.marginTop = 2;
+            slider.style.marginBottom = 2;
+            slider.labelElement.style.minWidth = 100;
+            slider.labelElement.style.color = Text;
+            slider.RegisterValueChangedCallback(_ => Mix());
+            parent.Add(slider);
+            return slider;
+        }
+
+        void Mix()
+        {
+            if (!CosmeticCatalog.Mixable(Slot)) return;
+            _lastMix = Time.unscaledTime;
+            Color colour = Color.HSVToRGB(_hue.value / 360f, _saturation.value / 100f, _brightness.value / 100f);
+            Choose(CosmeticCatalog.CustomColour(Slot, colour));
+        }
+
+        /// <summary>Shows the mixer for colours only, set to the colour being worn.</summary>
+        void RefreshMixer(CharacterLook look)
+        {
+            bool mixable = CosmeticCatalog.Mixable(Slot);
+            _mixer.style.display = mixable ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!mixable) return;
+            CosmeticItem current = look.Item(Slot);
+            _mixSwatch.style.backgroundColor = current.Color;
+            Color32 c = current.Color;
+            _mixHex.text = current.Custom ? current.Id : "#" + c.r.ToString("X2") + c.g.ToString("X2") + c.b.ToString("X2");
+            // Left alone while a slider is being dragged, so rounding never makes it jump.
+            if (Time.unscaledTime - _lastMix < 0.5f) return;
+            Color.RGBToHSV(current.Color, out float h, out float sat, out float v);
+            _hue.SetValueWithoutNotify(h * 360f);
+            _saturation.SetValueWithoutNotify(sat * 100f);
+            _brightness.SetValueWithoutNotify(v * 100f);
         }
 
         /// <summary>The weapon a skin goes on: every weapon, or one in particular.</summary>
@@ -338,17 +428,21 @@ namespace Recoil.Client.UI
             string chosen = skins ? (picked != null ? look.SkinFor(picked.weaponId).Id : look.weaponSkin) : look.Get(slot);
             _items.Clear();
             foreach (CosmeticItem item in CosmeticCatalog.InSlot(slot)) _items.Add(ItemTile(item, item.Id == chosen, look));
+            // A colour of the player's own mixing shows as one more tile.
+            CosmeticItem worn = skins ? null : look.Item(slot);
+            if (worn != null && worn.Custom) _items.Add(ItemTile(worn, true, look));
+            RefreshMixer(look);
         }
 
         string Caption(CosmeticSlot slot, CharacterLook look, WeaponDefinition picked)
         {
             switch (slot)
             {
-                case CosmeticSlot.SuitColor: return "The main colour of your suit.";
-                case CosmeticSlot.TrimColor: return "Your arms, and the colour of your headgear and back item.";
-                case CosmeticSlot.Pattern: return "Printed on your suit, in a shade of its colour.";
-                case CosmeticSlot.Headgear: return "Worn over the head. Purely for looks: your head is the same size to a bullet whatever you wear.";
-                case CosmeticSlot.Visor: return "The glow across your face.";
+                case CosmeticSlot.SuitColor: return "Your uniform: shirt and trousers. Pick a colour, or mix your own below.";
+                case CosmeticSlot.TrimColor: return "Your gear: plate carrier, pouches, knee pads, helmet, hats and pack. Pick a colour, or mix your own below.";
+                case CosmeticSlot.Pattern: return "Printed on your uniform, in a shade of its colour.";
+                case CosmeticSlot.Headgear: return "Worn on your head. Purely for looks: your head is the same size to a bullet whatever you wear.";
+                case CosmeticSlot.Skin: return "Your skin tone. Pick one, or mix your own below.";
                 case CosmeticSlot.Back: return "Worn on your back.";
                 default:
                     if (picked == null)
@@ -405,7 +499,7 @@ namespace Recoil.Client.UI
             {
                 case CosmeticSlot.SuitColor:
                 case CosmeticSlot.TrimColor:
-                case CosmeticSlot.Visor:
+                case CosmeticSlot.Skin:
                     swatch.style.backgroundColor = item.Color;
                     break;
                 case CosmeticSlot.Pattern:
@@ -427,8 +521,8 @@ namespace Recoil.Client.UI
                     }
                     break;
                 default:
-                    // Headgear and back items: a plate in the trim colour, with a line marking "none".
-                    bool none = item.Shape == 0;
+                    // Headgear and back items: a plate in the gear colour, with a line marking "none".
+                    bool none = item.Shape == 0 && item.Slot == CosmeticSlot.Back;
                     swatch.style.backgroundColor = none ? new Color(0.2f, 0.22f, 0.27f) : trim;
                     Glyph(swatch, none ? "NONE" : "");
                     break;

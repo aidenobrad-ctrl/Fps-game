@@ -358,7 +358,16 @@ namespace Recoil.Shared.Net
         public static void WriteLook(NetWriter writer, CharacterLook look)
         {
             look = LookRules.Sanitize(look);
-            foreach (CosmeticSlot slot in CosmeticCatalog.Slots) writer.WriteByte((byte)look.Item(slot).Index);
+            foreach (CosmeticSlot slot in CosmeticCatalog.Slots)
+            {
+                CosmeticItem item = look.Item(slot);
+                writer.WriteByte((byte)item.Index);
+                if (!item.Custom) continue;
+                // A colour the player mixed: the colour itself follows.
+                writer.WriteByte(CosmeticCatalog.Channel(item.Color.r));
+                writer.WriteByte(CosmeticCatalog.Channel(item.Color.g));
+                writer.WriteByte(CosmeticCatalog.Channel(item.Color.b));
+            }
             writer.WriteByte((byte)look.weaponSkins.Length);
             foreach (WeaponSkinChoice choice in look.weaponSkins)
             {
@@ -373,7 +382,17 @@ namespace Recoil.Shared.Net
             var look = new CharacterLook();
             foreach (CosmeticSlot slot in CosmeticCatalog.Slots)
             {
-                CosmeticItem item = CosmeticCatalog.At(slot, reader.ReadByte());
+                int index = reader.ReadByte();
+                CosmeticItem item;
+                if (index == CosmeticCatalog.CustomIndex && CosmeticCatalog.Mixable(slot))
+                {
+                    byte r = reader.ReadByte(), g = reader.ReadByte(), b = reader.ReadByte();
+                    item = CosmeticCatalog.CustomColour(slot, new Color(r / 255f, g / 255f, b / 255f));
+                }
+                else
+                {
+                    item = CosmeticCatalog.At(slot, index);
+                }
                 look.Set(slot, (item ?? CosmeticCatalog.Default(slot)).Id);
             }
             int count = reader.ReadByte();

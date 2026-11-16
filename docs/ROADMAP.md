@@ -151,12 +151,12 @@ Still to come from the original Phase 6 plan: parties queuing together, results 
 
 You asked for this next, ahead of progression, with everything free to pick for now.
 
-- **A look of your own:** suit and trim colours, a pattern printed on the suit, headgear, a visor glow and a back item, all original designs built from simple shapes and patterns drawn in code.
+- **A look of your own:** uniform and gear colours (from a list, or any colour mixed with sliders), a pattern printed on the uniform, headgear, skin tone and a back item, all original designs.
 - **Weapon skins:** twelve skins plus the factory finish, one for every weapon or one per weapon. They show on your first-person weapon and in your hands to others.
 - **The Customize screen** from the main menu and the Esc menu, with a live preview that turns, and Randomize and Reset.
 - **Seen online:** your look travels with you into a match and changes there straight away; the server passes on at most two changes a second per player. Bots wear random looks.
-- **Fair by construction:** cosmetics have no colliders and never touch the hitboxes, and team-coloured shoulder pads sit on every outfit.
-- **Models (later):** an original armoured soldier and detailed weapon parts, built in Blender from code (`art/blender`), with a procedural walk, crouch, slide and jump, arms solved to the gun, and first-person gloves.
+- **Fair by construction:** cosmetics have no colliders and never touch the hitboxes, and team-coloured armbands are on every outfit.
+- **Models (later):** an original human soldier (one skinned body with a face, uniform and gear, real-world headgear and packs) and detailed weapon parts, built in Blender from code (`art/blender`), with a procedural walk, crouch, slide and jump, arms solved to the gun, and first-person sleeves and gloves.
 - Saved on your computer (`cosmetics.json`). With accounts on, it would follow the account like loadouts do; that wiring is for when accounts are switched on.
 
 **You can test:** open Customize, dress up, check your weapon skin in first person on the range, then join a match (two copies, or bots) and see each other's looks.

@@ -6,7 +6,7 @@ using Recoil.Shared.Weapons;
 namespace Recoil.Client.Weapons
 {
     /// <summary>
-    /// The player's own gloves and forearms on the weapon in the first-person view: the right
+    /// The player's own gloves and sleeves on the weapon in the first-person view: the right
     /// hand round the pistol grip, the left cupping the handguard from below (or both on the
     /// grip, for a handgun), forearms running back out of the bottom of the screen. They are
     /// the soldier model's own segments, in the player's suit and trim, and they move with the
@@ -28,11 +28,10 @@ namespace Recoil.Client.Weapons
         {
             if (layout.Root == null || layout.Grip == null || !SoldierView.Available) return;
             look = look ?? new CharacterLook();
-            CosmeticItem suitItem = look.Item(CosmeticSlot.SuitColor), trimItem = look.Item(CosmeticSlot.TrimColor);
-            CosmeticItem pattern = look.Item(CosmeticSlot.Pattern), visor = look.Item(CosmeticSlot.Visor);
-            Material suit = LookMaterials.Patterned(pattern.Pattern, suitItem.Color, Color.Lerp(suitItem.Color * 0.7f, trimItem.Color, 0.25f));
-            Material trim = LookMaterials.Patterned(PatternKind.Plain, trimItem.Color, trimItem.Color);
-            Material glow = GreyboxMaterials.Unlit(visor.Color);
+            CosmeticItem uniformItem = look.Item(CosmeticSlot.SuitColor), gearItem = look.Item(CosmeticSlot.TrimColor);
+            CosmeticItem pattern = look.Item(CosmeticSlot.Pattern);
+            Material uniform = LookMaterials.Patterned(pattern.Pattern, uniformItem.Color, Color.Lerp(uniformItem.Color * 0.7f, gearItem.Color, 0.25f));
+            Material gear = LookMaterials.Patterned(PatternKind.Plain, gearItem.Color, gearItem.Color);
 
             Material Zone(ModelZone zone)
             {
@@ -40,9 +39,9 @@ namespace Recoil.Client.Weapons
                 {
                     case ModelZone.Dark: return ModelMaterials.Dark;
                     case ModelZone.Metal: return ModelMaterials.Metal;
-                    case ModelZone.Glow: return glow;
-                    case ModelZone.Trim: return trim;
-                    default: return suit;
+                    case ModelZone.Trim: return gear;
+                    case ModelZone.Primary: return uniform;
+                    default: return ModelMaterials.Dark;
                 }
             }
 
@@ -73,8 +72,8 @@ namespace Recoil.Client.Weapons
 
         static void Arm(Transform root, string side, Vector3 wrist, Vector3 fingers, Vector3 towardElbow, System.Func<ModelZone, Material> zone)
         {
-            ModelMesh forearm = ModelLibrary.Get(SoldierView.Set, "Forearm" + side);
-            ModelMesh hand = ModelLibrary.Get(SoldierView.Set, "Hand" + side);
+            ModelMesh forearm = ModelLibrary.Get(SoldierView.Set, "FPForearm" + side);
+            ModelMesh hand = ModelLibrary.Get(SoldierView.Set, "FPHand" + side);
             if (forearm == null || hand == null) return;
 
             Vector3 rest = hand.Pivot - forearm.Pivot;

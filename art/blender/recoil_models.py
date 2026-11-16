@@ -23,10 +23,13 @@ The format is described in Client/Visuals/ModelLibrary.cs, which reads it.
 import bpy, bmesh, math, os, struct, sys
 from mathutils import Matrix, Vector
 
-ZONES = {"primary": 0, "dark": 1, "metal": 2, "glow": 3, "trim": 4, "team": 5, "helmet": 6}
+ZONES = {"primary": 0, "dark": 1, "metal": 2, "glow": 3, "trim": 4, "team": 5, "helmet": 6,
+         "skin": 7, "hair": 8, "eye": 9, "iris": 10, "lips": 11, "boots": 12}
 PREVIEW_COLOURS = {
-    0: (0.18, 0.32, 0.42, 1), 1: (0.05, 0.055, 0.06, 1), 2: (0.45, 0.46, 0.48, 1), 3: (0.1, 0.9, 1.0, 1),
-    4: (0.75, 0.62, 0.3, 1), 5: (0.9, 0.2, 0.15, 1), 6: (0.12, 0.2, 0.26, 1),
+    0: (0.2, 0.24, 0.17, 1), 1: (0.035, 0.037, 0.04, 1), 2: (0.45, 0.46, 0.48, 1), 3: (0.1, 0.9, 1.0, 1),
+    4: (0.42, 0.37, 0.27, 1), 5: (0.15, 0.35, 0.8, 1), 6: (0.12, 0.2, 0.26, 1),
+    7: (0.62, 0.42, 0.31, 1), 8: (0.06, 0.045, 0.035, 1), 9: (0.85, 0.84, 0.8, 1), 10: (0.12, 0.08, 0.05, 1),
+    11: (0.5, 0.29, 0.24, 1), 12: (0.11, 0.08, 0.06, 1),
 }
 
 
@@ -109,11 +112,21 @@ class Part:
             f.material_index = ZONES[zone]
         return faces
 
-    def to_object(self):
+    def to_object(self, subsurf=0):
         mesh = bpy.data.meshes.new(self.name)
         bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces)
         self.bm.to_mesh(mesh)
         self.bm.free()
+        if subsurf > 0:
+            # Smoothed with Catmull-Clark subdivision, keeping each face's zone.
+            temp = bpy.data.objects.new("temp", mesh)
+            bpy.context.scene.collection.objects.link(temp)
+            temp.modifiers.new("smooth", 'SUBSURF').levels = subsurf
+            smoothed = bpy.data.meshes.new_from_object(temp.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+            bpy.data.objects.remove(temp)
+            bpy.data.meshes.remove(mesh)
+            mesh = smoothed
+            mesh.name = self.name
         for poly in mesh.polygons:
             poly.use_smooth = True
         mesh.use_auto_smooth = True
@@ -122,6 +135,28 @@ class Part:
         bpy.context.scene.collection.objects.link(obj)
         obj["pivot"] = list(self.pivot)
         return obj
+
+
+def cut_sphere(part, centre, radius, scale, zone, plane_co, plane_no, thickness=0.0, u=36, v=22):
+    """A sphere cut cleanly by a plane, keeping the side the normal points to, thickened if asked."""
+    before = set(part.bm.faces)
+    res = bmesh.ops.create_uvsphere(part.bm, u_segments=u, v_segments=v, radius=radius)
+    verts = res["verts"]
+    for vert in verts:
+        vert.co = Vector(centre) + Vector((vert.co.x * scale[0], vert.co.y * scale[1], vert.co.z * scale[2]))
+    faces = list({f for vert in verts for f in vert.link_faces})
+    edges = list({e for vert in verts for e in vert.link_edges})
+    bmesh.ops.bisect_plane(part.bm, geom=faces + edges + verts, plane_co=Vector(plane_co),
+                           plane_no=Vector(plane_no).normalized(), clear_inner=True)
+    faces = [f for f in part.bm.faces if f not in before]
+    for f in faces:
+        f.material_index = ZONES[zone]
+    if thickness > 0:
+        res = bmesh.ops.solidify(part.bm, geom=faces, thickness=thickness)
+        for elem in res["geom"]:
+            if isinstance(elem, bmesh.types.BMFace):
+                elem.material_index = ZONES[zone]
+    return part
 
 
 def euler(rot):
@@ -135,109 +170,627 @@ def mirror_x(p):
 
 # ---------------------------------------------------------------------------- the soldier
 
-def soldier():
-    """The armoured operator, one Part per rigid segment. Left is -x."""
-    parts = []
+# The skeleton: each bone's name, the bone it hangs from, and its joint, in the game's frame.
+# Client/Visuals/SoldierView.cs reads these from the file and animates them.
+BONES = [("Pelvis", None, (0, 0.96, 0)), ("Torso", "Pelvis", (0, 1.02, 0)), ("Head", "Torso", (0, 1.5, 0))]
+for _side, _s in (("L", -1), ("R", 1)):
+    BONES += [
+        ("Thigh" + _side, "Pelvis", (_s * 0.1, 0.93, 0)),
+        ("Shin" + _side, "Thigh" + _side, (_s * 0.11, 0.51, 0.01)),
+        ("Foot" + _side, "Shin" + _side, (_s * 0.115, 0.11, -0.02)),
+        ("UpperArm" + _side, "Torso", (_s * 0.2, 1.42, -0.01)),
+        ("Forearm" + _side, "UpperArm" + _side, (_s * 0.25, 1.15, -0.03)),
+        ("Hand" + _side, "Forearm" + _side, (_s * 0.28, 0.9, 0.0)),
+    ]
+BONE_INDEX = {name: i for i, (name, _, _) in enumerate(BONES)}
+PIVOT = {name: Vector(p) for name, _, p in BONES}
+PARENT = {name: parent for name, parent, _ in BONES}
+HEAD_CENTRE = Vector((0, 1.645, 0.0))
+BACK_CENTRE = Vector((0, 1.17, 0.0))
 
-    # Head: helmet shell, wraparound visor, a rebreather and ear cups.
-    head = Part("Head", (0, 1.50, 0))
-    head.cylinder((0, 1.47, -0.01), (0, 1.6, 0.0), 0.08, 0.07, "dark", segments=16)
-    head.cylinder((0, 1.49, -0.01), (0, 1.55, -0.01), 0.098, 0.085, "dark", segments=20, bevel=0.012)
-    head.sphere((0, 1.662, -0.004), 0.138, "helmet", scale=(1.0, 0.96, 1.1), u=32, v=18)
-    head.cylinder((0, 1.588, -0.006), (0, 1.622, -0.006), 0.146, 0.143, "dark", segments=32, bevel=0.01)
-    head.box((0, 1.666, 0.108), (0.25, 0.08, 0.075), "metal", bevel=0.022, segments=3)
-    head.box((0, 1.668, 0.135), (0.215, 0.05, 0.04), "glow", bevel=0.012, segments=2)
-    head.box((0, 1.58, 0.102), (0.12, 0.075, 0.08), "metal", bevel=0.024, segments=3)
-    for s in (-1, 1):
-        head.cylinder((s * 0.068, 1.575, 0.115), (s * 0.085, 1.565, 0.135), 0.024, 0.022, "dark", segments=12, bevel=0.004)
-        head.cylinder((s * 0.122, 1.652, 0.0), (s * 0.158, 1.652, 0.0), 0.05, 0.046, "dark", segments=16, bevel=0.008)
-        head.box((s * 0.162, 1.652, 0.0), (0.012, 0.03, 0.03), "glow" if s > 0 else "metal", bevel=0.004)
-    head.box((0, 1.792, -0.02), (0.04, 0.03, 0.2), "trim", bevel=0.012, segments=2)
-    parts.append(head)
 
-    # Torso: under-suit, chest plate and its overlay, magazine pouches, back plate, collar, shoulder pads.
-    torso = Part("Torso", (0, 1.02, 0))
-    torso.box((0, 1.13, 0), (0.26, 0.24, 0.19), "dark", bevel=0.05, segments=3, taper=(1.15, 1.05))
-    for y, w in ((1.06, 0.27), (1.11, 0.285), (1.16, 0.3)):
-        torso.box((0, y, 0.005), (w, 0.022, 0.2), "dark", bevel=0.009)
-    torso.box((0, 1.315, 0.006), (0.36, 0.31, 0.25), "primary", bevel=0.06, segments=3, taper=(1.18, 0.95))
-    torso.box((0, 1.34, 0.128), (0.32, 0.2, 0.045), "primary", bevel=0.018, segments=2)
-    torso.box((0, 1.305, -0.137), (0.36, 0.3, 0.05), "primary", bevel=0.018, segments=2)
-    for x in (-0.088, 0.0, 0.088):
-        torso.box((x, 1.2, 0.155), (0.076, 0.1, 0.05), "dark", bevel=0.012, segments=2)
-        torso.box((x, 1.255, 0.158), (0.08, 0.026, 0.056), "trim", bevel=0.008)
-    torso.box((0.078, 1.41, 0.153), (0.11, 0.008, 0.008), "glow")
-    torso.cylinder((0, 1.44, -0.008), (0, 1.535, -0.008), 0.122, 0.104, "dark", segments=24, bevel=0.014)
-    for s in (-1, 1):
-        torso.box((s * 0.235, 1.448, 0), (0.14, 0.05, 0.18), "team", bevel=0.02, segments=2, rot=(0, 0, -s * 24))
-        torso.box((s * 0.19, 1.29, 0), (0.03, 0.22, 0.2), "dark", bevel=0.01)
-        torso.box((s * 0.12, 1.42, 0.12), (0.035, 0.12, 0.012), "dark", bevel=0.004)
-    parts.append(torso)
+def bone_segment(name):
+    """The line a bone runs along, for working out which bone moves each point of the body."""
+    p = PIVOT[name]
+    children = [n for n, parent, _ in BONES if parent == name and not n.startswith("UpperArm") and not n.startswith("Thigh")]
+    if name == "Pelvis":
+        return Vector((0, 0.84, 0)), Vector((0, 1.0, 0))
+    if name == "Torso":
+        return Vector((0, 1.02, 0)), Vector((0, 1.46, 0))
+    if name == "Head":
+        return p, p + Vector((0, 0.22, 0))
+    if name.startswith("Foot"):
+        return p, p + Vector((0, -0.08, 0.15))
+    if name.startswith("Hand"):
+        return p, p + Vector((0.0, -0.1, 0.0))
+    return p, PIVOT[children[0]]
 
-    # Pelvis: belt and buckle, hips, hanging side plates, a pouch at the back.
-    pelvis = Part("Pelvis", (0, 0.96, 0))
-    pelvis.box((0, 0.985, 0), (0.335, 0.07, 0.225), "dark", bevel=0.025, segments=2)
-    pelvis.box((0, 0.985, 0.116), (0.06, 0.044, 0.02), "metal", bevel=0.006)
-    pelvis.box((0, 0.9, 0), (0.3, 0.14, 0.2), "primary", bevel=0.045, segments=3, taper_bottom=(0.82, 0.9))
+
+def distance_to_segment(point, a, b):
+    ab = b - a
+    t = max(0.0, min(1.0, (point - a).dot(ab) / max(ab.length_squared, 1e-9)))
+    return (point - (a + ab * t)).length
+
+
+def envelope(point, width=0.05):
+    """Two bones and a blend for a point of the continuous body: the nearest bone, and its
+    parent or child where the two are about as near, so joints bend smoothly."""
+    distances = sorted((distance_to_segment(point, *bone_segment(n)), n) for n, _, _ in BONES)
+    (d1, b1), = distances[:1]
+    for d2, b2 in distances[1:4]:
+        if PARENT.get(b1) == b2 or PARENT.get(b2) == b1:
+            gap = d2 - d1
+            if gap < width:
+                return BONE_INDEX[b1], BONE_INDEX[b2], 0.5 * (1.0 - gap / width)
+            break
+    return BONE_INDEX[b1], BONE_INDEX[b1], 0.0
+
+
+def mannequin():
+    """
+    The body under the gear, grown from a skeleton with Blender's Skin modifier and smoothed:
+    one continuous surface from neck to ankles, so it bends without seams. Above the belt it
+    is the uniform shirt, below it the trousers, and the neck is skin.
+    """
+    points = {}
+    def at(name, p, r):
+        points[name] = (Vector(p), r)
+    at("hips", (0, 0.93, 0.0), (0.165, 0.118))
+    at("waist", (0, 1.06, 0.0), (0.15, 0.108))
+    at("chest", (0, 1.25, 0.005), (0.18, 0.12))
+    at("upper", (0, 1.39, -0.005), (0.19, 0.106))
+    at("neck0", (0, 1.47, -0.012), (0.074, 0.074))
+    at("neck1", (0, 1.57, 0.0), (0.062, 0.062))
+    edges = [("hips", "waist"), ("waist", "chest"), ("chest", "upper"), ("upper", "neck0"), ("neck0", "neck1")]
+    for s, n in ((-1, "L"), (1, "R")):
+        at("sh" + n, (s * 0.2, 1.42, -0.01), (0.062, 0.062))
+        at("bi" + n, (s * 0.225, 1.29, -0.02), (0.057, 0.057))
+        at("el" + n, (s * 0.25, 1.15, -0.03), (0.047, 0.047))
+        at("fa" + n, (s * 0.265, 1.04, -0.02), (0.046, 0.046))
+        at("wr" + n, (s * 0.28, 0.9, 0.0), (0.037, 0.037))
+        at("hp" + n, (s * 0.1, 0.88, 0.0), (0.098, 0.098))
+        at("th" + n, (s * 0.106, 0.7, 0.008), (0.086, 0.086))
+        at("kn" + n, (s * 0.11, 0.51, 0.01), (0.064, 0.064))
+        at("ca" + n, (s * 0.112, 0.36, -0.012), (0.066, 0.066))
+        at("an" + n, (s * 0.115, 0.13, -0.02), (0.046, 0.046))
+        edges += [("upper", "sh" + n), ("sh" + n, "bi" + n), ("bi" + n, "el" + n), ("el" + n, "fa" + n), ("fa" + n, "wr" + n),
+                  ("hips", "hp" + n), ("hp" + n, "th" + n), ("th" + n, "kn" + n), ("kn" + n, "ca" + n), ("ca" + n, "an" + n)]
+    names = list(points)
+    mesh = bpy.data.meshes.new("skeleton")
+    mesh.from_pydata([points[n][0] for n in names], [(names.index(a), names.index(b)) for a, b in edges], [])
+    obj = bpy.data.objects.new("skeleton", mesh)
+    bpy.context.scene.collection.objects.link(obj)
+    obj.modifiers.new("skin", 'SKIN')
+    for i, n in enumerate(names):
+        mesh.skin_vertices[0].data[i].radius = points[n][1]
+    mesh.skin_vertices[0].data[names.index("hips")].use_root = True
+    obj.modifiers.new("smooth", 'SUBSURF').levels = 2
+    body = bpy.data.meshes.new_from_object(obj.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(obj)
+    bpy.data.meshes.remove(mesh)
+
+    part = Part("Mannequin")
+    part.bm.from_mesh(body)
+    bpy.data.meshes.remove(body)
+    for f in part.bm.faces:
+        c = f.calc_center_median()
+        neck = c.y > 1.5 and abs(c.x) < 0.09
+        f.material_index = ZONES["skin"] if neck else ZONES["primary"]
+    return part
+
+
+def head_part():
+    """A face: a sculpted skull and jaw, eye sockets, a nose, ears, eyes, brows and lips."""
+    part = Part("Head", (0, 0, 0))
+    bm = part.bm
+    C, R = HEAD_CENTRE, 0.1
+
+    def smooth(a, b, x):
+        t = max(0.0, min(1.0, (x - a) / (b - a)))
+        return t * t * (3 - 2 * t)
+
+    def bump(p, centre, radius):
+        return math.exp(-((p - Vector(centre)).length / radius) ** 2)
+
+    res = bmesh.ops.create_uvsphere(bm, u_segments=40, v_segments=28, radius=R)
+    for v in res["verts"]:
+        x, y, z = v.co.x / R, v.co.y / R, v.co.z / R
+        px, py, pz = x * 0.08, y * 0.11, z * 0.1
+        lower = smooth(0.0, -1.0, y)
+        upper = smooth(0.2, 1.0, y)
+        px *= (1.0 - 0.2 * lower) * (1.0 + 0.04 * upper)    # a jaw that narrows, a crown that stays round
+        if z < 0:
+            pz *= 1.0 - 0.3 * lower                         # the back of the skull tucks in above the neck
+        if pz > 0.048:
+            pz = 0.048 + (pz - 0.048) * 0.6                 # a flatter face
+        if z > 0.2 and y < -0.55:
+            pz += 0.007 * smooth(-0.55, -0.9, y)            # the chin comes forward a touch
+        p = Vector((px, py, pz))
+        for side in (-1, 1):
+            p.z -= 0.008 * bump(p, (side * 0.031, 0.012, 0.075), 0.02)    # eye sockets
+            p.z += 0.004 * bump(p, (side * 0.05, -0.014, 0.065), 0.025)   # cheekbones
+        p.z += 0.004 * bump(p, (0.0, 0.032, 0.078), 0.03)                # the brow
+        v.co = C + p
+    for f in {f for v in res["verts"] for f in v.link_faces}:
+        f.material_index = ZONES["skin"]
+
+    # The nose: narrow at the bridge, wider at the tip and nostrils.
+    centre = C + Vector((0, -0.016, 0.083))
+    res = bmesh.ops.create_cube(bm, size=1.0, matrix=Matrix.Translation(centre) @ Matrix.Diagonal((0.026, 0.042, 0.024, 1)))
+    for v in res["verts"]:
+        rel = v.co - centre
+        if rel.y > 0:
+            v.co.x = centre.x + rel.x * 0.5
+            v.co.z -= 0.008
+        else:
+            v.co.x = centre.x + rel.x * 1.2
+            v.co.z += 0.003
+    part._finish(res["verts"], "skin", 0.009, 3)
+
+    for side in (-1, 1):
+        part.sphere(C + Vector((side * 0.08, -0.002, -0.008)), 0.03, "skin", scale=(0.33, 1.0, 0.6), u=16, v=10)  # ears
+        eye = C + Vector((side * 0.031, 0.012, 0.0625))
+        part.sphere(eye, 0.0115, "eye", u=16, v=12)
+        part.sphere(eye + Vector((0, 0, 0.0105)), 0.0056, "iris", scale=(1, 1, 0.4), u=12, v=8)
+        cut_sphere(part, eye, 0.0127, (1, 1, 1), "skin", eye + Vector((0, 0.0062, 0)), (0, 1, 0.1), u=16, v=12)   # upper lid
+        part.sphere(C + Vector((side * 0.0115, -0.035, 0.08)), 0.0085, "skin", scale=(1, 0.8, 0.9), u=12, v=8)    # nostrils
+        part.box(C + Vector((side * 0.031, 0.031, 0.079)), (0.03, 0.006, 0.008), "hair", bevel=0.002, rot=(0, 0, -side * 7))
+    part.sphere(C + Vector((0, -0.053, 0.071)), 0.02, "lips", scale=(1.0, 0.22, 0.38), u=16, v=8)
+    part.sphere(C + Vector((0, -0.063, 0.068)), 0.018, "lips", scale=(0.95, 0.3, 0.4), u=16, v=8)
+    return part
+
+
+def body_pieces():
+    """Everything the body is made of: (part, the bone it moves with or None for blended weights, smoothing)."""
+    pieces = [(mannequin(), None, 0), (head_part(), "Head", 1)]
+
+    collar = Part("Collar")
+    collar.cylinder((0, 1.45, -0.012), (0, 1.51, -0.01), 0.088, 0.08, "primary", segments=24, bevel=0.012)
+    pieces.append((collar, "Torso", 0))
+
+    # The plate carrier: front and back plates, a cummerbund, shoulder straps, magazine pouches.
+    vest = Part("Vest")
+    vest.box((0, 1.3, 0.142), (0.31, 0.3, 0.05), "trim", bevel=0.02, segments=3)
+    vest.box((0, 1.3, -0.138), (0.31, 0.31, 0.045), "trim", bevel=0.02, segments=3)
+    vest.cylinder((0, 1.11, 0), (0, 1.21, 0), 1.0, 1.0, "trim", segments=28)
+    for v in vest.bm.verts:   # flatten the cummerbund ring to the waist's oval
+        if 1.105 <= v.co.y <= 1.215 and abs(v.co.z) < 1.05 and abs(v.co.x) < 1.05 and (abs(v.co.x) > 0.5 or abs(v.co.z) > 0.5):
+            v.co.x *= 0.168
+            v.co.z *= 0.124
     for s in (-1, 1):
-        pelvis.box((s * 0.166, 0.9, 0.0), (0.03, 0.15, 0.15), "trim", bevel=0.012, rot=(0, 0, s * -6))
-    pelvis.box((0, 0.97, -0.13), (0.14, 0.08, 0.06), "dark", bevel=0.015)
-    parts.append(pelvis)
+        vest.box((s * 0.115, 1.45, -0.005), (0.07, 0.025, 0.27), "trim", bevel=0.008, rot=(0, 0, s * 6))
+        vest.box((s * 0.16, 1.3, 0.0), (0.035, 0.24, 0.24), "dark", bevel=0.01)
+    for x in (-0.085, 0.0, 0.085):
+        vest.box((x, 1.205, 0.183), (0.072, 0.105, 0.045), "trim", bevel=0.012, segments=2)
+        vest.box((x, 1.262, 0.186), (0.074, 0.02, 0.05), "dark", bevel=0.006)
+    vest.box((0, 1.4, 0.172), (0.18, 0.06, 0.012), "dark", bevel=0.004)
+    vest.box((0.17, 1.17, -0.02), (0.05, 0.11, 0.09), "trim", bevel=0.012)
+    pieces.append((vest, "Torso", 0))
+
+    belt = Part("Belt")
+    belt.cylinder((0, 0.965, 0), (0, 1.01, 0), 1.0, 1.0, "dark", segments=28)
+    for v in belt.bm.verts:
+        v.co.x *= 0.17
+        v.co.z *= 0.124
+    belt.box((0, 0.987, 0.124), (0.06, 0.04, 0.016), "metal", bevel=0.005)
+    belt.box((-0.12, 0.96, 0.085), (0.05, 0.08, 0.04), "trim", bevel=0.01)
+    pieces.append((belt, "Pelvis", 0))
 
     for side, s in (("L", -1), ("R", 1)):
-        hip = (s * 0.105, 0.93, 0)
-        thigh = Part("Thigh" + side, hip)
-        thigh.cylinder((s * 0.108, 0.95, 0), (s * 0.112, 0.52, 0.005), 0.086, 0.064, "primary", segments=16, bevel=0.012)
-        thigh.box((s * 0.112, 0.79, 0.07), (0.1, 0.15, 0.026), "trim", bevel=0.011, segments=2, rot=(-6, 0, 0), taper_bottom=(0.8, 1.0))
+        thigh = Part("Thigh" + side)
+        thigh.box((s * 0.19, 0.71, 0.01), (0.035, 0.13, 0.12), "primary", bevel=0.012, segments=2)
+        thigh.box((s * 0.208, 0.765, 0.01), (0.012, 0.03, 0.118), "primary", bevel=0.004)
         if s > 0:
-            thigh.box((0.185, 0.75, 0.0), (0.05, 0.14, 0.12), "dark", bevel=0.015)
-            thigh.box((0.205, 0.72, 0.0), (0.012, 0.05, 0.05), "metal", bevel=0.003)
-        else:
-            thigh.box((-0.175, 0.8, 0.0), (0.022, 0.05, 0.13), "dark", bevel=0.005)
-        parts.append(thigh)
+            thigh.box((0.205, 0.83, -0.01), (0.04, 0.12, 0.1), "dark", bevel=0.012)
+        pieces.append((thigh, "Thigh" + side, 0))
 
-        knee = (s * 0.11, 0.5, 0.01)
-        shin = Part("Shin" + side, knee)
-        shin.box((s * 0.11, 0.5, 0.075), (0.12, 0.11, 0.06), "trim", bevel=0.026, segments=3)
-        shin.cylinder((s * 0.11, 0.49, 0.005), (s * 0.115, 0.12, -0.005), 0.062, 0.05, "dark", segments=14, bevel=0.01)
-        shin.box((s * 0.112, 0.3, 0.05), (0.1, 0.3, 0.04), "primary", bevel=0.016, segments=2, taper=(1.12, 1.0))
-        shin.box((s * 0.115, 0.21, -0.045), (0.09, 0.012, 0.05), "dark", bevel=0.004)
-        parts.append(shin)
+        shin = Part("Shin" + side)
+        shin.box((s * 0.11, 0.51, 0.068), (0.105, 0.115, 0.05), "trim", bevel=0.022, segments=3)
+        shin.cylinder((s * 0.11, 0.47, 0.0), (s * 0.11, 0.49, 0.0), 0.069, 0.069, "dark", segments=16)
+        pieces.append((shin, "Shin" + side, 0))
 
-        ankle = (s * 0.115, 0.09, -0.01)
-        boot = Part("Foot" + side, ankle)
-        boot.box((s * 0.115, 0.018, 0.035), (0.118, 0.036, 0.29), "dark", bevel=0.012, segments=2)
-        boot.box((s * 0.115, 0.088, 0.02), (0.106, 0.12, 0.24), "dark", bevel=0.034, segments=3, taper=(0.92, 0.8))
-        boot.box((s * 0.115, 0.056, 0.135), (0.1, 0.05, 0.07), "trim", bevel=0.02, segments=2)
-        boot.box((s * 0.115, 0.123, -0.02), (0.113, 0.026, 0.13), "trim", bevel=0.008)
-        boot.box((s * 0.115, 0.165, -0.015), (0.098, 0.05, 0.1), "dark", bevel=0.018)
-        parts.append(boot)
+        boot = Part("Boot" + side)
+        boot.box((s * 0.115, 0.017, 0.035), (0.112, 0.034, 0.29), "dark", bevel=0.012, segments=2)
+        boot.box((s * 0.115, 0.068, 0.04), (0.102, 0.075, 0.25), "boots", bevel=0.03, segments=3, taper=(0.95, 0.85))
+        boot.cylinder((s * 0.115, 0.06, -0.02), (s * 0.115, 0.215, -0.02), 0.058, 0.055, "boots", segments=18, bevel=0.01)
+        boot.box((s * 0.115, 0.108, 0.075), (0.07, 0.03, 0.11), "dark", bevel=0.008, rot=(-25, 0, 0))
+        pieces.append((boot, "Foot" + side, 0))
 
-        shoulder = (s * 0.215, 1.415, 0)
-        elbow = (s * 0.235, 1.13, -0.01)
-        wrist = (s * 0.24, 0.88, 0.0)
-        upper = Part("UpperArm" + side, shoulder)
-        upper.cylinder(shoulder, elbow, 0.06, 0.05, "primary", segments=14, bevel=0.012)
-        upper.box((s * 0.265, 1.29, 0.0), (0.035, 0.14, 0.085), "trim", bevel=0.012, segments=2)
-        upper.box((s * 0.23, 1.2, 0.0), (0.11, 0.018, 0.1), "dark", bevel=0.006)
-        parts.append(upper)
+        upper = Part("UpperArm" + side)
+        upper.cylinder((s * 0.218, 1.315, -0.018), (s * 0.221, 1.345, -0.018), 0.061, 0.061, "team", segments=18)
+        upper.box((s * 0.272, 1.36, -0.015), (0.012, 0.07, 0.06), "primary", bevel=0.004)
+        pieces.append((upper, "UpperArm" + side, 0))
 
-        fore = Part("Forearm" + side, elbow)
-        fore.sphere(elbow, 0.05, "metal", scale=(1.0, 0.9, 1.0), u=16, v=10)
-        fore.cylinder(elbow, wrist, 0.048, 0.04, "primary", segments=14, bevel=0.01)
-        fore.box((s * 0.24, 1.0, 0.016), (0.07, 0.13, 0.064), "trim", bevel=0.018, segments=2, taper=(1.1, 1.1))
-        fore.box((s * 0.24, 0.92, 0.0), (0.09, 0.02, 0.085), "dark", bevel=0.007)
-        fore.box((s * 0.283, 1.02, 0.01), (0.008, 0.06, 0.012), "glow")
+        fore = Part("Forearm" + side)
+        fore.box((s * 0.25, 1.15, -0.065), (0.07, 0.07, 0.03), "trim", bevel=0.012, segments=2)
+        fore.cylinder((s * 0.276, 0.925, -0.002), (s * 0.279, 0.95, -0.004), 0.043, 0.042, "primary", segments=16, bevel=0.006)
+        pieces.append((fore, "Forearm" + side, 0))
+
+        pieces.append((glove(side, s), "Hand" + side, 0))
+    return pieces
+
+
+def glove(side, s, name=None):
+    hand = Part(name or ("Glove" + side))
+    w = Vector((s * 0.28, 0.9, 0.0))
+    hand.box(w + Vector((0, -0.045, 0.002)), (0.04, 0.085, 0.078), "dark", bevel=0.015, segments=2)
+    hand.box(w + Vector((0, -0.1, 0.012)), (0.036, 0.05, 0.074), "dark", bevel=0.014, segments=2, rot=(16, 0, 0))
+    hand.box(w + Vector((-s * 0.016, -0.05, 0.042)), (0.022, 0.055, 0.022), "dark", bevel=0.009, rot=(-25, 0, s * 18))
+    hand.box(w + Vector((s * 0.021, -0.06, 0.004)), (0.006, 0.05, 0.06), "trim", bevel=0.002)
+    hand.cylinder(w + Vector((0, 0.005, 0)), w + Vector((0, -0.012, 0)), 0.042, 0.04, "dark", segments=16)
+    return hand
+
+
+def first_person_arms():
+    """Rigid sleeves and gloves for the first-person view, each around its own joint."""
+    parts = []
+    for side, s in (("L", -1), ("R", 1)):
+        elbow, wrist = PIVOT["Forearm" + side], PIVOT["Hand" + side]
+        fore = Part("FPForearm" + side, elbow)
+        fore.cylinder(elbow + Vector((0, 0.03, 0)), wrist + Vector((0, 0.02, 0)), 0.05, 0.041, "primary", segments=20, bevel=0.01)
+        fore.cylinder(wrist + Vector((0, 0.045, 0)), wrist + Vector((0, 0.015, 0)), 0.045, 0.044, "primary", segments=20, bevel=0.006)
+        fore.box(elbow + Vector((s * 0.0, -0.02, -0.04)), (0.072, 0.075, 0.035), "trim", bevel=0.012, segments=2)
         parts.append(fore)
-
-        hand = Part("Hand" + side, wrist)
-        hand.box((s * 0.24, 0.835, 0.0), (0.075, 0.09, 0.04), "dark", bevel=0.016, segments=2)
-        hand.box((s * 0.24, 0.775, 0.012), (0.072, 0.05, 0.034), "dark", bevel=0.014, segments=2, rot=(18, 0, 0))
-        hand.box((s * 0.207, 0.835, 0.028), (0.022, 0.06, 0.024), "dark", bevel=0.009, rot=(-20, 0, s * 15))
-        hand.box((s * 0.24, 0.85, -0.022), (0.06, 0.05, 0.008), "metal", bevel=0.003)
-        parts.append(hand)
-
+        g = glove(side, s, "FPHand" + side)
+        g.pivot = wrist
+        parts.append(g)
     return parts
+
+
+def gear_models():
+    """Headgear (centred on the head) and back items (centred on the torso), worn on top of the body."""
+    parts = []
+    C = HEAD_CENTRE
+
+    def shell(part, centre, radius, scale, zone, keep, thickness=0.006, u=36, v=20):
+        """Part of a sphere: the vertices where keep(relative position) is true, thickened inwards."""
+        res = bmesh.ops.create_uvsphere(part.bm, u_segments=u, v_segments=v, radius=radius)
+        verts = res["verts"]
+        for vert in verts:
+            vert.co = Vector((vert.co.x * scale[0], vert.co.y * scale[1], vert.co.z * scale[2]))
+        doomed = [vert for vert in verts if not keep(vert.co)]
+        kept = [vert for vert in verts if keep(vert.co)]
+        bmesh.ops.delete(part.bm, geom=doomed, context='VERTS')
+        faces = list({f for vert in kept if vert.is_valid for f in vert.link_faces})
+        for f in faces:
+            f.material_index = ZONES[zone]
+        if thickness > 0:
+            res = bmesh.ops.solidify(part.bm, geom=faces, thickness=thickness)
+            for elem in res["geom"]:
+                if isinstance(elem, bmesh.types.BMFace):
+                    elem.material_index = ZONES[zone]
+        return centre
+
+    def place(part, offset):
+        bmesh.ops.translate(part.bm, verts=list(part.bm.verts), vec=offset)
+
+    hair = Part("Hair", C)
+    cut_sphere(hair, C + Vector((0, 0.004, -0.004)), 0.1, (0.84, 1.13, 1.04), "hair", C + Vector((0, 0.022, 0)), (0, 1, -0.6), thickness=0.004)
+    parts.append(hair)
+
+    helmet = Part("Helmet", C)
+    cut_sphere(helmet, C + Vector((0, 0.028, -0.008)), 0.122, (0.94, 0.96, 1.06), "trim", C + Vector((0, 0.0, 0)), (0, 1, -0.45), thickness=0.012)
+    for side in (-1, 1):
+        helmet.box(C + Vector((side * 0.112, 0.045, -0.01)), (0.012, 0.022, 0.1), "dark", bevel=0.004)
+        helmet.box(C + Vector((side * 0.08, -0.045, 0.035)), (0.008, 0.07, 0.012), "dark", rot=(20, 0, side * -10))
+    helmet.box(C + Vector((0, 0.1, 0.11)), (0.04, 0.03, 0.015), "metal", bevel=0.005, rot=(-50, 0, 0))
+    helmet.box(C + Vector((0, 0.11, -0.1)), (0.07, 0.04, 0.012), "dark", bevel=0.004, rot=(35, 0, 0))
+    parts.append(helmet)
+
+    cap = Part("Cap", C)
+    cut_sphere(cap, C + Vector((0, 0.014, -0.002)), 0.106, (0.84, 1.0, 1.0), "trim", C + Vector((0, 0.03, 0)), (0, 1, -0.15), thickness=0.005)
+    cap.box(C + Vector((0, 0.04, 0.125)), (0.15, 0.008, 0.08), "trim", bevel=0.004, rot=(-12, 0, 0), taper=(0.85, 0.7))
+    cap.sphere(C + Vector((0, 0.12, -0.002)), 0.008, "trim")
+    parts.append(cap)
+
+    beanie = Part("Beanie", C)
+    cut_sphere(beanie, C + Vector((0, 0.012, -0.002)), 0.108, (0.84, 1.14, 1.0), "trim", C + Vector((0, 0.02, 0)), (0, 1, -0.2), thickness=0.006)
+    beanie.ring(C + Vector((0, 0.03, -0.002)), (0, 1, 0), 0.094, 0.082, 0.04, "trim", segments=32)
+    for vert in beanie.bm.verts:
+        rel = vert.co - C
+        if 0.005 < rel.y < 0.055 and abs(rel.z) > 0.0:
+            pass
+    parts.append(beanie)
+
+    boonie = Part("Boonie", C)
+    cut_sphere(boonie, C + Vector((0, 0.03, -0.002)), 0.11, (0.84, 0.95, 1.0), "primary", C + Vector((0, 0.04, 0)), (0, 1, 0), thickness=0.005)
+    boonie.ring(C + Vector((0, 0.044, -0.002)), (0, 1, 0), 0.165, 0.088, 0.008, "primary", segments=32)
+    boonie.ring(C + Vector((0, 0.055, -0.002)), (0, 1, 0), 0.094, 0.086, 0.02, "dark", segments=32)
+    parts.append(boonie)
+
+    def headset(part):
+        for side in (-1, 1):
+            part.cylinder(C + Vector((side * 0.074, 0.0, -0.005)), C + Vector((side * 0.102, 0.0, -0.005)), 0.042, 0.04, "dark", segments=18, bevel=0.008)
+        # The band over the top: half a ring.
+        before = set(part.bm.faces)
+        part.ring(C + Vector((0, 0.0, -0.008)), (0, 0, 1), 0.11, 0.1, 0.02, "dark", segments=40)
+        band = [f for f in part.bm.faces if f not in before]
+        verts = list({v for f in band for v in f.verts})
+        edges = list({e for f in band for e in f.edges})
+        bmesh.ops.bisect_plane(part.bm, geom=band + edges + verts, plane_co=C + Vector((0, 0.02, 0)), plane_no=Vector((0, 1, 0)), clear_inner=True)
+        for vert in verts:
+            if vert.is_valid:
+                rel = vert.co - C
+                vert.co.x = C.x + rel.x * 0.95
+        part.cylinder(C + Vector((-0.098, -0.02, 0.01)), C + Vector((-0.04, -0.062, 0.088)), 0.005, 0.004, "dark", segments=8)
+        part.sphere(C + Vector((-0.038, -0.063, 0.09)), 0.011, "dark")
+
+    phones = Part("Headset", C)
+    headset(phones)
+    parts.append(phones)
+
+    helmet_phones = Part("HelmetHeadset", C)
+    for s in (-1, 1):
+        helmet_phones.cylinder(C + Vector((s * 0.075, -0.005, -0.005)), C + Vector((s * 0.105, -0.005, -0.005)), 0.044, 0.042, "dark", segments=18, bevel=0.008)
+    helmet_phones.cylinder(C + Vector((-0.1, -0.025, 0.01)), C + Vector((-0.04, -0.06, 0.1)), 0.005, 0.004, "dark", segments=8)
+    parts.append(helmet_phones)
+
+    bandana = Part("Bandana", C)
+    bandana.cylinder(C + Vector((0, 0.03, -0.004)), C + Vector((0, 0.06, -0.004)), 1.0, 1.0, "trim", segments=32)
+    for vert in bandana.bm.verts:
+        rel = vert.co - C
+        vert.co.x = C.x + rel.x * 0.081
+        vert.co.z = C.z - 0.004 + (rel.z + 0.004) * 0.1
+    bandana.box(C + Vector((0, 0.04, -0.105)), (0.03, 0.03, 0.02), "trim", bevel=0.008)
+    bandana.box(C + Vector((0.01, 0.01, -0.11)), (0.02, 0.05, 0.006), "trim", bevel=0.003, rot=(10, 0, 15))
+    parts.append(bandana)
+
+    B = BACK_CENTRE
+    pack = Part("AssaultPack", B)
+    pack.box(B + Vector((0, 0.06, -0.235)), (0.27, 0.36, 0.13), "trim", bevel=0.04, segments=3, taper=(0.9, 0.85))
+    pack.box(B + Vector((0, 0.2, -0.24)), (0.25, 0.06, 0.14), "trim", bevel=0.02, segments=2)
+    for s in (-1, 1):
+        pack.box(B + Vector((s * 0.15, 0.0, -0.23)), (0.04, 0.16, 0.09), "trim", bevel=0.015)
+    pack.box(B + Vector((0, 0.02, -0.305)), (0.16, 0.18, 0.02), "dark", bevel=0.006)
+    parts.append(pack)
+
+    hydration = Part("HydrationPack", B)
+    hydration.box(B + Vector((0, 0.08, -0.2)), (0.2, 0.32, 0.06), "trim", bevel=0.025, segments=3)
+    hydration.cylinder(B + Vector((0.07, 0.24, -0.19)), B + Vector((0.12, 0.31, 0.02)), 0.008, 0.008, "dark", segments=8)
+    hydration.cylinder(B + Vector((0.12, 0.31, 0.02)), B + Vector((0.11, 0.18, 0.17)), 0.008, 0.008, "dark", segments=8)
+    parts.append(hydration)
+
+    radio = Part("RadioPack", B)
+    radio.box(B + Vector((0, 0.07, -0.2)), (0.22, 0.3, 0.07), "trim", bevel=0.02, segments=2)
+    radio.box(B + Vector((0.05, 0.1, -0.245)), (0.1, 0.19, 0.06), "dark", bevel=0.01)
+    radio.cylinder(B + Vector((0.08, 0.2, -0.25)), B + Vector((0.1, 0.62, -0.27)), 0.005, 0.003, "dark", segments=8)
+    radio.cylinder(B + Vector((0.03, 0.2, -0.25)), B + Vector((0.03, 0.23, -0.25)), 0.012, 0.01, "metal", segments=10)
+    parts.append(radio)
+
+    ruck = Part("Rucksack", B)
+    ruck.box(B + Vector((0, 0.03, -0.26)), (0.32, 0.5, 0.18), "trim", bevel=0.05, segments=3, taper=(0.92, 0.85))
+    ruck.box(B + Vector((0, 0.27, -0.26)), (0.3, 0.07, 0.19), "trim", bevel=0.025, segments=2)
+    for s in (-1, 1):
+        ruck.box(B + Vector((s * 0.18, -0.05, -0.25)), (0.05, 0.2, 0.12), "trim", bevel=0.02)
+    ruck.box(B + Vector((0, -0.2, -0.27)), (0.3, 0.012, 0.19), "dark")
+    parts.append(ruck)
+
+    bedroll = Part("BedrollPack", B)
+    bedroll.box(B + Vector((0, 0.02, -0.235)), (0.26, 0.32, 0.13), "trim", bevel=0.04, segments=3)
+    bedroll.cylinder(B + Vector((-0.17, 0.24, -0.23)), B + Vector((0.17, 0.24, -0.23)), 0.06, 0.06, "primary", segments=20, bevel=0.02)
+    for x in (-0.09, 0.09):
+        bedroll.cylinder(B + Vector((x - 0.008, 0.24, -0.23)), B + Vector((x + 0.008, 0.24, -0.23)), 0.064, 0.064, "dark", segments=20)
+    parts.append(bedroll)
+
+    scarf = Part("Scarf", B)
+    scarf.cylinder(B + Vector((0, 0.28, -0.01)), B + Vector((0, 0.36, -0.005)), 0.1, 0.085, "primary", segments=28, bevel=0.02)
+    scarf.box(B + Vector((0.03, 0.15, 0.13)), (0.1, 0.2, 0.02), "primary", bevel=0.008, rot=(8, 0, 6), taper_bottom=(0.6, 1.0))
+    parts.append(scarf)
+    return parts
+
+
+# ---------------------------------------------------------------------------- skinned export
+
+def skin_weights(obj, bone):
+    """Per vertex: (first bone, second bone, the second's weight). A rigid piece follows one bone."""
+    if bone is not None:
+        i = BONE_INDEX[bone]
+        return [(i, i, 0.0)] * len(obj.data.vertices)
+    return [envelope(v.co) for v in obj.data.vertices]
+
+
+def export_skinned(path, skinned, rigid):
+    """
+    RCM2: magic; uint8 bone count; per bone: name, int8 parent (-1 for none), pivot (3 floats);
+    uint16 mesh count; per mesh: name, pivot, uint8 flags (1: skinned), uint16 vertex count,
+    vertices (position, normal, uv, and when skinned: uint8 bone, uint8 bone, float weight of
+    the second), uint8 submesh count, then per submesh: uint8 zone, uint32 index count, uint16
+    indices. A skinned mesh is in the body's rest pose, in model space.
+    """
+    out = bytearray(b"RCM2")
+    out += struct.pack("<B", len(BONES))
+    for name, parent, pivot in BONES:
+        data = name.encode("utf-8")
+        out += struct.pack("<B", len(data)) + data
+        out += struct.pack("<b", BONE_INDEX[parent] if parent else -1)
+        out += struct.pack("<3f", *pivot)
+    meshes = [("Body", Vector(), skinned)] + [(obj.name, Vector(obj["pivot"]), [(obj, None, None)]) for obj in rigid]
+    out += struct.pack("<H", len(meshes))
+    total = 0
+    for name, pivot, sources in meshes:
+        is_skinned = name == "Body"
+        vertices, by_zone = [], {}
+        for obj, bone, weights in sources:
+            mesh = obj.data
+            mesh.calc_normals_split()
+            mesh.calc_loop_triangles()
+            lookup = {}
+            for tri in mesh.loop_triangles:
+                corner = []
+                for loop_index in tri.loops:
+                    loop = mesh.loops[loop_index]
+                    vi = loop.vertex_index
+                    co = mesh.vertices[vi].co - pivot
+                    n = loop.normal
+                    uv = box_uv(mesh.vertices[vi].co, tri.normal)
+                    key = (vi, round(n.x, 3), round(n.y, 3), round(n.z, 3), round(uv[0], 4), round(uv[1], 4))
+                    if key not in lookup:
+                        lookup[key] = len(vertices)
+                        record = [co.x, co.y, co.z, n.x, n.y, n.z, uv[0], uv[1]]
+                        if is_skinned:
+                            record.append(weights[vi])
+                        vertices.append(record)
+                    corner.append(lookup[key])
+                by_zone.setdefault(tri.material_index, []).extend((corner[0], corner[2], corner[1]))
+                total += 1
+        assert len(vertices) < 65536, (name, len(vertices))
+        data = name.encode("utf-8")
+        out += struct.pack("<B", len(data)) + data
+        out += struct.pack("<3f", *pivot)
+        out += struct.pack("<B", 1 if is_skinned else 0)
+        out += struct.pack("<H", len(vertices))
+        for v in vertices:
+            out += struct.pack("<8f", *v[:8])
+            if is_skinned:
+                b0, b1, w1 = v[8]
+                out += struct.pack("<BBf", b0, b1, w1)
+        out += struct.pack("<B", len(by_zone))
+        for zone in sorted(by_zone):
+            indices = by_zone[zone]
+            out += struct.pack("<BI", zone, len(indices))
+            out += struct.pack("<%dH" % len(indices), *indices)
+        print("  %s: %d vertices" % (name, len(vertices)))
+    with open(path, "wb") as f:
+        f.write(out)
+    print(f"wrote {path}: {len(meshes)} meshes, {total} triangles, {len(out) // 1024} KB")
+
+
+# ---------------------------------------------------------------------------- posing, as the game does
+
+def unity_euler(x, y, z):
+    """Unity's Quaternion.Euler(x, y, z) as a matrix: z, then x, then y."""
+    return (Matrix.Rotation(math.radians(y), 4, 'Y') @ Matrix.Rotation(math.radians(x), 4, 'X')
+            @ Matrix.Rotation(math.radians(z), 4, 'Z'))
+
+
+def pose_bones(motion, gun_profile=None, gun_att=None):
+    """
+    The bones' model-space matrices for a pose, by Client/Visuals/SoldierView.cs's rules, and
+    where the gun goes. Returns (matrices by bone, gun root matrix or None).
+    """
+    rot = {n: Matrix.Identity(4) for n, _, _ in BONES}
+    local = {n: PIVOT[n] - (PIVOT[PARENT[n]] if PARENT[n] else Vector()) for n, _, _ in BONES}
+    length = lambda a, b: (PIVOT[b] - PIVOT[a]).length
+    thigh_len, shin_len = length("ThighL", "ShinL"), length("ShinL", "FootL")
+    upper_len, fore_len = length("UpperArmL", "ForearmL"), length("ForearmL", "HandL")
+    ankle = PIVOT["FootL"].y
+
+    speed, phase, stance = motion["speed"], motion["phase"], motion.get("stance", "stand")
+    amplitude = min(speed / 5.6, 1.3)
+    drop = 0.0 if stance == "stand" else 0.34
+    bob = amplitude * 0.035 * abs(math.cos(phase))
+    pelvis_pos = PIVOT["Pelvis"] - Vector((0, drop + bob, 0))
+    hip_height = PIVOT["Pelvis"].y - (PIVOT["Pelvis"].y - PIVOT["ThighL"].y) - drop - bob
+    reach = max(0.25, min(hip_height - ankle, thigh_len + shin_len - 0.005))
+    hip = math.acos(max(-1, min(1, (thigh_len ** 2 + reach ** 2 - shin_len ** 2) / (2 * thigh_len * reach))))
+    inner = math.acos(max(-1, min(1, (thigh_len ** 2 + shin_len ** 2 - reach ** 2) / (2 * thigh_len * shin_len))))
+    thigh_base, knee_base = -math.degrees(hip), math.degrees(math.pi - inner)
+    for side, ph in (("L", phase), ("R", phase + math.pi)):
+        swing = math.sin(ph)
+        lift = max(0.0, math.cos(ph)) * amplitude * 42
+        pitch = thigh_base - swing * amplitude * 30 - lift * 0.4
+        knee = knee_base + lift
+        rot["Thigh" + side] = unity_euler(pitch, 0, 0)
+        rot["Shin" + side] = unity_euler(knee, 0, 0)
+        rot["Foot" + side] = unity_euler(-(pitch + knee) - lift * 0.2, 0, 0)
+    view_pitch = motion.get("pitch", 0.0)
+    lean = amplitude * 7
+    rot["Torso"] = unity_euler(view_pitch * 0.4 + lean, 0, 0)
+    rot["Head"] = unity_euler(view_pitch * 0.35 - lean * 0.6, 0, 0)
+
+    world = {}
+    def world_of(n):
+        if n not in world:
+            base = Matrix.Identity(4) if PARENT[n] is None else world_of(PARENT[n])
+            world[n] = base @ Matrix.Translation(pelvis_pos if n == "Pelvis" else local[n]) @ rot[n]
+        return world[n]
+    for n, _, _ in BONES:
+        world_of(n)
+
+    if gun_profile is None:
+        for side, s in (("L", -1), ("R", 1)):
+            world["UpperArm" + side] = world["Torso"] @ Matrix.Translation(local["UpperArm" + side]) @ unity_euler(-6, 0, s * 7)
+            world["Forearm" + side] = world["UpperArm" + side] @ Matrix.Translation(local["Forearm" + side]) @ unity_euler(-14, 0, 0)
+            world["Hand" + side] = world["Forearm" + side] @ Matrix.Translation(local["Hand" + side])
+        return world, None
+
+    mount = world["Torso"] @ Matrix.Translation((0.13, 0.36, 0.05)) @ unity_euler(view_pitch * 0.6 - lean, 0, 0)
+    b, body_len = gun_profile["bulk"], gun_profile["body"]
+    rear = -(body_len * 0.5 + gun_profile["stock"])
+    gun_root = mount @ Matrix.Translation((0, 0, -rear - 0.03))
+    grip = gun_root @ Vector((0, -0.075 * b, -body_len * 0.28))
+    handguard = gun_profile["barrel"] * 0.55
+    support = gun_root @ Vector((0, 0.004 * b - 0.026 * b, body_len * 0.5 + max(handguard, 0.04) * 0.5))
+    up = (gun_root.to_3x3() @ Vector((0, 1, 0))).normalized()
+    fwd = (gun_root.to_3x3() @ Vector((0, 0, 1))).normalized()
+    right = (gun_root.to_3x3() @ Vector((1, 0, 0))).normalized()
+
+    def reach_arm(side, target, pole):
+        upper, fore, hand = "UpperArm" + side, "Forearm" + side, "Hand" + side
+        shoulder = world[upper].to_translation()
+        to_target = target - shoulder
+        distance = max(0.05, min(to_target.length, upper_len + fore_len - 0.002))
+        direction = to_target.normalized()
+        cos_a = max(-1, min(1, (upper_len ** 2 + distance ** 2 - fore_len ** 2) / (2 * upper_len * distance)))
+        sin_a = math.sqrt(1 - cos_a ** 2)
+        bend = pole - direction * pole.dot(direction)
+        bend.normalize()
+        elbow = shoulder + direction * (cos_a * upper_len) + bend * (sin_a * upper_len)
+        wrist = shoulder + direction * distance
+        r_upper = (PIVOT[fore] - PIVOT[upper]).rotation_difference(elbow - shoulder).to_matrix().to_4x4()
+        r_fore = (PIVOT[hand] - PIVOT[fore]).rotation_difference(wrist - elbow).to_matrix().to_4x4()
+        world[upper] = Matrix.Translation(shoulder) @ r_upper
+        world[fore] = Matrix.Translation(elbow) @ r_fore
+        world[hand] = Matrix.Translation(wrist) @ r_fore
+
+    reach_arm("R", grip + up * 0.055 - fwd * 0.02, Vector((0.7, -1, -0.3)))
+    reach_arm("L", support - up * 0.02 - right * 0.025, Vector((-0.8, -1, -0.1)))
+    return world, gun_root
+
+
+def posed_copy(obj, bone, weights, world, place, name):
+    """A copy of a body piece, skinned to the posed bones (linear blend, as Unity does) and placed."""
+    mesh = obj.data.copy()
+    skin = {n: world[n] @ Matrix.Translation(-PIVOT[n]) for n, _, _ in BONES}
+    names = [n for n, _, _ in BONES]
+    for v, (b0, b1, w1) in zip(mesh.vertices, weights):
+        p = v.co.copy()
+        a = skin[names[b0]] @ p
+        if w1 > 0:
+            a = a * (1 - w1) + (skin[names[b1]] @ p) * w1
+        v.co = place @ a
+    mesh.update()
+    copy = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(copy)
+    copy["pivot"] = [0, 0, 0]
+    return copy
+
+
+def posed_soldier(pieces, gear, motion, gun=None, gun_objects=None, origin=(0, 0, 0), yaw=0.0, headgear="Helmet", back=None, tag=""):
+    """A whole soldier in a pose: body pieces, headgear, a back item and a gun. Returns the objects."""
+    world, gun_root = pose_bones(motion, *(gun or (None, None)))
+    place = Matrix.Translation(origin) @ Matrix.Rotation(math.radians(yaw), 4, 'Y')
+    made = []
+    for obj, bone, weights in pieces:
+        made.append(posed_copy(obj, bone, weights, world, place, obj.name + "_posed" + tag))
+    gear_by_name = {o.name.split(".")[0]: o for o in gear}
+    worn = []
+    if headgear:
+        worn += [(gear_by_name[n], "Head") for n in (headgear if isinstance(headgear, (list, tuple)) else [headgear])]
+    if back:
+        worn.append((gear_by_name[back], "Torso"))
+    for obj, bone in worn:
+        rigid = [(BONE_INDEX[bone], BONE_INDEX[bone], 0.0)] * len(obj.data.vertices)
+        made.append(posed_copy(obj, bone, rigid, world, place, obj.name + "_worn" + tag))
+    if gun is not None:
+        meshes = {o.name.split(".")[0]: o.data for o in gun_objects}
+        for name, pos, size, rot_x in gun_layout(*gun):
+            g = bpy.data.objects.new(name + "_held" + tag, meshes[name])
+            bpy.context.scene.collection.objects.link(g)
+            g["pivot"] = [0, 0, 0]
+            g.matrix_world = place @ gun_root @ Matrix.Translation(pos) @ unity_euler(rot_x, 0, 0) @ Matrix.Diagonal((size[0], size[1], size[2], 1))
+            made.append(g)
+    return made
 
 
 # ---------------------------------------------------------------------------- gun parts
@@ -616,198 +1169,6 @@ def preview_guns(part_objects, path):
             offsets=[o.location.copy() for o in shown])
 
 
-# ---------------------------------------------------------------------------- posed soldier, for checking the rig
-
-def unity_euler(x, y, z):
-    """Unity's Quaternion.Euler(x, y, z) as a matrix: z, then x, then y."""
-    return (Matrix.Rotation(math.radians(y), 4, 'Y') @ Matrix.Rotation(math.radians(x), 4, 'X')
-            @ Matrix.Rotation(math.radians(z), 4, 'Z'))
-
-
-def pose_soldier(soldier_objects, gun_objects, motion, gun_profile, gun_att, origin=(0, 0, 0), yaw=0.0, tag=""):
-    """
-    Poses copies of the soldier's segments the way Client/Visuals/SoldierView.cs does, with an
-    assembled gun at the weapon mount and the arms solved to its grips. Returns the new objects.
-    """
-    by_name = {o.name: o for o in soldier_objects}
-    pivot = {n: Vector(o["pivot"]) for n, o in by_name.items()}
-    parent = {"Pelvis": None, "Torso": "Pelvis", "Head": "Torso"}
-    for side in "LR":
-        parent.update({"Thigh" + side: "Pelvis", "Shin" + side: "Thigh" + side, "Foot" + side: "Shin" + side,
-                       "UpperArm" + side: "Torso", "Forearm" + side: "UpperArm" + side, "Hand" + side: "Forearm" + side})
-    local_pos = {n: pivot[n] - (pivot[parent[n]] if parent[n] else Vector()) for n in parent}
-    rot = {n: Matrix.Identity(4) for n in parent}
-
-    def length(a, b):
-        return (pivot[b] - pivot[a]).length
-    thigh_len, shin_len = length("ThighL", "ShinL"), length("ShinL", "FootL")
-    upper_len, fore_len = length("UpperArmL", "ForearmL"), length("ForearmL", "HandL")
-
-    speed, phase, stance = motion["speed"], motion["phase"], motion.get("stance", "stand")
-    amplitude = min(speed / 5.6, 1.3)
-    drop = 0.0 if stance == "stand" else 0.34
-    bob = amplitude * 0.035 * abs(math.cos(phase))
-    pelvis_pos = pivot["Pelvis"] - Vector((0, drop + bob, 0))
-    reach = max(0.25, min(pivot["Pelvis"].y - 0.03 - drop - bob - 0.09, thigh_len + shin_len - 0.005))
-    hip = math.acos(max(-1, min(1, (thigh_len ** 2 + reach ** 2 - shin_len ** 2) / (2 * thigh_len * reach))))
-    inner = math.acos(max(-1, min(1, (thigh_len ** 2 + shin_len ** 2 - reach ** 2) / (2 * thigh_len * shin_len))))
-    thigh_base, knee_base = -math.degrees(hip), math.degrees(math.pi - inner)
-    for side, ph in (("L", phase), ("R", phase + math.pi)):
-        swing = math.sin(ph)
-        lift = max(0.0, math.cos(ph)) * amplitude * 42
-        pitch = thigh_base - swing * amplitude * 30 - lift * 0.4
-        knee = knee_base + lift
-        rot["Thigh" + side] = unity_euler(pitch, 0, 0)
-        rot["Shin" + side] = unity_euler(knee, 0, 0)
-        rot["Foot" + side] = unity_euler(-(pitch + knee) - lift * 0.2, 0, 0)
-    view_pitch = motion.get("pitch", 0.0)
-    lean = amplitude * 7
-    rot["Torso"] = unity_euler(view_pitch * 0.4 + lean, 0, 0)
-    rot["Head"] = unity_euler(view_pitch * 0.35 - lean * 0.6, 0, 0)
-
-    world = {}
-    def world_of(n):
-        if n in world:
-            return world[n]
-        base = Matrix.Identity(4) if parent[n] is None else world_of(parent[n])
-        lp = pelvis_pos if n == "Pelvis" else local_pos[n]
-        world[n] = base @ Matrix.Translation(lp) @ rot[n]
-        return world[n]
-    for n in parent:
-        world_of(n)
-
-    # The gun at the shoulder pocket, turned with the rest of the view's pitch.
-    mount = world["Torso"] @ Matrix.Translation((0.13, 0.36, 0.05)) @ unity_euler(view_pitch * 0.6 - lean, 0, 0)
-    layout = gun_layout(gun_profile, gun_att)
-    b, length_ = gun_profile["bulk"], gun_profile["body"]
-    rear = -(length_ * 0.5 + gun_profile["stock"])
-    gun_root = mount @ Matrix.Translation((0, 0, -rear - 0.03))
-    meshes = {o.name: o.data for o in gun_objects}
-    made = []
-    for name, pos, size, rot_x in layout:
-        obj = bpy.data.objects.new(name + "_held" + tag, meshes[name])
-        bpy.context.scene.collection.objects.link(obj)
-        obj["pivot"] = [0, 0, 0]
-        obj.matrix_world = gun_root @ Matrix.Translation(pos) @ unity_euler(rot_x, 0, 0) @ Matrix.Diagonal((size[0], size[1], size[2], 1))
-        made.append(obj)
-    grip = gun_root @ Vector((0, -0.075 * b, -length_ * 0.28))
-    handguard = gun_profile["barrel"] * 0.55
-    support = gun_root @ Vector((0, 0.004 * b - 0.026 * b, length_ * 0.5 + max(handguard, 0.04) * 0.5))
-    up = (gun_root.to_3x3() @ Vector((0, 1, 0))).normalized()
-    fwd = (gun_root.to_3x3() @ Vector((0, 0, 1))).normalized()
-    right = (gun_root.to_3x3() @ Vector((1, 0, 0))).normalized()
-
-    def reach_arm(side, target, pole):
-        upper, fore, hand = "UpperArm" + side, "Forearm" + side, "Hand" + side
-        shoulder = world[upper].to_translation()
-        to_target = target - shoulder
-        distance = max(0.05, min(to_target.length, upper_len + fore_len - 0.002))
-        direction = to_target.normalized()
-        cos_a = max(-1, min(1, (upper_len ** 2 + distance ** 2 - fore_len ** 2) / (2 * upper_len * distance)))
-        sin_a = math.sqrt(1 - cos_a ** 2)
-        bend = pole - direction * pole.dot(direction)
-        bend.normalize()
-        elbow = shoulder + direction * (cos_a * upper_len) + bend * (sin_a * upper_len)
-        wrist = shoulder + direction * distance
-        upper_rest = pivot[fore] - pivot[upper]
-        fore_rest = pivot[hand] - pivot[fore]
-        r_upper = upper_rest.rotation_difference(elbow - shoulder).to_matrix().to_4x4()
-        r_fore = fore_rest.rotation_difference(wrist - elbow).to_matrix().to_4x4()
-        world[upper] = Matrix.Translation(shoulder) @ r_upper
-        world[fore] = Matrix.Translation(elbow) @ r_fore
-        world[hand] = Matrix.Translation(wrist) @ r_fore
-
-    reach_arm("R", grip + up * 0.055 - fwd * 0.02, Vector((0.7, -1, -0.3)))
-    reach_arm("L", support - up * 0.02 - right * 0.025, Vector((-0.8, -1, -0.1)))
-
-    for n, obj in by_name.items():
-        copy = bpy.data.objects.new(n + "_posed" + tag, obj.data.copy())
-        bpy.context.scene.collection.objects.link(copy)
-        # The segment's mesh is in absolute rest coordinates: take it to its pivot first.
-        copy.data.transform(Matrix.Translation(-pivot[n]))
-        copy.matrix_world = world[n]
-        copy["pivot"] = [0, 0, 0]
-        copy["soldier"] = True
-        made.append(copy)
-    # Then stand the whole figure where it belongs, turned to face its way.
-    place = Matrix.Translation(origin) @ Matrix.Rotation(math.radians(yaw), 4, 'Y')
-    for obj in made:
-        obj.matrix_world = place @ obj.matrix_world
-    return made
-
-
-def preview_posed(soldier_objects, gun_objects, path):
-    for obj in soldier_objects + gun_objects:
-        obj.hide_render = True
-    rifle = (dict(bulk=1.0, body=0.3, barrel=0.3, stock=0.2, mag=0.14), dict(sight="reddot", grip="vertical"))
-    shown = pose_soldier(soldier_objects, gun_objects, dict(speed=0, phase=0, pitch=5), *rifle, origin=(-0.5, 0, 0))
-    shown += pose_soldier(soldier_objects, gun_objects, dict(speed=5.6, phase=0.9, pitch=-5), *rifle, origin=(0.6, 0, -0.4))
-    preview(shown, path, (1.6, 1.45, 3.3), (0.05, 1.0, -0.2), lens=45, size=(1400, 1000),
-            offsets=[o.matrix_world.copy() for o in shown])
-
-
-# ---------------------------------------------------------------------------- first-person arms, for checking
-
-# The same numbers as Client/Weapons/FirstPersonArms.cs, in the weapon's own space.
-FP_RIGHT_WRIST = (0.012, 0.0, 0.0)       # added to the grip, then moved up the grip's axis
-FP_RIGHT_UP_GRIP = 0.05
-FP_RIGHT_ELBOW = (0.4, -0.55, -1.0)      # direction from the wrist back to the elbow
-FP_LEFT_WRIST = (-0.035, -0.045, -0.015)  # from the support point
-FP_LEFT_FINGERS = (0.55, 0.8, 0.25)
-FP_LEFT_ELBOW = (-0.55, -0.45, -1.0)
-
-
-def fp_arm_matrices(grip, support, b, pivot):
-    """World (gun-space) matrices for the forearm and hand of each arm."""
-    grip_axis = (unity_euler(18, 0, 0).to_3x3() @ Vector((0, -1, 0))).normalized()
-    out = {}
-    fore_rest = {s: (pivot["Hand" + s] - pivot["Forearm" + s]) for s in "LR"}
-    forearm_len = fore_rest["R"].length
-
-    def arm(side, wrist, fingers, elbow_dir):
-        elbow = wrist + Vector(elbow_dir).normalized() * forearm_len
-        r_fore = fore_rest[side].rotation_difference(wrist - elbow).to_matrix().to_4x4()
-        r_hand = Vector((0, -1, 0)).rotation_difference(Vector(fingers).normalized()).to_matrix().to_4x4()
-        out["Forearm" + side] = Matrix.Translation(elbow) @ r_fore
-        out["Hand" + side] = Matrix.Translation(wrist) @ r_hand
-
-    right_wrist = Vector(grip) + Vector(FP_RIGHT_WRIST) - grip_axis * FP_RIGHT_UP_GRIP
-    arm("R", right_wrist, grip_axis, FP_RIGHT_ELBOW)
-    if support is not None:
-        arm("L", Vector(support) + Vector(FP_LEFT_WRIST), FP_LEFT_FINGERS, FP_LEFT_ELBOW)
-    return out
-
-
-def preview_first_person(soldier_objects, gun_objects, path):
-    for obj in bpy.context.scene.objects:
-        obj.hide_render = True
-    profile, att = dict(bulk=1.0, body=0.3, barrel=0.3, stock=0.2, mag=0.14), dict(sight="reddot", grip="vertical")
-    b, length_ = profile["bulk"], profile["body"]
-    hip = Matrix.Translation((0.17, -0.17, 0.3 + length_ * 0.2))
-    meshes = {o.name: o.data for o in gun_objects}
-    shown = []
-    for name, pos, size, rot_x in gun_layout(profile, att):
-        obj = bpy.data.objects.new(name + "_fp", meshes[name])
-        bpy.context.scene.collection.objects.link(obj)
-        obj["pivot"] = [0, 0, 0]
-        obj.matrix_world = hip @ Matrix.Translation(pos) @ unity_euler(rot_x, 0, 0) @ Matrix.Diagonal((size[0], size[1], size[2], 1))
-        shown.append(obj)
-    pivot = {o.name.split(".")[0]: Vector(o["pivot"]) for o in soldier_objects}
-    handguard = profile["barrel"] * 0.55
-    grip = (0, -0.075 * b, -length_ * 0.28)
-    support = (0, 0.004 * b - 0.026 * b, length_ * 0.5 + max(handguard, 0.04) * 0.5)
-    for name, m in fp_arm_matrices(grip, support, b, pivot).items():
-        source = next(o for o in soldier_objects if o.name.split(".")[0] == name)
-        copy = bpy.data.objects.new(name + "_fp", source.data.copy())
-        bpy.context.scene.collection.objects.link(copy)
-        copy.data.transform(Matrix.Translation(-pivot[name]))
-        copy.matrix_world = hip @ m
-        copy["pivot"] = [0, 0, 0]
-        shown.append(copy)
-    # The player's eye at the origin, looking down +z, with the game's 74-degree field of view.
-    preview(shown, path, (0, 0, 0), (0, 0, 1), lens=15, size=(1280, 720), offsets=[o.matrix_world.copy() for o in shown])
-
-
 # ---------------------------------------------------------------------------- the menu's backdrop
 
 def material(name, colour, roughness=0.45, metallic=0.0, emission=0.0):
@@ -823,30 +1184,54 @@ def material(name, colour, roughness=0.45, metallic=0.0, emission=0.0):
     return mat
 
 
-def zone_set(prefix, suit, trim, team, visor, helmet):
+def zone_set(prefix, uniform, gear, team, skin, hair=(0.05, 0.035, 0.025, 1)):
+    """One soldier's materials, in zone order."""
     return [
-        material(prefix + "suit", suit, 0.42),
-        material(prefix + "dark", (0.03, 0.033, 0.037, 1), 0.55),
-        material(prefix + "metal", (0.5, 0.52, 0.55, 1), 0.28, 0.9),
-        material(prefix + "glow", visor, 0.3, 0.0, 8.0),
-        material(prefix + "trim", trim, 0.38, 0.2),
-        material(prefix + "team", team, 0.4, 0.0, 0.5),
-        material(prefix + "helmet", helmet, 0.3, 0.1),
+        material(prefix + "uniform", uniform, 0.85),
+        material(prefix + "dark", (0.03, 0.032, 0.035, 1), 0.7),
+        material(prefix + "metal", (0.5, 0.52, 0.55, 1), 0.3, 0.9),
+        material(prefix + "glow", (0.1, 0.85, 1.0, 1), 0.3, 0.0, 6.0),
+        material(prefix + "gear", gear, 0.75, 0.0),
+        material(prefix + "team", team, 0.7, 0.0),
+        material(prefix + "helmet", gear, 0.6, 0.0),
+        material(prefix + "skin", skin, 0.5),
+        material(prefix + "hair", hair, 0.7),
+        material(prefix + "eye", (0.85, 0.84, 0.8, 1), 0.15),
+        material(prefix + "iris", (0.08, 0.05, 0.03, 1), 0.1),
+        material(prefix + "lips", tuple(c * 0.82 for c in skin[:3]) + (1,), 0.45),
+        material(prefix + "boots", (0.09, 0.07, 0.05, 1), 0.55),
     ]
+
+
+def build_soldier():
+    """The body pieces as objects, each with its skin weights: [(object, bone, weights)]."""
+    pieces = []
+    for part, bone, smoothing in body_pieces():
+        obj = part.to_object(subsurf=smoothing)
+        pieces.append((obj, bone, skin_weights(obj, bone)))
+    return pieces
+
+
+def dress(objects, zones):
+    for obj in objects:
+        if len(obj.data.materials) == 0:
+            for m in zones:
+                obj.data.materials.append(m)
 
 
 def render_backdrop(path, samples=160):
     """The art behind the main menu: soldiers in a dark arena, lit from behind, on the right of the frame."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
-    soldier_objects = [p.to_object() for p in soldier()]
+    pieces = build_soldier()
+    gear = [p.to_object() for p in gear_models()]
     gun_objects = [p.to_object() for p in gun_parts()]
-    for obj in soldier_objects + gun_objects:
+    for obj in [o for o, _, _ in pieces] + gear + gun_objects:
         obj.hide_render = True
 
     gun_set = [material("gun_" + n, c, r, m, e) for n, c, r, m, e in (
         ("body", (0.06, 0.065, 0.07, 1), 0.38, 0.3, 0), ("dark", (0.025, 0.027, 0.03, 1), 0.5, 0.1, 0),
-        ("metal", (0.45, 0.46, 0.48, 1), 0.3, 0.9, 0), ("glow", (0.1, 0.85, 1.0, 1), 0.3, 0, 10.0),
+        ("metal", (0.45, 0.46, 0.48, 1), 0.3, 0.9, 0), ("glow", (0.9, 0.3, 0.1, 1), 0.3, 0, 3.0),
         ("trim", (0.3, 0.3, 0.3, 1), 0.4, 0, 0), ("team", (0.3, 0.3, 0.3, 1), 0.4, 0, 0), ("helm", (0.3, 0.3, 0.3, 1), 0.4, 0, 0))]
     for obj in gun_objects:
         for m in gun_set:
@@ -855,18 +1240,19 @@ def render_backdrop(path, samples=160):
     rifle = (dict(bulk=1.0, body=0.3, barrel=0.3, stock=0.2, mag=0.14), dict(sight="reddot", grip="vertical", barrel="suppressor"))
     marksman = (dict(bulk=1.05, body=0.34, barrel=0.5, stock=0.24, mag=0.08), dict(sight="scope", barrel="muzzle"))
     lmg = (dict(bulk=1.3, body=0.36, barrel=0.4, stock=0.22, mag=0.12), dict(mag="drum"))
+    blue = (0.15, 0.35, 0.8, 1)
     figures = [
-        (rifle, dict(speed=0, phase=0, pitch=4), (1.15, 0, 0.95), -38, zone_set("a_", (0.14, 0.2, 0.26, 1), (0.85, 0.55, 0.18, 1), (0.2, 0.55, 1.0, 1), (0.15, 0.9, 1.0, 1), (0.08, 0.11, 0.14, 1))),
-        (marksman, dict(speed=5.2, phase=2.2, pitch=2), (2.45, 0, -2.4), -24, zone_set("b_", (0.3, 0.31, 0.29, 1), (0.12, 0.6, 0.75, 1), (0.2, 0.55, 1.0, 1), (1.0, 0.55, 0.12, 1), (0.16, 0.17, 0.16, 1))),
-        (lmg, dict(speed=0, phase=0, pitch=10, stance="crouch"), (0.75, 0, -3.3), -8, zone_set("c_", (0.32, 0.12, 0.1, 1), (0.85, 0.82, 0.75, 1), (0.2, 0.55, 1.0, 1), (0.15, 0.9, 1.0, 1), (0.18, 0.08, 0.07, 1))),
+        (rifle, dict(speed=0, phase=0, pitch=4), (1.15, 0, 0.95), -38, "Helmet", "AssaultPack",
+         zone_set("a_", (0.2, 0.23, 0.16, 1), (0.36, 0.31, 0.22, 1), blue, (0.62, 0.42, 0.31, 1))),
+        (marksman, dict(speed=5.2, phase=2.2, pitch=2), (2.45, 0, -2.4), -24, ["Cap", "Headset"], "RadioPack",
+         zone_set("b_", (0.32, 0.3, 0.26, 1), (0.13, 0.14, 0.12, 1), blue, (0.35, 0.22, 0.15, 1))),
+        (lmg, dict(speed=0, phase=0, pitch=10, stance="crouch"), (0.75, 0, -3.3), -8, ["Helmet", "HelmetHeadset"], None,
+         zone_set("c_", (0.12, 0.13, 0.15, 1), (0.2, 0.21, 0.19, 1), blue, (0.8, 0.62, 0.5, 1))),
     ]
     shown = []
-    for i, (gun, motion, origin, yaw, zones) in enumerate(figures):
-        made = pose_soldier(soldier_objects, gun_objects, motion, *gun, origin=origin, yaw=yaw, tag="_%d" % i)
-        for obj in made:
-            if obj.get("soldier"):
-                for m in zones:
-                    obj.data.materials.append(m)
+    for i, (gun, motion, origin, yaw, headgear, back, zones) in enumerate(figures):
+        made = posed_soldier(pieces, gear, motion, gun, gun_objects, origin=origin, yaw=yaw, headgear=headgear, back=back, tag="_%d" % i)
+        dress([o for o in made if "_held" not in o.name], zones)
         shown += made
 
     # The arena: a glossy floor, dark blocks and pillars with strips of light.
@@ -960,31 +1346,43 @@ def main():
     os.makedirs(out, exist_ok=True)
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    soldier_objects = [p.to_object() for p in soldier()]
-    export(soldier_objects, os.path.join(out, "Soldier.bytes"))
-    if preview_dir:
-        os.makedirs(preview_dir, exist_ok=True)
-        for obj in soldier_objects:
-            obj.location = (0, 0, 0)
-        preview(soldier_objects, os.path.join(preview_dir, "soldier_front.png"), (1.3, 1.25, 2.6), (0, 0.95, 0), lens=55)
-        preview(soldier_objects, os.path.join(preview_dir, "soldier_back.png"), (-1.6, 1.4, -2.2), (0, 0.95, 0), lens=55)
-
-    bpy.ops.wm.read_factory_settings(use_empty=True)
+    pieces = build_soldier()
+    fp_arms = [p.to_object() for p in first_person_arms()]
+    export_skinned(os.path.join(out, "Soldier.bytes"), pieces, fp_arms)
+    gear = [p.to_object() for p in gear_models()]
+    export(gear, os.path.join(out, "Gear.bytes"))
     gun_objects = [p.to_object() for p in gun_parts()]
     export(gun_objects, os.path.join(out, "GunParts.bytes"))
-    if preview_dir:
-        # Laid out in rows and columns along z and y, and seen from the right-hand side.
-        cols = 6
-        offsets = [Vector((0, -(i // cols) * 1.6, ((i % cols) - cols / 2 + 0.5) * 1.6)) for i in range(len(gun_objects))]
-        preview(gun_objects, os.path.join(preview_dir, "gun_parts.png"), (11.0, -1.6, 0.0), (0, -1.6, 0), lens=42,
-                size=(1500, 900), offsets=offsets)
-        for obj in gun_objects:
-            obj.hide_render = True
-        preview_guns(gun_objects, os.path.join(preview_dir, "guns_assembled.png"))
-        # The soldier again, posed by the game's own rules, holding a rifle.
-        soldier_again = [p.to_object() for p in soldier()]
-        preview_posed(soldier_again, gun_objects, os.path.join(preview_dir, "soldier_posed.png"))
-        soldier_fp = [p.to_object() for p in soldier()]
-        preview_first_person(soldier_fp, gun_objects, os.path.join(preview_dir, "first_person.png"))
+    if not preview_dir:
+        return
+
+    os.makedirs(preview_dir, exist_ok=True)
+    for obj in [o for o, _, _ in pieces] + fp_arms + gear + gun_objects:
+        obj.hide_render = True
+    zones = zone_set("p_", PREVIEW_COLOURS[0], PREVIEW_COLOURS[4], PREVIEW_COLOURS[5], PREVIEW_COLOURS[7])
+    gun_set = [material("pg_%d" % i, c, 0.4, 0.8 if i == 2 else 0.2) for i, c in sorted(PREVIEW_COLOURS.items())]
+    for obj in gun_objects:
+        for m in gun_set:
+            obj.data.materials.append(m)
+    rifle = (dict(bulk=1.0, body=0.3, barrel=0.3, stock=0.2, mag=0.14), dict(sight="reddot", grip="vertical"))
+
+    def shot(name, made, camera, look, lens=50, size=(900, 1100)):
+        dress([o for o in made if "_held" not in o.name], zones)
+        preview(made, os.path.join(preview_dir, name), camera, look, lens=lens, size=size, offsets=[o.matrix_world.copy() for o in made])
+        for o in made:
+            o.hide_render = True
+
+    rest = dict(speed=0, phase=0, pitch=0)
+    shot("soldier_front.png", posed_soldier(pieces, gear, rest, headgear="Helmet", back="AssaultPack", tag="_f"), (1.3, 1.25, 2.6), (0, 0.95, 0), lens=55)
+    shot("soldier_back.png", posed_soldier(pieces, gear, rest, headgear="Helmet", back="AssaultPack", tag="_b"), (-1.6, 1.4, -2.2), (0, 0.95, 0), lens=55)
+    shot("head.png", posed_soldier(pieces, gear, rest, headgear=None, tag="_h"), (0.28, 1.7, 0.75), (0, 1.64, 0), lens=60, size=(800, 800))
+    made = posed_soldier(pieces, gear, dict(speed=0, phase=0, pitch=5), rifle, gun_objects, origin=(-0.5, 0, 0), tag="_p1")
+    made += posed_soldier(pieces, gear, dict(speed=5.6, phase=0.9, pitch=-5), rifle, gun_objects, origin=(0.6, 0, -0.4), headgear=["Cap", "Headset"], back="RadioPack", tag="_p2")
+    shot("soldier_posed.png", made, (1.6, 1.45, 3.3), (0.05, 1.0, -0.2), lens=45, size=(1400, 1000))
+    lineup = []
+    for i, (hg, back) in enumerate((("Hair", None), ("Helmet", None), ("Cap", "HydrationPack"), ("Beanie", "Rucksack"),
+                                     (["Hair", "Headset"], "BedrollPack"), ("Boonie", "Scarf"), (["Helmet", "HelmetHeadset"], "RadioPack"), (["Hair", "Bandana"], None))):
+        lineup += posed_soldier(pieces, gear, rest, origin=((i - 3.5) * 0.75, 0, 0), yaw=180 if i % 2 else 0, headgear=hg, back=back, tag="_l%d" % i)
+    shot("lineup.png", lineup, (0, 1.5, 6.5), (0, 1.0, 0), lens=40, size=(1600, 800))
 
 main()

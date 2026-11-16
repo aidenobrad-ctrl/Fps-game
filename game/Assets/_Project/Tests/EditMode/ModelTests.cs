@@ -12,16 +12,18 @@ namespace Recoil.Tests
     /// <summary>The Blender-made model files: readable, complete, and the right size.</summary>
     public class ModelTests
     {
-        static List<ModelData> Load(string set)
+        static ModelSet LoadSet(string set)
         {
             string root = Environment.GetEnvironmentVariable("RECOIL_PROJECT") ?? "";
             foreach (string candidate in new[] { Path.Combine(root, "Assets/_Project/Resources/Models", set + ".bytes"), "Assets/_Project/Resources/Models/" + set + ".bytes" })
             {
-                if (File.Exists(candidate)) return ModelFile.Parse(File.ReadAllBytes(candidate));
+                if (File.Exists(candidate)) return ModelFile.ParseSet(File.ReadAllBytes(candidate));
             }
             Assert.Fail("Resources/Models/" + set + ".bytes was not found. Make it with art/blender/recoil_models.py.");
             return null;
         }
+
+        static List<ModelData> Load(string set) => LoadSet(set).Models;
 
         static void WellFormed(ModelData model)
         {
@@ -33,25 +35,53 @@ namespace Recoil.Tests
         }
 
         [Test]
-        public void TheSoldier_HasEverySegment_AtHumanProportions()
+        public void TheSoldier_IsOneSkinnedBody_OnASkeletonOfEveryBone()
         {
-            Dictionary<string, ModelData> soldier = Load("Soldier").ToDictionary(m => m.Name);
-            foreach (string name in SoldierView.Names)
+            ModelSet soldier = LoadSet(SoldierView.Set);
+            var bones = soldier.Bones.Select(b => b.Name).ToList();
+            foreach (string name in SoldierView.Names) Assert.That(bones, Does.Contain(name));
+            Assert.That(soldier.Bones[bones.IndexOf("Head")].Pivot.y, Is.InRange(1.4f, 1.6f), "the neck");
+            Assert.That(soldier.Bones[bones.IndexOf("ThighL")].Pivot.x, Is.LessThan(0f), "left is -x");
+
+            ModelData body = soldier.Models.Single(m => m.Name == "Body");
+            WellFormed(body);
+            Assert.That(body.Skinned, Is.True);
+            Assert.That(body.Weight1.All(w => w >= 0f && w <= 0.5f), "the nearer bone always leads");
+            Assert.That(body.Weight1.Count(w => w > 0.05f), Is.GreaterThan(500), "the skin blends between bones at the joints");
+            // Standing, the top of the head is about 1.75 m up and the soles touch the floor.
+            Assert.That(body.Positions.Max(p => p.y), Is.InRange(1.7f, 1.85f));
+            Assert.That(body.Positions.Min(p => p.y), Is.InRange(-0.01f, 0.02f));
+            // A face, armbands for the team, and no glowing visor.
+            foreach (ModelZone zone in new[] { ModelZone.Skin, ModelZone.Eye, ModelZone.Iris, ModelZone.Team, ModelZone.Trim, ModelZone.Primary })
+                Assert.That(body.Zones, Does.Contain(zone), zone.ToString());
+            Assert.That(body.Zones, Does.Not.Contain(ModelZone.Glow));
+
+            foreach (string side in new[] { "L", "R" })
             {
-                Assert.That(soldier.ContainsKey(name), name);
-                WellFormed(soldier[name]);
+                WellFormed(soldier.Models.Single(m => m.Name == "FPForearm" + side));
+                WellFormed(soldier.Models.Single(m => m.Name == "FPHand" + side));
             }
-            Assert.That(soldier["Head"].Pivot.y, Is.InRange(1.4f, 1.6f), "the neck");
-            Assert.That(soldier["ThighL"].Pivot.x, Is.LessThan(0f), "left is -x");
-            Assert.That(soldier["ThighR"].Pivot.x, Is.GreaterThan(0f));
-            // Standing, the top of the helmet is about 1.8 m up and the soles touch the floor.
-            float top = soldier["Head"].Positions.Max(p => p.y) + soldier["Head"].Pivot.y;
-            float sole = soldier["FootL"].Positions.Min(p => p.y) + soldier["FootL"].Pivot.y;
-            Assert.That(top, Is.InRange(1.75f, 1.9f));
-            Assert.That(sole, Is.InRange(-0.01f, 0.02f));
-            // Shoulder pads carry the team colour; the helmet has its visor.
-            Assert.That(soldier["Torso"].Zones, Does.Contain(ModelZone.Team));
-            Assert.That(soldier["Head"].Zones, Does.Contain(ModelZone.Glow));
+        }
+
+        [Test]
+        public void EveryHeadgearAndBackItem_HasItsModels()
+        {
+            Dictionary<string, ModelData> gear = Load(CharacterLookView.GearSet).ToDictionary(m => m.Name);
+            foreach (Recoil.Shared.Cosmetics.HeadgearKind kind in Enum.GetValues(typeof(Recoil.Shared.Cosmetics.HeadgearKind)))
+            {
+                foreach (string name in CharacterLookView.HeadgearModels(kind))
+                {
+                    Assert.That(gear.ContainsKey(name), kind + " -> " + name);
+                    WellFormed(gear[name]);
+                }
+            }
+            foreach (Recoil.Shared.Cosmetics.BackKind kind in Enum.GetValues(typeof(Recoil.Shared.Cosmetics.BackKind)))
+            {
+                string name = CharacterLookView.BackModel(kind);
+                if (name == null) continue;
+                Assert.That(gear.ContainsKey(name), kind + " -> " + name);
+                WellFormed(gear[name]);
+            }
         }
 
         [Test]

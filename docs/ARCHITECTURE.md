@@ -476,20 +476,22 @@ When the server applies damage to a person it sends them a `HurtMessage`: how mu
 
 ## Cosmetics
 
-A player's look is a `CharacterLook`: the id of the item chosen for each slot (suit colour, trim colour, pattern, headgear, visor, back) and their weapon skins (one for every weapon, plus any weapon with its own). The items are defined in code in `CosmeticCatalog` (`Shared/Cosmetics`), so the server can check a look without loading any content, and `LookRules.Sanitize` turns anything unknown into a default.
+A player's look is a `CharacterLook`: the id of the item chosen for each slot (uniform colour, gear colour, pattern, headgear, skin tone, back) and their weapon skins (one for every weapon, plus any weapon with its own). The items are defined in code in `CosmeticCatalog` (`Shared/Cosmetics`), so the server can check a look without loading any content, and `LookRules.Sanitize` turns anything unknown into a default.
 
 | Piece | Where | Job |
 | --- | --- | --- |
 | Catalog and rules | `CosmeticCatalog`, `CharacterLook`, `LookRules` (Shared) | What exists, what a legal look is, random looks for bots |
 | Saved look | `CosmeticsLibrary` (Client/Cosmetics) | `cosmetics.json` beside the loadouts; raises `Changed` |
 | On the wire | `NetMessages.WriteLook`/`ReadLook` | Each slot as its item's position in the catalog (one byte), then the per-weapon skins; at most about a kilobyte. Sent in the hello, in every `PlayerInfo`, and in a `Look` message when it changes |
-| Drawing a character | `SoldierView`, `CharacterLookView`, `LookMaterials` (Client/Visuals) | The Blender-made armoured soldier in the suit, trim, helmet and visor colours; headgear and back items on anchors that move with the head and torso; patterns drawn into small textures in code |
+| Drawing a character | `SoldierView`, `CharacterLookView`, `LookMaterials` (Client/Visuals) | The Blender-made skinned soldier in the uniform, gear and skin colours; headgear and back items on the head and torso bones; patterns drawn into small textures in code |
 | Weapon skins | `ViewModelBuilder` (first person and others' hands), `RemotePlayerView` | The skin's materials in place of the weapon's own colours |
 | The screen | `CustomizeScreen` (Client/UI), `CharacterPreview` | Categories, item tiles, and a character on a stage far below the level filmed into a render texture |
 
 Catalog lists are append-only, because the wire format sends positions: add new items at the end and retire old ones by hiding them. The server passes a player's new look on at most twice a second, always ending on the latest.
 
-Nothing cosmetic has a collider. The hitboxes are the same six parts for everyone, so what a player wears cannot make them harder to hit; team-coloured shoulder pads are drawn over every outfit so sides stay readable.
+Nothing cosmetic has a collider. The hitboxes are the same six parts for everyone, so what a player wears cannot make them harder to hit; team-coloured armbands are on every outfit so sides stay readable.
+
+Colours for the uniform, the gear and the skin can be any colour at all: a mixed colour's id is the colour itself ("#RRGGBB"), and on the network it is the index 255 followed by its three bytes. `LookRules.Sanitize` keeps a well-formed mixed colour and turns anything else unknown into the default.
 
 ## Progression and ranked
 
@@ -588,9 +590,10 @@ These files may use nothing but `System`, so they compile in both.
     blender -b --python art/blender/recoil_models.py -- --out game/Assets/_Project/Resources/Models --preview <folder>
     blender -b --python art/blender/recoil_models.py -- --out /tmp/x --backdrop <file.png> --samples 128
 
-- **The soldier** is an original armoured operator in fifteen rigid segments (pelvis, torso, head, upper arms, forearms, hands, thighs, shins, boots), each modelled around its joint. `SoldierView` hangs them from each other and poses them every frame: legs walk and run with the speed, step sideways when strafing, bend to crouch, tuck in the air and stretch out in a slide; torso, head and gun share the view's pitch; each arm is solved (two-bone IK) to the gun's grip and handguard. Zones take the player's suit pattern, trim, a darker helmet, the visor's glow and the team's colour on the shoulder pads.
+- **The soldier** is an original human soldier: one continuous body grown from a skeleton with Blender's Skin modifier and smoothed (uniform shirt and trousers), a sculpted head (skull and jaw, eye sockets, eyes with lids, nose, ears, brows, lips), and the gear on top (plate carrier and pouches, collar, belt, thigh pockets, knee and elbow pads, gloves, boots, team armbands). It is exported as one skinned mesh on a fifteen-bone skeleton (`Soldier.bytes`, format RCM2): each vertex follows its nearest bone, blended with the next one near a joint, and rigid pieces follow one bone. `SoldierView` builds the skeleton from the file, draws the body with a `SkinnedMeshRenderer`, and poses the bones every frame: legs walk and run with the speed, step sideways when strafing, bend to crouch, tuck in the air and stretch out in a slide; torso, head and gun share the view's pitch; each arm is solved (two-bone IK) to the gun's grip and handguard. Zones take the uniform's colour and pattern, the gear's colour, the skin tone, and the team's colour on the armbands.
+- **Headgear and back items** (`Gear.bytes`): hair, combat helmet, cap, beanie, headset, boonie hat, helmet headset, bandana; assault pack, hydration pack, radio pack, rucksack, pack with bedroll, scarf. `CharacterLookView` hangs the chosen ones on the head and torso bones.
 - **Weapons** are still laid out by `ViewModelBuilder` from each weapon's proportions and attachments, but every part (receiver with rail and ejection port, vented handguard, barrel, suppressor, muzzle device, stock, grip, magazines, drum, foregrips, laser, sight frame, scope, launcher and blade parts) is a detailed model made to fill a unit box, stretched to the size the layout asks for. The same model is the first-person view and the gun in other players' hands.
-- **First-person arms** (`FirstPersonArms`) put the soldier's gloves and forearms on the weapon in the player's colours.
+- **First-person arms** (`FirstPersonArms`) put sleeves and gloves on the weapon in the player's colours.
 - **The menu's backdrop** (`Resources/UI/MenuBackdrop.png`) is rendered from the same models.
 
-The script also renders previews (the soldier, every part, assembled guns, a posed soldier using the game's own rig rules, and the first-person view), which is how the models were checked. Without the model files the game falls back to the simple shapes. Hitboxes are unchanged and separate: no pose or outfit makes anyone easier or harder to hit.
+The script also renders previews (the soldier front and back, a close-up of the face, every headgear and pack, assembled guns, and soldiers posed by the game's own rig rules and skinned the way Unity skins them), which is how the models were checked. Without the model files the game falls back to the simple shapes. Hitboxes are unchanged and separate: no pose or outfit makes anyone easier or harder to hit.
