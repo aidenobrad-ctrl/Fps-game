@@ -10,5 +10,5 @@ PlayerSettings:
   m_ActiveColorSpace: 1
   runInBackground: 1
   bundleVersion: 0.1.0
-  activeInputHandler: 2
+  activeInputHandler: 1
   insecureHttpOption: 2

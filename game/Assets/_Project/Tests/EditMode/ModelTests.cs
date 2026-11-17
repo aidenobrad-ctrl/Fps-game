@@ -53,8 +53,8 @@ namespace Recoil.Tests
             Assert.That(body.Positions.Min(p => p.y), Is.InRange(-0.01f, 0.02f));
             // A face, armbands for the team, and no glowing visor.
             foreach (ModelZone zone in new[] { ModelZone.Skin, ModelZone.Eye, ModelZone.Iris, ModelZone.Team, ModelZone.Trim, ModelZone.Primary })
-                Assert.That(body.Zones, Does.Contain(zone), zone.ToString());
-            Assert.That(body.Zones, Does.Not.Contain(ModelZone.Glow));
+                Assert.That(body.Zones, Has.Member(zone), zone.ToString());
+            Assert.That(body.Zones, Has.No.Member(ModelZone.Glow));
 
             foreach (string side in new[] { "L", "R" })
             {
