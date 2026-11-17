@@ -11,8 +11,12 @@ and a weapon skin's colours on a gun.
 
 Two files come out:
 
-  Soldier.bytes   the armoured operator, as rigid segments (pelvis, torso, head, arms, legs)
-                  each modelled around its own joint, for the game to pose and animate;
+  Soldier.bytes   the soldier, skinned to a fifteen-bone skeleton: a realistic body and face
+                  (art/blender/human.py, from the CC0 MakeHuman base mesh) in a fitted
+                  uniform and plate carrier (art/blender/outfit.py), as three skinned meshes
+                  (Body, Uniform, Kit), plus the first-person sleeves and gloves;
+  Gear.bytes      the hair, headgear and back items, fitted to that head and carrier;
+  SkinAlbedo.png, EyeAlbedo.png  the face's painted skin and the eyes' texture;
   GunParts.bytes  detailed parts for the weapon builder (receiver, handguard, barrel,
                   suppressor, stock, grip, magazines, sights, launcher and blade parts), each
                   modelled to fill a unit box so the builder can stretch it to any weapon's
@@ -25,6 +29,12 @@ The format is described in Client/Visuals/ModelLibrary.cs, which reads it.
 """
 import bpy, bmesh, math, os, struct, sys
 from mathutils import Matrix, Vector
+
+# human.py and outfit.py sit next to this file.
+try:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+except NameError:
+    pass
 
 ZONES = {"primary": 0, "dark": 1, "metal": 2, "glow": 3, "trim": 4, "team": 5, "helmet": 6,
          "skin": 7, "hair": 8, "eye": 9, "iris": 10, "lips": 11, "boots": 12}
@@ -209,269 +219,26 @@ def mirror_x(p):
 
 # The skeleton: each bone's name, the bone it hangs from, and its joint, in the game's frame.
 # Client/Visuals/SoldierView.cs reads these from the file and animates them.
-BONES = [("Pelvis", None, (0, 0.96, 0)), ("Torso", "Pelvis", (0, 1.02, 0)), ("Head", "Torso", (0, 1.5, 0))]
+# The joints are the realistic body's (human.py): hips, knees, ankles, shoulders, elbows and
+# wrists where MakeHuman's skeleton has them in the soldier's rest pose. The torso bends at
+# 1.02 m, where Shared/Match/BodyShapes.cs puts the joint the gun is held from.
+BONES = [("Pelvis", None, (0, 0.96, 0)), ("Torso", "Pelvis", (0, 1.02, 0)), ("Head", "Torso", (0, 1.5, 0.011))]
 for _side, _s in (("L", -1), ("R", 1)):
     BONES += [
-        ("Thigh" + _side, "Pelvis", (_s * 0.1, 0.93, 0)),
-        ("Shin" + _side, "Thigh" + _side, (_s * 0.11, 0.51, 0.01)),
-        ("Foot" + _side, "Shin" + _side, (_s * 0.115, 0.11, -0.02)),
-        ("UpperArm" + _side, "Torso", (_s * 0.2, 1.42, -0.01)),
-        ("Forearm" + _side, "UpperArm" + _side, (_s * 0.25, 1.15, -0.03)),
-        ("Hand" + _side, "Forearm" + _side, (_s * 0.28, 0.9, 0.0)),
+        ("Thigh" + _side, "Pelvis", (_s * 0.107, 0.945, -0.007)),
+        ("Shin" + _side, "Thigh" + _side, (_s * 0.107, 0.515, 0.027)),
+        ("Foot" + _side, "Shin" + _side, (_s * 0.115, 0.068, 0.011)),
+        ("UpperArm" + _side, "Torso", (_s * 0.192, 1.382, 0.011)),
+        ("Forearm" + _side, "UpperArm" + _side, (_s * 0.233, 1.148, -0.092)),
+        ("Hand" + _side, "Forearm" + _side, (_s * 0.268, 0.904, 0.011)),
     ]
 BONE_INDEX = {name: i for i, (name, _, _) in enumerate(BONES)}
 PIVOT = {name: Vector(p) for name, _, p in BONES}
 PARENT = {name: parent for name, parent, _ in BONES}
+# Where the headgear and back items are modelled around; refit_gear() moves them onto the
+# realistic head and plate carrier.
 HEAD_CENTRE = Vector((0, 1.645, 0.0))
 BACK_CENTRE = Vector((0, 1.17, 0.0))
-
-
-def bone_segment(name):
-    """The line a bone runs along, for working out which bone moves each point of the body."""
-    p = PIVOT[name]
-    children = [n for n, parent, _ in BONES if parent == name and not n.startswith("UpperArm") and not n.startswith("Thigh")]
-    if name == "Pelvis":
-        return Vector((0, 0.84, 0)), Vector((0, 1.0, 0))
-    if name == "Torso":
-        return Vector((0, 1.02, 0)), Vector((0, 1.46, 0))
-    if name == "Head":
-        return p, p + Vector((0, 0.22, 0))
-    if name.startswith("Foot"):
-        return p, p + Vector((0, -0.08, 0.15))
-    if name.startswith("Hand"):
-        return p, p + Vector((0.0, -0.1, 0.0))
-    return p, PIVOT[children[0]]
-
-
-def distance_to_segment(point, a, b):
-    ab = b - a
-    t = max(0.0, min(1.0, (point - a).dot(ab) / max(ab.length_squared, 1e-9)))
-    return (point - (a + ab * t)).length
-
-
-def envelope(point, width=0.05):
-    """Two bones and a blend for a point of the continuous body: the nearest bone, and its
-    parent or child where the two are about as near, so joints bend smoothly."""
-    distances = sorted((distance_to_segment(point, *bone_segment(n)), n) for n, _, _ in BONES)
-    (d1, b1), = distances[:1]
-    for d2, b2 in distances[1:4]:
-        if PARENT.get(b1) == b2 or PARENT.get(b2) == b1:
-            gap = d2 - d1
-            if gap < width:
-                return BONE_INDEX[b1], BONE_INDEX[b2], 0.5 * (1.0 - gap / width)
-            break
-    return BONE_INDEX[b1], BONE_INDEX[b1], 0.0
-
-
-def mannequin():
-    """
-    The body under the gear, grown from a skeleton with Blender's Skin modifier and smoothed:
-    one continuous surface from neck to ankles, so it bends without seams. Above the belt it
-    is the uniform shirt, below it the trousers, and the neck is skin.
-    """
-    points = {}
-    def at(name, p, r):
-        points[name] = (Vector(p), r)
-    at("hips", (0, 0.93, 0.0), (0.165, 0.118))
-    at("waist", (0, 1.06, 0.0), (0.15, 0.108))
-    at("chest", (0, 1.25, 0.005), (0.18, 0.12))
-    at("upper", (0, 1.39, -0.005), (0.19, 0.106))
-    at("neck0", (0, 1.47, -0.012), (0.074, 0.074))
-    at("neck1", (0, 1.57, 0.0), (0.062, 0.062))
-    edges = [("hips", "waist"), ("waist", "chest"), ("chest", "upper"), ("upper", "neck0"), ("neck0", "neck1")]
-    for s, n in ((-1, "L"), (1, "R")):
-        at("sh" + n, (s * 0.2, 1.42, -0.01), (0.062, 0.062))
-        at("bi" + n, (s * 0.225, 1.29, -0.02), (0.057, 0.057))
-        at("el" + n, (s * 0.25, 1.15, -0.03), (0.047, 0.047))
-        at("fa" + n, (s * 0.265, 1.04, -0.02), (0.046, 0.046))
-        at("wr" + n, (s * 0.28, 0.9, 0.0), (0.037, 0.037))
-        at("hp" + n, (s * 0.1, 0.88, 0.0), (0.098, 0.098))
-        at("th" + n, (s * 0.106, 0.7, 0.008), (0.086, 0.086))
-        at("kn" + n, (s * 0.11, 0.51, 0.01), (0.064, 0.064))
-        at("ca" + n, (s * 0.112, 0.36, -0.012), (0.066, 0.066))
-        at("an" + n, (s * 0.115, 0.13, -0.02), (0.046, 0.046))
-        edges += [("upper", "sh" + n), ("sh" + n, "bi" + n), ("bi" + n, "el" + n), ("el" + n, "fa" + n), ("fa" + n, "wr" + n),
-                  ("hips", "hp" + n), ("hp" + n, "th" + n), ("th" + n, "kn" + n), ("kn" + n, "ca" + n), ("ca" + n, "an" + n)]
-    names = list(points)
-    mesh = bpy.data.meshes.new("skeleton")
-    mesh.from_pydata([points[n][0] for n in names], [(names.index(a), names.index(b)) for a, b in edges], [])
-    obj = bpy.data.objects.new("skeleton", mesh)
-    bpy.context.scene.collection.objects.link(obj)
-    obj.modifiers.new("skin", 'SKIN')
-    for i, n in enumerate(names):
-        mesh.skin_vertices[0].data[i].radius = points[n][1]
-    mesh.skin_vertices[0].data[names.index("hips")].use_root = True
-    obj.modifiers.new("smooth", 'SUBSURF').levels = 2
-    body = bpy.data.meshes.new_from_object(obj.evaluated_get(bpy.context.evaluated_depsgraph_get()))
-    bpy.data.objects.remove(obj)
-    bpy.data.meshes.remove(mesh)
-
-    part = Part("Mannequin")
-    part.bm.from_mesh(body)
-    bpy.data.meshes.remove(body)
-    for f in part.bm.faces:
-        c = f.calc_center_median()
-        neck = c.y > 1.5 and abs(c.x) < 0.09
-        f.material_index = ZONES["skin"] if neck else ZONES["primary"]
-    return part
-
-
-def head_part():
-    """A face: a sculpted skull and jaw, eye sockets, a nose, ears, eyes, brows and lips."""
-    part = Part("Head", (0, 0, 0))
-    bm = part.bm
-    C, R = HEAD_CENTRE, 0.1
-
-    def smooth(a, b, x):
-        t = max(0.0, min(1.0, (x - a) / (b - a)))
-        return t * t * (3 - 2 * t)
-
-    def bump(p, centre, radius):
-        return math.exp(-((p - Vector(centre)).length / radius) ** 2)
-
-    res = bmesh.ops.create_uvsphere(bm, u_segments=40, v_segments=28, radius=R)
-    for v in res["verts"]:
-        x, y, z = v.co.x / R, v.co.y / R, v.co.z / R
-        px, py, pz = x * 0.08, y * 0.11, z * 0.1
-        lower = smooth(0.0, -1.0, y)
-        upper = smooth(0.2, 1.0, y)
-        px *= (1.0 - 0.2 * lower) * (1.0 + 0.04 * upper)    # a jaw that narrows, a crown that stays round
-        if z < 0:
-            pz *= 1.0 - 0.3 * lower                         # the back of the skull tucks in above the neck
-        if pz > 0.048:
-            pz = 0.048 + (pz - 0.048) * 0.6                 # a flatter face
-        if z > 0.2 and y < -0.55:
-            pz += 0.007 * smooth(-0.55, -0.9, y)            # the chin comes forward a touch
-        p = Vector((px, py, pz))
-        for side in (-1, 1):
-            p.z -= 0.008 * bump(p, (side * 0.031, 0.012, 0.075), 0.02)    # eye sockets
-            p.z += 0.004 * bump(p, (side * 0.05, -0.014, 0.065), 0.025)   # cheekbones
-        p.z += 0.004 * bump(p, (0.0, 0.032, 0.078), 0.03)                # the brow
-        v.co = C + p
-    for f in {f for v in res["verts"] for f in v.link_faces}:
-        f.material_index = ZONES["skin"]
-
-    # The nose: narrow at the bridge, wider at the tip and nostrils.
-    centre = C + Vector((0, -0.016, 0.083))
-    res = bmesh.ops.create_cube(bm, size=1.0, matrix=Matrix.Translation(centre) @ Matrix.Diagonal((0.026, 0.042, 0.024, 1)))
-    for v in res["verts"]:
-        rel = v.co - centre
-        if rel.y > 0:
-            v.co.x = centre.x + rel.x * 0.5
-            v.co.z -= 0.008
-        else:
-            v.co.x = centre.x + rel.x * 1.2
-            v.co.z += 0.003
-    part._finish(res["verts"], "skin", 0.009, 3)
-
-    for side in (-1, 1):
-        part.sphere(C + Vector((side * 0.08, -0.002, -0.008)), 0.03, "skin", scale=(0.33, 1.0, 0.6), u=16, v=10)  # ears
-        eye = C + Vector((side * 0.031, 0.012, 0.0625))
-        part.sphere(eye, 0.0115, "eye", u=16, v=12)
-        part.sphere(eye + Vector((0, 0, 0.0105)), 0.0056, "iris", scale=(1, 1, 0.4), u=12, v=8)
-        cut_sphere(part, eye, 0.0127, (1, 1, 1), "skin", eye + Vector((0, 0.0062, 0)), (0, 1, 0.1), u=16, v=12)   # upper lid
-        part.sphere(C + Vector((side * 0.0115, -0.035, 0.08)), 0.0085, "skin", scale=(1, 0.8, 0.9), u=12, v=8)    # nostrils
-        part.box(C + Vector((side * 0.031, 0.031, 0.079)), (0.03, 0.006, 0.008), "hair", bevel=0.002, rot=(0, 0, -side * 7))
-    part.sphere(C + Vector((0, -0.053, 0.071)), 0.02, "lips", scale=(1.0, 0.22, 0.38), u=16, v=8)
-    part.sphere(C + Vector((0, -0.063, 0.068)), 0.018, "lips", scale=(0.95, 0.3, 0.4), u=16, v=8)
-    return part
-
-
-def body_pieces():
-    """Everything the body is made of: (part, the bone it moves with or None for blended weights, smoothing)."""
-    pieces = [(mannequin(), None, 0), (head_part(), "Head", 1)]
-
-    collar = Part("Collar")
-    collar.cylinder((0, 1.45, -0.012), (0, 1.51, -0.01), 0.088, 0.08, "primary", segments=24, bevel=0.012)
-    pieces.append((collar, "Torso", 0))
-
-    # The plate carrier: front and back plates, a cummerbund, shoulder straps, magazine pouches.
-    vest = Part("Vest")
-    vest.box((0, 1.3, 0.142), (0.31, 0.3, 0.05), "trim", bevel=0.02, segments=3)
-    vest.box((0, 1.3, -0.138), (0.31, 0.31, 0.045), "trim", bevel=0.02, segments=3)
-    vest.cylinder((0, 1.11, 0), (0, 1.21, 0), 1.0, 1.0, "trim", segments=28)
-    for v in vest.bm.verts:   # flatten the cummerbund ring to the waist's oval
-        if 1.105 <= v.co.y <= 1.215 and abs(v.co.z) < 1.05 and abs(v.co.x) < 1.05 and (abs(v.co.x) > 0.5 or abs(v.co.z) > 0.5):
-            v.co.x *= 0.168
-            v.co.z *= 0.124
-    for s in (-1, 1):
-        vest.box((s * 0.115, 1.45, -0.005), (0.07, 0.025, 0.27), "trim", bevel=0.008, rot=(0, 0, s * 6))
-        vest.box((s * 0.16, 1.3, 0.0), (0.035, 0.24, 0.24), "dark", bevel=0.01)
-    for x in (-0.085, 0.0, 0.085):
-        vest.box((x, 1.205, 0.183), (0.072, 0.105, 0.045), "trim", bevel=0.012, segments=2)
-        vest.box((x, 1.262, 0.186), (0.074, 0.02, 0.05), "dark", bevel=0.006)
-    vest.box((0, 1.4, 0.172), (0.18, 0.06, 0.012), "dark", bevel=0.004)
-    vest.box((0.17, 1.17, -0.02), (0.05, 0.11, 0.09), "trim", bevel=0.012)
-    pieces.append((vest, "Torso", 0))
-
-    belt = Part("Belt")
-    belt.cylinder((0, 0.965, 0), (0, 1.01, 0), 1.0, 1.0, "dark", segments=28)
-    for v in belt.bm.verts:
-        v.co.x *= 0.17
-        v.co.z *= 0.124
-    belt.box((0, 0.987, 0.124), (0.06, 0.04, 0.016), "metal", bevel=0.005)
-    belt.box((-0.12, 0.96, 0.085), (0.05, 0.08, 0.04), "trim", bevel=0.01)
-    pieces.append((belt, "Pelvis", 0))
-
-    for side, s in (("L", -1), ("R", 1)):
-        thigh = Part("Thigh" + side)
-        thigh.box((s * 0.19, 0.71, 0.01), (0.035, 0.13, 0.12), "primary", bevel=0.012, segments=2)
-        thigh.box((s * 0.208, 0.765, 0.01), (0.012, 0.03, 0.118), "primary", bevel=0.004)
-        if s > 0:
-            thigh.box((0.205, 0.83, -0.01), (0.04, 0.12, 0.1), "dark", bevel=0.012)
-        pieces.append((thigh, "Thigh" + side, 0))
-
-        shin = Part("Shin" + side)
-        shin.box((s * 0.11, 0.51, 0.068), (0.105, 0.115, 0.05), "trim", bevel=0.022, segments=3)
-        shin.cylinder((s * 0.11, 0.47, 0.0), (s * 0.11, 0.49, 0.0), 0.069, 0.069, "dark", segments=16)
-        pieces.append((shin, "Shin" + side, 0))
-
-        boot = Part("Boot" + side)
-        boot.box((s * 0.115, 0.017, 0.035), (0.112, 0.034, 0.29), "dark", bevel=0.012, segments=2)
-        boot.box((s * 0.115, 0.068, 0.04), (0.102, 0.075, 0.25), "boots", bevel=0.03, segments=3, taper=(0.95, 0.85))
-        boot.cylinder((s * 0.115, 0.06, -0.02), (s * 0.115, 0.215, -0.02), 0.058, 0.055, "boots", segments=18, bevel=0.01)
-        boot.box((s * 0.115, 0.108, 0.075), (0.07, 0.03, 0.11), "dark", bevel=0.008, rot=(-25, 0, 0))
-        pieces.append((boot, "Foot" + side, 0))
-
-        upper = Part("UpperArm" + side)
-        upper.cylinder((s * 0.218, 1.315, -0.018), (s * 0.221, 1.345, -0.018), 0.061, 0.061, "team", segments=18)
-        upper.box((s * 0.272, 1.36, -0.015), (0.012, 0.07, 0.06), "primary", bevel=0.004)
-        pieces.append((upper, "UpperArm" + side, 0))
-
-        fore = Part("Forearm" + side)
-        fore.box((s * 0.25, 1.15, -0.065), (0.07, 0.07, 0.03), "trim", bevel=0.012, segments=2)
-        fore.cylinder((s * 0.276, 0.925, -0.002), (s * 0.279, 0.95, -0.004), 0.043, 0.042, "primary", segments=16, bevel=0.006)
-        pieces.append((fore, "Forearm" + side, 0))
-
-        pieces.append((glove(side, s), "Hand" + side, 0))
-    return pieces
-
-
-def glove(side, s, name=None):
-    hand = Part(name or ("Glove" + side))
-    w = Vector((s * 0.28, 0.9, 0.0))
-    hand.box(w + Vector((0, -0.045, 0.002)), (0.04, 0.085, 0.078), "dark", bevel=0.015, segments=2)
-    hand.box(w + Vector((0, -0.1, 0.012)), (0.036, 0.05, 0.074), "dark", bevel=0.014, segments=2, rot=(16, 0, 0))
-    hand.box(w + Vector((-s * 0.016, -0.05, 0.042)), (0.022, 0.055, 0.022), "dark", bevel=0.009, rot=(-25, 0, s * 18))
-    hand.box(w + Vector((s * 0.021, -0.06, 0.004)), (0.006, 0.05, 0.06), "trim", bevel=0.002)
-    hand.cylinder(w + Vector((0, 0.005, 0)), w + Vector((0, -0.012, 0)), 0.042, 0.04, "dark", segments=16)
-    return hand
-
-
-def first_person_arms():
-    """Rigid sleeves and gloves for the first-person view, each around its own joint."""
-    parts = []
-    for side, s in (("L", -1), ("R", 1)):
-        elbow, wrist = PIVOT["Forearm" + side], PIVOT["Hand" + side]
-        fore = Part("FPForearm" + side, elbow)
-        fore.cylinder(elbow + Vector((0, 0.03, 0)), wrist + Vector((0, 0.02, 0)), 0.05, 0.041, "primary", segments=20, bevel=0.01)
-        fore.cylinder(wrist + Vector((0, 0.045, 0)), wrist + Vector((0, 0.015, 0)), 0.045, 0.044, "primary", segments=20, bevel=0.006)
-        fore.box(elbow + Vector((s * 0.0, -0.02, -0.04)), (0.072, 0.075, 0.035), "trim", bevel=0.012, segments=2)
-        parts.append(fore)
-        g = glove(side, s, "FPHand" + side)
-        g.pivot = wrist
-        parts.append(g)
-    return parts
 
 
 def gear_models():
@@ -618,14 +385,6 @@ def gear_models():
 
 # ---------------------------------------------------------------------------- skinned export
 
-def skin_weights(obj, bone):
-    """Per vertex: (first bone, second bone, the second's weight). A rigid piece follows one bone."""
-    if bone is not None:
-        i = BONE_INDEX[bone]
-        return [(i, i, 0.0)] * len(obj.data.vertices)
-    return [envelope(v.co) for v in obj.data.vertices]
-
-
 def export_skinned(path, skinned, rigid):
     """
     RCM2: magic; uint8 bone count; per bone: name, int8 parent (-1 for none), pivot (3 floats);
@@ -633,7 +392,12 @@ def export_skinned(path, skinned, rigid):
     vertices (position, normal, uv, and when skinned: uint8 bone, uint8 bone, float weight of
     the second), uint8 submesh count, then per submesh: uint8 zone, uint32 index count, uint16
     indices. A skinned mesh is in the body's rest pose, in model space.
+
+    skinned: [(mesh name, [objects with weight attributes])]; rigid: objects, each its own mesh.
+    An object marked own_uv keeps its UV map (the face and eyes are textured); the rest get
+    box-projected coordinates for the uniform's patterns.
     """
+    import outfit
     out = bytearray(b"RCM2")
     out += struct.pack("<B", len(BONES))
     for name, parent, pivot in BONES:
@@ -641,16 +405,18 @@ def export_skinned(path, skinned, rigid):
         out += struct.pack("<B", len(data)) + data
         out += struct.pack("<b", BONE_INDEX[parent] if parent else -1)
         out += struct.pack("<3f", *pivot)
-    meshes = [("Body", Vector(), skinned)] + [(obj.name, Vector(obj["pivot"]), [(obj, None, None)]) for obj in rigid]
+    meshes = [(name, Vector(), objects, True) for name, objects in skinned] + \
+             [(obj.name, Vector(obj["pivot"]), [obj], False) for obj in rigid]
     out += struct.pack("<H", len(meshes))
     total = 0
-    for name, pivot, sources in meshes:
-        is_skinned = name == "Body"
+    for name, pivot, sources, is_skinned in meshes:
         vertices, by_zone = [], {}
-        for obj, bone, weights in sources:
+        for obj in sources:
             mesh = obj.data
+            weights = outfit.weights_of(obj) if is_skinned else None
             mesh.calc_normals_split()
             mesh.calc_loop_triangles()
+            uv_layer = mesh.uv_layers.active if obj.get("own_uv") else None
             lookup = {}
             for tri in mesh.loop_triangles:
                 corner = []
@@ -659,7 +425,7 @@ def export_skinned(path, skinned, rigid):
                     vi = loop.vertex_index
                     co = mesh.vertices[vi].co - pivot
                     n = loop.normal
-                    uv = box_uv(mesh.vertices[vi].co, tri.normal)
+                    uv = tuple(uv_layer.data[loop_index].uv) if uv_layer else box_uv(mesh.vertices[vi].co, tri.normal)
                     key = (vi, round(n.x, 3), round(n.y, 3), round(n.z, 3), round(uv[0], 4), round(uv[1], 4))
                     if key not in lookup:
                         lookup[key] = len(vertices)
@@ -690,6 +456,80 @@ def export_skinned(path, skinned, rigid):
     with open(path, "wb") as f:
         f.write(out)
     print(f"wrote {path}: {len(meshes)} meshes, {total} triangles, {len(out) // 1024} KB")
+
+
+# ---------------------------------------------------------------------------- the realistic soldier
+
+def build_soldier(texture_dir):
+    """
+    The soldier: the realistic body and face (human.py) dressed in the uniform and kit
+    (outfit.py). Bakes the face's skin texture into texture_dir and copies the eyes' there.
+    Returns (skinned [(mesh name, objects)], first-person objects, gear objects).
+    """
+    import human, outfit
+    outfit.Part, outfit.ZONES = Part, ZONES
+    B = human.Built(BONE_INDEX)
+    head, eyes, lashes, hair = human.build_head(B, ZONES, texture_dir)
+    TEXTURES["skin"] = human.bake_skin(head, texture_dir)
+    eye_image = bpy.data.images.load(os.path.join(human.DATA, "eyes", "brown_eye.png"))
+    eye_image.scale(512, 512)
+    eye_image.filepath_raw = TEXTURES["eye"] = os.path.join(texture_dir, "EyeAlbedo.png")
+    eye_image.file_format = 'PNG'
+    eye_image.save()
+    outfit.set_weights(head, lambda co: outfit.mass_near(B, co))
+    for obj in (eyes, lashes):
+        outfit.rigid(obj, BONE_INDEX["Head"])
+    head["own_uv"] = True
+    eyes["own_uv"] = True
+    dressed = outfit.dress(B, BONE_INDEX)
+    skinned = [("Body", [head, eyes, lashes]), ("Uniform", dressed["uniform"]), ("Kit", dressed["kit"])]
+    gear = refit_gear(head, hair, dressed["back"])
+    return skinned, dressed["first_person"], gear
+
+
+def refit_gear(head, hair, back_z):
+    """
+    The headgear and back items, moved from where gear_models() makes them onto the
+    realistic head and plate carrier, and the realistic hair in place of the old one.
+    """
+    objects = {}
+    for part in gear_models():
+        obj = part.to_object()
+        objects[part.name] = obj
+    old_hair = objects.pop("Hair")
+    bpy.data.objects.remove(old_hair)
+    hair.name = "Hair"
+
+    # The old head, in the band the hat brims sit in: half as wide as this, this far back and
+    # forward, and its crown this high (with hair). The new one, measured the same way.
+    old_half, old_back, old_front, old_top = 0.082, -0.098, 0.076, 1.762
+    band = [head.matrix_world @ v.co for v in head.data.vertices if 1.66 <= v.co.y <= 1.72]
+    band += [v.co for v in hair.data.vertices if 1.66 <= v.co.y <= 1.72]
+    new_half = max(abs(p.x) for p in band)
+    new_back = min(p.z for p in band)
+    new_front = max(p.z for p in band if abs(p.x) < 0.03 and p.y > 1.69)
+    new_top = max(v.co.y for v in hair.data.vertices)
+    sx = new_half / old_half
+    sz = (new_front - new_back) / (old_front - old_back)
+    sy = (sx + sz) / 2
+    oc, nc = (old_front + old_back) / 2, (new_front + new_back) / 2
+    print("refit head: x %.3f z %.3f y %.3f, centre %.3f -> %.3f, top %.3f" % (sx, sz, sy, oc, nc, new_top))
+
+    def on_head(co):
+        return Vector((co.x * sx, new_top - (old_top - co.y) * sy, nc + (co.z - oc) * sz))
+
+    # The old carrier's back face was here; the new one's is at back_z.
+    back_shift = Vector((0.0, 0.0, back_z - (-0.1605)))
+    for name, obj in objects.items():
+        for v in obj.data.vertices:
+            if name in ("Helmet", "Cap", "Beanie", "Boonie", "Headset", "HelmetHeadset", "Bandana"):
+                v.co = on_head(v.co)
+            elif name == "Scarf":
+                v.co = v.co + Vector((0.0, 0.0, 0.026))
+            else:
+                v.co = v.co + back_shift
+        obj.data.update()
+    return [hair] + list(objects.values())
 
 
 # ---------------------------------------------------------------------------- posing, as the game does
@@ -746,8 +586,8 @@ def pose_bones(motion, gun_profile=None, gun_att=None):
 
     if gun_profile is None:
         for side, s in (("L", -1), ("R", 1)):
-            world["UpperArm" + side] = world["Torso"] @ Matrix.Translation(local["UpperArm" + side]) @ unity_euler(-6, 0, s * 7)
-            world["Forearm" + side] = world["UpperArm" + side] @ Matrix.Translation(local["Forearm" + side]) @ unity_euler(-14, 0, 0)
+            world["UpperArm" + side] = world["Torso"] @ Matrix.Translation(local["UpperArm" + side]) @ unity_euler(0, 0, s * 3)
+            world["Forearm" + side] = world["UpperArm" + side] @ Matrix.Translation(local["Forearm" + side]) @ unity_euler(-4, 0, 0)
             world["Hand" + side] = world["Forearm" + side] @ Matrix.Translation(local["Hand" + side])
         return world, None
 
@@ -1311,7 +1151,7 @@ def preview(objects, path, camera_at, look_at, lens=50, size=(900, 1100), offset
     for i, obj in enumerate(objects):
         # Only ever appended: clearing the list would reset every face to the first slot.
         if len(obj.data.materials) == 0:
-            for zone in range(7):
+            for zone in range(len(PREVIEW_COLOURS)):
                 obj.data.materials.append(bpy.data.materials["preview_%d" % zone])
         obj.parent = rig
         if offsets and isinstance(offsets[i], Matrix):
@@ -1442,8 +1282,40 @@ def material(name, colour, roughness=0.45, metallic=0.0, emission=0.0):
     return mat
 
 
+# The face's and eyes' textures, once build_soldier() has made them.
+TEXTURES = {}
+
+
+def textured(name, path, tint, roughness, subsurface=0.0):
+    """A material from an image, multiplied by a tint (as the game does with a skin tone)."""
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    image = nt.nodes.new("ShaderNodeTexImage")
+    image.image = bpy.data.images.load(path, check_existing=True)
+    mix = nt.nodes.new("ShaderNodeMix")
+    mix.data_type = 'RGBA'
+    mix.blend_type = 'MULTIPLY'
+    mix.inputs[0].default_value = 1.0
+    mix.inputs[7].default_value = tint
+    nt.links.new(image.outputs[0], mix.inputs[6])
+    nt.links.new(mix.outputs[2], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = roughness
+    if subsurface > 0:
+        bsdf.inputs["Subsurface Weight"].default_value = subsurface
+        bsdf.inputs["Subsurface Scale"].default_value = 0.003
+    return mat
+
+
 def zone_set(prefix, uniform, gear, team, skin, hair=(0.05, 0.035, 0.025, 1)):
-    """One soldier's materials, in zone order."""
+    """One soldier's materials, in zone order. The skin is the baked face texture in this tone."""
+    if "skin" in TEXTURES:
+        skin_mat = textured(prefix + "skin", TEXTURES["skin"], tuple(c / 0.75 for c in skin[:3]) + (1,), 0.5, 0.05)
+        eye_mat = textured(prefix + "eye", TEXTURES["eye"], (1, 1, 1, 1), 0.08)
+    else:
+        skin_mat = material(prefix + "skin", skin, 0.5)
+        eye_mat = material(prefix + "eye", (0.85, 0.84, 0.8, 1), 0.15)
     return [
         material(prefix + "uniform", uniform, 0.85),
         material(prefix + "dark", (0.03, 0.032, 0.035, 1), 0.7),
@@ -1452,22 +1324,19 @@ def zone_set(prefix, uniform, gear, team, skin, hair=(0.05, 0.035, 0.025, 1)):
         material(prefix + "gear", gear, 0.75, 0.0),
         material(prefix + "team", team, 0.7, 0.0),
         material(prefix + "helmet", gear, 0.6, 0.0),
-        material(prefix + "skin", skin, 0.5),
+        skin_mat,
         material(prefix + "hair", hair, 0.7),
-        material(prefix + "eye", (0.85, 0.84, 0.8, 1), 0.15),
+        eye_mat,
         material(prefix + "iris", (0.08, 0.05, 0.03, 1), 0.1),
         material(prefix + "lips", tuple(c * 0.82 for c in skin[:3]) + (1,), 0.45),
         material(prefix + "boots", (0.09, 0.07, 0.05, 1), 0.55),
     ]
 
 
-def build_soldier():
-    """The body pieces as objects, each with its skin weights: [(object, bone, weights)]."""
-    pieces = []
-    for part, bone, smoothing in body_pieces():
-        obj = part.to_object(subsurf=smoothing)
-        pieces.append((obj, bone, skin_weights(obj, bone)))
-    return pieces
+def soldier_pieces(skinned):
+    """The skinned objects with their weights, for posing: [(object, None, weights)]."""
+    import outfit
+    return [(obj, None, outfit.weights_of(obj)) for _, objects in skinned for obj in objects]
 
 
 def dress(objects, zones):
@@ -1481,10 +1350,11 @@ def render_backdrop(path, samples=160):
     """The art behind the main menu: soldiers in a dark arena, lit from behind, on the right of the frame."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
-    pieces = build_soldier()
-    gear = [p.to_object() for p in gear_models()]
+    import tempfile
+    skinned, fp_arms, gear = build_soldier(tempfile.mkdtemp())
+    pieces = soldier_pieces(skinned)
     gun_objects = [p.to_object() for p in gun_parts()]
-    for obj in [o for o, _, _ in pieces] + gear + gun_objects:
+    for obj in [o for o, _, _ in pieces] + fp_arms + gear + gun_objects:
         obj.hide_render = True
 
     gun_set = [material("gun_" + n, c, r, m, e) for n, c, r, m, e in (
@@ -1630,11 +1500,10 @@ def main():
             os.makedirs(preview_dir, exist_ok=True)
             preview_projectiles(projectile_objects, os.path.join(preview_dir, "projectiles.png"))
         return
-    pieces = build_soldier()
-    fp_arms = [p.to_object() for p in first_person_arms()]
-    export_skinned(os.path.join(out, "Soldier.bytes"), pieces, fp_arms)
-    gear = [p.to_object() for p in gear_models()]
+    skinned, fp_arms, gear = build_soldier(out)
+    export_skinned(os.path.join(out, "Soldier.bytes"), skinned, fp_arms)
     export(gear, os.path.join(out, "Gear.bytes"))
+    pieces = soldier_pieces(skinned)
     gun_objects = [p.to_object() for p in gun_parts()]
     export(gun_objects, os.path.join(out, "GunParts.bytes"))
     projectile_objects = [p.to_object() for p in projectile_models()]
@@ -1661,7 +1530,7 @@ def main():
     rest = dict(speed=0, phase=0, pitch=0)
     shot("soldier_front.png", posed_soldier(pieces, gear, rest, headgear="Helmet", back="AssaultPack", tag="_f"), (1.3, 1.25, 2.6), (0, 0.95, 0), lens=55)
     shot("soldier_back.png", posed_soldier(pieces, gear, rest, headgear="Helmet", back="AssaultPack", tag="_b"), (-1.6, 1.4, -2.2), (0, 0.95, 0), lens=55)
-    shot("head.png", posed_soldier(pieces, gear, rest, headgear=None, tag="_h"), (0.28, 1.7, 0.75), (0, 1.64, 0), lens=60, size=(800, 800))
+    shot("head.png", posed_soldier(pieces, gear, rest, headgear="Hair", tag="_h"), (0.3, 1.7, 0.85), (0, 1.63, 0.05), lens=60, size=(800, 800))
     made = posed_soldier(pieces, gear, dict(speed=0, phase=0, pitch=5), rifle, gun_objects, origin=(-0.5, 0, 0), tag="_p1")
     made += posed_soldier(pieces, gear, dict(speed=5.6, phase=0.9, pitch=-5), rifle, gun_objects, origin=(0.6, 0, -0.4), headgear=["Cap", "Headset"], back="RadioPack", tag="_p2")
     shot("soldier_posed.png", made, (1.6, 1.45, 3.3), (0.05, 1.0, -0.2), lens=45, size=(1400, 1000))

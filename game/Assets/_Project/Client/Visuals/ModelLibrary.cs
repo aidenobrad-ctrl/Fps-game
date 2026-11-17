@@ -10,6 +10,8 @@ namespace Recoil.Client.Visuals
         public Vector3 Pivot;
         public Mesh Mesh;
         public ModelZone[] Zones;
+        /// <summary>Bound to the set's skeleton, in its rest pose, rather than hung on one bone.</summary>
+        public bool Skinned;
     }
 
     /// <summary>
@@ -25,12 +27,14 @@ namespace Recoil.Client.Visuals
     {
         static readonly Dictionary<string, Dictionary<string, ModelMesh>> Sets = new Dictionary<string, Dictionary<string, ModelMesh>>();
         static readonly Dictionary<string, List<ModelBone>> Skeletons = new Dictionary<string, List<ModelBone>>();
+        static readonly Dictionary<string, List<ModelMesh>> InOrder = new Dictionary<string, List<ModelMesh>>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
         {
             Sets.Clear();
             Skeletons.Clear();
+            InOrder.Clear();
         }
 
         /// <summary>A set's skeleton, in order (a bone always after its parent), or an empty list.</summary>
@@ -49,6 +53,13 @@ namespace Recoil.Client.Visuals
 
         public static bool Has(string set) => Load(set) != null && Load(set).Count > 0;
 
+        /// <summary>Every model in a set, in the order the file lists them; empty if the set could not be read.</summary>
+        public static IReadOnlyList<ModelMesh> All(string set)
+        {
+            Load(set);
+            return InOrder.TryGetValue(set, out List<ModelMesh> models) ? models : (IReadOnlyList<ModelMesh>)new ModelMesh[0];
+        }
+
         static Dictionary<string, ModelMesh> Load(string set)
         {
             if (Sets.TryGetValue(set, out Dictionary<string, ModelMesh> loaded)) return loaded;
@@ -63,9 +74,16 @@ namespace Recoil.Client.Visuals
                 try
                 {
                     models = new Dictionary<string, ModelMesh>();
+                    var ordered = new List<ModelMesh>();
                     ModelSet file = ModelFile.ParseSet(asset.bytes);
                     Skeletons[set] = file.Bones;
-                    foreach (ModelData data in file.Models) models[data.Name] = ToMesh(data, file.Bones);
+                    foreach (ModelData data in file.Models)
+                    {
+                        ModelMesh mesh = ToMesh(data, file.Bones);
+                        models[data.Name] = mesh;
+                        ordered.Add(mesh);
+                    }
+                    InOrder[set] = ordered;
                 }
                 catch (System.Exception e)
                 {
@@ -107,7 +125,7 @@ namespace Recoil.Client.Visuals
             }
             mesh.RecalculateBounds();
             mesh.UploadMeshData(true);
-            return new ModelMesh { Name = data.Name, Pivot = data.Pivot, Mesh = mesh, Zones = data.Zones };
+            return new ModelMesh { Name = data.Name, Pivot = data.Pivot, Mesh = mesh, Zones = data.Zones, Skinned = data.Skinned };
         }
 
         /// <summary>Hangs a model on <paramref name="parent"/>, with one material per zone from <paramref name="materials"/>.</summary>
@@ -128,16 +146,66 @@ namespace Recoil.Client.Visuals
     public static class ModelMaterials
     {
         static Material _metal, _dark, _hair, _eye, _iris, _boots;
+        static Texture2D _skinTexture, _eyeTexture;
+        static bool _texturesLooked;
+
+        /// <summary>The painted skin is a neutral grey this bright; a tone is divided by it to colour it.</summary>
+        const float SkinTextureGrey = 0.75f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => _metal = _dark = _hair = _eye = _iris = _boots = null;
+        static void ResetStatics()
+        {
+            _metal = _dark = _hair = _eye = _iris = _boots = null;
+            _skinTexture = _eyeTexture = null;
+            _texturesLooked = false;
+        }
 
         public static Material Metal => Make(ref _metal, "Model Metal", new Color(0.42f, 0.43f, 0.45f), 0.75f, 0.58f);
         public static Material Dark => Make(ref _dark, "Model Dark", new Color(0.075f, 0.08f, 0.088f), 0f, 0.3f);
         public static Material Hair => Make(ref _hair, "Model Hair", new Color(0.07f, 0.05f, 0.035f), 0f, 0.3f);
-        public static Material EyeWhite => Make(ref _eye, "Model Eye", new Color(0.86f, 0.85f, 0.81f), 0f, 0.75f);
+        /// <summary>The eyes: the eye texture (white, iris and pupil) where there is one, else plain white.</summary>
+        public static Material EyeWhite
+        {
+            get
+            {
+                if (_eye != null) return _eye;
+                LoadTextures();
+                Material eye = Make(ref _eye, "Model Eye", _eyeTexture != null ? Color.white : new Color(0.86f, 0.85f, 0.81f), 0f, 0.75f);
+                if (_eyeTexture != null && eye.HasProperty("_BaseMap")) eye.SetTexture("_BaseMap", _eyeTexture);
+                return eye;
+            }
+        }
         public static Material Iris => Make(ref _iris, "Model Iris", new Color(0.09f, 0.06f, 0.04f), 0f, 0.85f);
         public static Material Boots => Make(ref _boots, "Model Boots", new Color(0.12f, 0.09f, 0.065f), 0f, 0.38f);
+
+        /// <summary>
+        /// The colour to give a skin material for a skin tone. The face's texture is painted in
+        /// neutral grey (brows, stubble, lips and the scalp's hair darker); this scales it so its
+        /// grey comes out as the tone. Without the texture, the tone itself.
+        /// </summary>
+        public static Color SkinTint(Color tone)
+        {
+            LoadTextures();
+            if (_skinTexture == null) return tone;
+            Color linear = tone.linear * (1f / SkinTextureGrey);
+            linear.a = 1f;
+            return linear.gamma;
+        }
+
+        /// <summary>Puts the painted face on a skin material (one made with <see cref="SkinTint"/>'s colour).</summary>
+        public static void TextureSkin(Material skin)
+        {
+            LoadTextures();
+            if (_skinTexture != null && skin.HasProperty("_BaseMap")) skin.SetTexture("_BaseMap", _skinTexture);
+        }
+
+        static void LoadTextures()
+        {
+            if (_texturesLooked) return;
+            _texturesLooked = true;
+            _skinTexture = Resources.Load<Texture2D>("Models/SkinAlbedo");
+            _eyeTexture = Resources.Load<Texture2D>("Models/EyeAlbedo");
+        }
 
         static Material Make(ref Material cache, string name, Color colour, float metallic, float smoothness)
         {

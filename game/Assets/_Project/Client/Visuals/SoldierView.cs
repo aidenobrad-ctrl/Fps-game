@@ -17,10 +17,11 @@ namespace Recoil.Client.Visuals
     }
 
     /// <summary>
-    /// A player's body as the Blender-made soldier: one skinned mesh (uniform, plate carrier,
-    /// gloves, boots, a face) over a fifteen-bone skeleton, posed every frame from how the
-    /// player is moving. Near the joints the skin follows two bones, so elbows, knees,
-    /// shoulders and hips bend smoothly.
+    /// A player's body as the Blender-made soldier: a realistic body and face (Body), the
+    /// uniform, gloves and boots (Uniform) and the plate carrier and belt kit (Kit), each a
+    /// skinned mesh over one fifteen-bone skeleton, posed every frame from how the player is
+    /// moving. Near the joints the skin follows two bones, so elbows, knees, shoulders and
+    /// hips bend smoothly.
     ///
     /// The legs walk and run with the speed, step sideways when strafing, bend to crouch,
     /// tuck in the air and stretch out in a slide. The torso and head share the view's pitch,
@@ -60,8 +61,7 @@ namespace Recoil.Client.Visuals
         readonly Transform _root;
         readonly Dictionary<string, Transform> _bones = new Dictionary<string, Transform>();
         readonly Dictionary<string, Vector3> _pivots = new Dictionary<string, Vector3>();
-        readonly SkinnedMeshRenderer _body;
-        readonly ModelZone[] _zones;
+        readonly List<(SkinnedMeshRenderer Renderer, ModelZone[] Zones)> _parts = new List<(SkinnedMeshRenderer, ModelZone[])>();
         readonly Vector3 _pelvisRest;
         readonly float _thigh, _shin, _upperArm, _forearm, _ankle, _hipDrop;
         readonly Vector3 _upperRestL, _upperRestR, _foreRestL, _foreRestR;
@@ -95,18 +95,22 @@ namespace Recoil.Client.Visuals
                 _pivots[bone.Name] = bone.Pivot;
             }
 
-            ModelMesh model = ModelLibrary.Get(Set, "Body");
-            var bodyObject = new GameObject("Body");
-            bodyObject.transform.SetParent(_root, false);
-            _body = bodyObject.AddComponent<SkinnedMeshRenderer>();
-            _body.sharedMesh = model.Mesh;
-            _body.bones = transforms;
-            _body.rootBone = _bones["Pelvis"];
-            // Generous, so a crouch or a slide never takes the body outside its bounds.
-            _body.localBounds = new Bounds(Vector3.zero, new Vector3(2.4f, 2.8f, 2.4f));
-            _body.shadowCastingMode = castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
-            _body.receiveShadows = castShadows;
-            _zones = model.Zones;
+            // Every skinned mesh in the file, all on the one skeleton.
+            foreach (ModelMesh model in ModelLibrary.All(Set))
+            {
+                if (!model.Skinned) continue;
+                var meshObject = new GameObject(model.Name);
+                meshObject.transform.SetParent(_root, false);
+                var renderer = meshObject.AddComponent<SkinnedMeshRenderer>();
+                renderer.sharedMesh = model.Mesh;
+                renderer.bones = transforms;
+                renderer.rootBone = _bones["Pelvis"];
+                // Generous, so a crouch or a slide never takes the body outside its bounds.
+                renderer.localBounds = new Bounds(Vector3.zero, new Vector3(2.4f, 2.8f, 2.4f));
+                renderer.shadowCastingMode = castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = castShadows;
+                _parts.Add((renderer, model.Zones));
+            }
             Refresh();
 
             _pelvisRest = _bones["Pelvis"].localPosition;
@@ -178,9 +182,12 @@ namespace Recoil.Client.Visuals
 
         void Refresh()
         {
-            var materials = new Material[_zones.Length];
-            for (int i = 0; i < _zones.Length; i++) materials[i] = ZoneMaterial(_zones[i]);
-            _body.sharedMaterials = materials;
+            foreach ((SkinnedMeshRenderer renderer, ModelZone[] zones) in _parts)
+            {
+                var materials = new Material[zones.Length];
+                for (int i = 0; i < zones.Length; i++) materials[i] = ZoneMaterial(zones[i]);
+                renderer.sharedMaterials = materials;
+            }
         }
 
         public void SetVisible(bool visible)
@@ -281,11 +288,11 @@ namespace Recoil.Client.Visuals
             Quaternion body = _root.rotation;
             if (_grip == null)
             {
-                // Empty hands: arms a little away from the sides, elbows soft.
-                _bones["UpperArmL"].localRotation = Quaternion.Euler(-6f, 0f, -7f);
-                _bones["UpperArmR"].localRotation = Quaternion.Euler(-6f, 0f, 7f);
-                _bones["ForearmL"].localRotation = Quaternion.Euler(-14f, 0f, 0f);
-                _bones["ForearmR"].localRotation = Quaternion.Euler(-14f, 0f, 0f);
+                // Empty hands: the arms hang as the model rests, a little away from the kit.
+                _bones["UpperArmL"].localRotation = Quaternion.Euler(0f, 0f, -3f);
+                _bones["UpperArmR"].localRotation = Quaternion.Euler(0f, 0f, 3f);
+                _bones["ForearmL"].localRotation = Quaternion.Euler(-4f, 0f, 0f);
+                _bones["ForearmR"].localRotation = Quaternion.Euler(-4f, 0f, 0f);
                 return;
             }
 

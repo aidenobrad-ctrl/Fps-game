@@ -35,7 +35,7 @@ namespace Recoil.Tests
         }
 
         [Test]
-        public void TheSoldier_IsOneSkinnedBody_OnASkeletonOfEveryBone()
+        public void TheSoldier_IsSkinnedBodyUniformAndKit_OnASkeletonOfEveryBone()
         {
             ModelSet soldier = LoadSet(SoldierView.Set);
             var bones = soldier.Bones.Select(b => b.Name).ToList();
@@ -43,23 +43,48 @@ namespace Recoil.Tests
             Assert.That(soldier.Bones[bones.IndexOf("Head")].Pivot.y, Is.InRange(1.4f, 1.6f), "the neck");
             Assert.That(soldier.Bones[bones.IndexOf("ThighL")].Pivot.x, Is.LessThan(0f), "left is -x");
 
-            ModelData body = soldier.Models.Single(m => m.Name == "Body");
-            WellFormed(body);
-            Assert.That(body.Skinned, Is.True);
-            Assert.That(body.Weight1.All(w => w >= 0f && w <= 0.5f), "the nearer bone always leads");
-            Assert.That(body.Weight1.Count(w => w > 0.05f), Is.GreaterThan(500), "the skin blends between bones at the joints");
+            List<ModelData> skinned = soldier.Models.Where(m => m.Skinned).ToList();
+            Assert.That(skinned.Select(m => m.Name), Is.EquivalentTo(new[] { "Body", "Uniform", "Kit" }));
+            foreach (ModelData part in skinned)
+            {
+                WellFormed(part);
+                Assert.That(part.Weight1.All(w => w >= 0f && w <= 0.5f), part.Name + ": the nearer bone always leads");
+            }
+            Assert.That(skinned.Sum(m => m.Weight1.Count(w => w > 0.05f)), Is.GreaterThan(500), "the skin and cloth blend between bones at the joints");
             // Standing, the top of the head is about 1.75 m up and the soles touch the floor.
-            Assert.That(body.Positions.Max(p => p.y), Is.InRange(1.7f, 1.85f));
-            Assert.That(body.Positions.Min(p => p.y), Is.InRange(-0.01f, 0.02f));
-            // A face, armbands for the team, and no glowing visor.
-            foreach (ModelZone zone in new[] { ModelZone.Skin, ModelZone.Eye, ModelZone.Iris, ModelZone.Team, ModelZone.Trim, ModelZone.Primary })
-                Assert.That(body.Zones, Has.Member(zone), zone.ToString());
-            Assert.That(body.Zones, Has.No.Member(ModelZone.Glow));
+            Assert.That(skinned.Max(m => m.Positions.Max(p => p.y)), Is.InRange(1.7f, 1.85f));
+            Assert.That(skinned.Min(m => m.Positions.Min(p => p.y)), Is.InRange(-0.01f, 0.02f));
+
+            // A face with eyes, mapped onto their textures.
+            ModelData body = skinned.Single(m => m.Name == "Body");
+            foreach (ModelZone zone in new[] { ModelZone.Skin, ModelZone.Eye })
+            {
+                int slot = Array.IndexOf(body.Zones, zone);
+                Assert.That(slot, Is.GreaterThanOrEqualTo(0), zone.ToString());
+                Assert.That(body.Indices[slot].All(i => body.Uvs[i].x >= -0.001f && body.Uvs[i].x <= 1.001f && body.Uvs[i].y >= -0.001f && body.Uvs[i].y <= 1.001f),
+                    zone + ": texture coordinates inside the texture");
+            }
+            // A uniform and kit in the player's colours, armbands for the team, boots, and no glowing visor.
+            var zones = skinned.SelectMany(m => m.Zones).ToList();
+            foreach (ModelZone zone in new[] { ModelZone.Primary, ModelZone.Trim, ModelZone.Team, ModelZone.Dark, ModelZone.Boots, ModelZone.Metal })
+                Assert.That(zones, Has.Member(zone), zone.ToString());
+            Assert.That(zones, Has.No.Member(ModelZone.Glow));
 
             foreach (string side in new[] { "L", "R" })
             {
                 WellFormed(soldier.Models.Single(m => m.Name == "FPForearm" + side));
                 WellFormed(soldier.Models.Single(m => m.Name == "FPHand" + side));
+            }
+        }
+
+        [Test]
+        public void TheFaceAndEyeTextures_AreThere()
+        {
+            string root = Environment.GetEnvironmentVariable("RECOIL_PROJECT") ?? "";
+            foreach (string texture in new[] { "SkinAlbedo.png", "EyeAlbedo.png" })
+            {
+                bool found = new[] { Path.Combine(root, "Assets/_Project/Resources/Models", texture), "Assets/_Project/Resources/Models/" + texture }.Any(File.Exists);
+                Assert.That(found, Is.True, texture + " is made with art/blender/recoil_models.py");
             }
         }
 

@@ -62,13 +62,16 @@ namespace Recoil.Client.Visuals
             CosmeticItem pattern = look.Item(CosmeticSlot.Pattern), skin = look.Item(CosmeticSlot.Skin);
             _uniformTint = pattern.Pattern == PatternKind.Plain ? uniform.Color : Color.white;
             _gearBase = gear.Color;
-            _skinBase = skin.Color;
+            // The soldier's face is painted: its material takes a tint that brings the paint to this tone.
+            _skinBase = _soldier != null ? ModelMaterials.SkinTint(skin.Color) : skin.Color;
 
             // Each view has its own copies, so a hit flash on one player does not light up another.
             Release();
             _uniform = Own(LookMaterials.Patterned(pattern.Pattern, uniform.Color, Shade(uniform.Color, gear.Color)));
             _gear = Own(LookMaterials.Patterned(PatternKind.Plain, gear.Color, gear.Color));
-            _skin = Own(GreyboxMaterials.Flat(skin.Color));
+            _skin = Own(GreyboxMaterials.Flat(_skinBase));
+            GreyboxMaterials.SetColor(_skin, _skinBase);
+            if (_soldier != null) ModelMaterials.TextureSkin(_skin);
             _lips = Own(GreyboxMaterials.Flat(Lips(skin.Color)));
             // Cloth is matte, gear a little less so, skin has a soft sheen.
             ModelMaterials.Tune(_uniform, 0f, 0.14f);
@@ -149,7 +152,8 @@ namespace Recoil.Client.Visuals
             // A patterned uniform is tinted white already; brightening it means lifting the pattern towards white.
             GreyboxMaterials.SetColor(_uniform, Color.Lerp(_uniformTint, Color.white * 2f, amount));
             GreyboxMaterials.SetColor(_gear, Color.Lerp(_gearBase, Color.white, amount));
-            GreyboxMaterials.SetColor(_skin, Color.Lerp(_skinBase, Color.white, amount));
+            // The painted face is a mid grey, so its flash goes past white to show as bright.
+            GreyboxMaterials.SetColor(_skin, Color.Lerp(_skinBase, _soldier != null ? Color.white * 1.6f : Color.white, amount));
         }
 
         /// <summary>Poses the soldier for how its player is moving. Nothing to do for the simple shapes.</summary>
