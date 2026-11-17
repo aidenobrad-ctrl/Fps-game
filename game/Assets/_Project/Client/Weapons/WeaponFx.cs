@@ -30,7 +30,7 @@ namespace Recoil.Client.Weapons
         /// <summary>How long a projectile takes to drift from the muzzle onto its true path.</summary>
         const float MuzzleBlendTime = 0.15f;
 
-        // Colours stay at or below 1: the additive material lifts them into glowing (FxResources.Glow).
+        // Colours stay at or below 1: the additive material lifts them into glowing (EffectResources.Glow).
         static readonly Color BulletTracer = new Color(1f, 0.82f, 0.5f);
         static readonly Color FlashColor = new Color(1f, 0.72f, 0.35f);
         static readonly Color SparkColor = new Color(1f, 0.72f, 0.38f);
@@ -92,9 +92,9 @@ namespace Recoil.Client.Weapons
             Transform pool = new GameObject("Effects").transform;
             _pool = pool.gameObject;
 
-            Material additiveSpark = FxResources.Additive(FxResources.Spark);
-            Material additiveGlow = FxResources.Additive(FxResources.Soft);
-            Material alphaSmoke = FxResources.Alpha(FxResources.Smoke);
+            Material additiveSpark = EffectResources.Additive(EffectResources.Spark);
+            Material additiveGlow = EffectResources.Additive(EffectResources.Soft);
+            Material alphaSmoke = EffectResources.Alpha(EffectResources.Smoke);
 
             _sparks = new FxParticles(pool, "Sparks", additiveSpark, stretch: true, gravity: 1.2f, drag: 0.6f, maxParticles: 800,
                 FxParticles.Fade(Color.white, new Color(1f, 0.45f, 0.15f), 0.2f), FxParticles.Curve(1f, 0.6f));
@@ -107,13 +107,13 @@ namespace Recoil.Client.Weapons
             _energy = new FxParticles(pool, "Energy", additiveGlow, stretch: false, gravity: 0f, drag: 4f, maxParticles: 800,
                 FxParticles.Fade(Color.white, Color.white, 0.3f), FxParticles.Curve(1f, 0.3f));
 
-            _holes = new FxQuads(pool, "Bullet Hole", FxResources.Alpha(FxResources.Hole), 96);
-            _scorches = new FxQuads(pool, "Scorch", FxResources.Alpha(FxResources.Scorch), 12);
-            _rings = new FxQuads(pool, "Ring", FxResources.Additive(FxResources.Ring), 8);
+            _holes = new FxQuads(pool, "Bullet Hole", EffectResources.Alpha(EffectResources.Hole), 96);
+            _scorches = new FxQuads(pool, "Scorch", EffectResources.Alpha(EffectResources.Scorch), 12);
+            _rings = new FxQuads(pool, "Ring", EffectResources.Additive(EffectResources.Ring), 8);
             _lights = new FxLights(pool, 6);
 
-            _tracerMaterial = FxResources.Additive(FxResources.Spark);
-            _energyTracerMaterial = FxResources.Additive(FxResources.Soft);
+            _tracerMaterial = EffectResources.Additive(EffectResources.Spark);
+            _energyTracerMaterial = EffectResources.Additive(EffectResources.Soft);
             for (int i = 0; i < TracerCount; i++)
             {
                 var go = new GameObject("Tracer");
@@ -148,7 +148,7 @@ namespace Recoil.Client.Weapons
                 _projectiles[i].Trail = trail;
             }
 
-            Material[] flashMaterials = { additiveSpark, FxResources.Additive(FxResources.Star) };
+            Material[] flashMaterials = { additiveSpark, EffectResources.Additive(EffectResources.Star) };
             for (int i = 0; i < WorldFlashCount; i++)
             {
                 var go = new GameObject("Muzzle Flash");
@@ -343,14 +343,14 @@ namespace Recoil.Client.Weapons
                     // A grenade: round, with a faint streak behind it.
                     size = Vector3.one * 0.13f;
                     material = GreyboxMaterials.Unlit(accentColor);
-                    SetTrail(trail, FxResources.Additive(FxResources.Soft), accentColor, 0.04f, 0f, 0.25f);
+                    SetTrail(trail, EffectResources.Additive(EffectResources.Soft), accentColor, 0.04f, 0f, 0.25f);
                 }
                 else if (stats.explosionRadius > 0f)
                 {
                     // A rocket: long, trailing smoke.
                     size = new Vector3(0.09f, 0.09f, 0.36f);
                     material = GreyboxMaterials.Unlit(accentColor);
-                    SetTrail(trail, FxResources.Alpha(FxResources.Smoke), new Color(0.75f, 0.74f, 0.72f, 0.55f), 0.12f, 0.5f, 0.9f);
+                    SetTrail(trail, EffectResources.Alpha(EffectResources.Smoke), new Color(0.75f, 0.74f, 0.72f, 0.55f), 0.12f, 0.5f, 0.9f);
                 }
                 else if (stats.projectileGravity > 0f)
                 {
@@ -364,7 +364,7 @@ namespace Recoil.Client.Weapons
                     float width = Mathf.Max(0.05f, stats.projectileRadius * 2f);
                     size = new Vector3(width, width, 0.42f);
                     material = GreyboxMaterials.Unlit(accentColor);
-                    SetTrail(trail, FxResources.Additive(FxResources.Soft), Lighten(accentColor, 0.2f), width * 1.2f, 0f, 0.12f);
+                    SetTrail(trail, EffectResources.Additive(EffectResources.Soft), Lighten(accentColor, 0.2f), width * 1.2f, 0f, 0.12f);
                 }
 
                 visual.Id = id;
@@ -552,11 +552,11 @@ namespace Recoil.Client.Weapons
 
         /// <summary>A tint for a renderer's own colour, which replaces the material's glow, so it carries the glow itself.</summary>
         static Color Hdr(Color color, float alpha) =>
-            new Color(color.r * FxResources.Glow, color.g * FxResources.Glow, color.b * FxResources.Glow, alpha);
+            new Color(color.r * EffectResources.Glow, color.g * EffectResources.Glow, color.b * EffectResources.Glow, alpha);
 
         void Tint(Renderer renderer, Color color)
         {
-            _block.SetColor(FxResources.ColorProperty, color);
+            _block.SetColor(EffectResources.ColorProperty, color);
             renderer.SetPropertyBlock(_block);
         }
 

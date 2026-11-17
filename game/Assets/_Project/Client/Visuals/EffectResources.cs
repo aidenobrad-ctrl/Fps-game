@@ -10,7 +10,7 @@ namespace Recoil.Client.Visuals
     /// a ring, a bullet hole, a scorch mark), so the project carries no image files for them.
     /// The materials use the game's own effect shader (Resources/Shaders/RecoilEffect).
     /// </summary>
-    public static class FxResources
+    public static class EffectResources
     {
         public const string ShaderResource = "Shaders/RecoilEffect";
 

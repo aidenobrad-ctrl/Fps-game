@@ -265,7 +265,7 @@ namespace Recoil.Client.Visuals
 
         void SetColor(MeshRenderer renderer, Color color)
         {
-            _block.SetColor(FxResources.ColorProperty, color);
+            _block.SetColor(EffectResources.ColorProperty, color);
             renderer.SetPropertyBlock(_block);
         }
 

@@ -461,7 +461,7 @@ Gunshots, impacts and the sounds around them come from `GunshotSynth`, which bui
 
 ## Effects and the picture
 
-Effects are drawn with one small shader of the game's own (`Resources/Shaders/RecoilEffect.shader`: unlit, vertex colour, additive or see-through) and textures painted in code (`FxResources`). Particle colours are eight-bit, so the additive material carries a brightness above white that lets fire and sparks catch the bloom.
+Effects are drawn with one small shader of the game's own (`Resources/Shaders/RecoilEffect.shader`: unlit, vertex colour, additive or see-through) and textures painted in code (`EffectResources`). Particle colours are eight-bit, so the additive material carries a brightness above white that lets fire and sparks catch the bloom.
 
 | Piece | Job |
 | --- | --- |
