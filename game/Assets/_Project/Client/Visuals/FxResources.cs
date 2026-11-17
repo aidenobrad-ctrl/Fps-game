@@ -26,7 +26,7 @@ namespace Recoil.Client.Visuals
 
         static Shader _shader;
         static bool _shaderChecked;
-        static readonly Dictionary<long, Material> Materials = new Dictionary<long, Material>();
+        static readonly Dictionary<(Texture2D, bool), Material> Materials = new Dictionary<(Texture2D, bool), Material>();
         static Texture2D _glow, _spark, _smoke, _star, _ring, _hole, _scorch;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -112,7 +112,7 @@ namespace Recoil.Client.Visuals
 
         static Material Get(Texture2D texture, bool additive)
         {
-            long key = ((long)texture.GetInstanceID() << 1) | (additive ? 1L : 0L);
+            var key = (texture, additive);
             if (Materials.TryGetValue(key, out Material cached) && cached != null) return cached;
 
             Shader shader = EffectShader();

@@ -4,12 +4,12 @@ A fast, competitive multiplayer FPS for PC, built in Unity 6.
 
 Eleven phases are built so far: **movement and a firing range**, **the weapon system with 40 weapons and 21 attachments**, **loadouts**, **online play** on a server that owns the match, **accounts** on a backend of their own, **every game mode, bots and matchmaking**, **character customization with weapon skins**, **progression, challenges and ranked**, **sound, effects, settings and performance**, **friends, parties, chat, reports and ranked seasons**, and **three more maps, private-match rules and smarter bots**. Accounts are switched back on; see [Accounts](#accounts). The plan for everything after is in [docs/ROADMAP.md](docs/ROADMAP.md), and how the code is organised is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-> **Not yet run in Unity.** This was written without access to a Unity Editor. The C# was compiled against Unity's reference assemblies. The simulation, the weapon data and the netcode were tested outside the engine, including whole matches between a real server and real clients on a simulated bad connection, every game mode, bots playing full matches, and the game's account and matchmaking code against the real backend. But nothing has been opened or played in Unity itself, so the menus, the HUD and everything else you look at are unverified. Expect to report a few first-run issues; [Troubleshooting](#troubleshooting) covers the likely ones.
+> **Not yet run in Unity.** This was written without access to a Unity Editor. The C# was compiled against Unity's reference assemblies and checked against the Unity 6000.6, URP 17.6 and Input System 1.20 sources. The simulation, the weapon data and the netcode were tested outside the engine, including whole matches between a real server and real clients on a simulated bad connection, every game mode, bots playing full matches, and the game's account and matchmaking code against the real backend. But nothing has been opened or played in Unity itself, so the menus, the HUD and everything else you look at are unverified. Expect to report a few first-run issues; [Troubleshooting](#troubleshooting) covers the likely ones.
 
 ## Open and play
 
-1. Install **Unity 6** (6000.0 LTS or newer) through Unity Hub.
-2. In Unity Hub choose **Add ▸ Add project from disk** and pick the `game` folder inside your copy of this repository (for example `fps-game\game`). If Hub says the project's Editor version is not installed, pick the Unity 6 version you have.
+1. Install **Unity 6000.6.9f1** through Unity Hub. The project is set up for that version: URP 17.6, Input System 1.20. A different Unity 6 version may work, but expect errors from older or newer packages.
+2. In Unity Hub choose **Add ▸ Add project from disk** and pick the `game` folder inside your copy of this repository (for example `fps-game\game`).
 3. Let the first import finish. The firing range scene opens by itself. If it does not, use **Recoil ▸ Open Firing Range** in the menu bar.
 4. Press **Play** and click inside the Game view to capture the mouse.
 
@@ -333,6 +333,8 @@ The tests that play whole matches (every mode, bots, matchmaking end to end) nee
 The backend has its own tests; see [backend/README.md](backend/README.md#tests).
 
 ## Troubleshooting
+
+**Hundreds of red errors, many inside `Packages/`, right after opening.** The project and your Unity version disagree about package versions. It is set up for Unity 6000.6.9f1 (see `game/Packages/manifest.json`). Open it with that version; if you already opened it with another one, close Unity, delete the `game/Library` folder and open it again with 6000.6.9f1.
 
 **Everything is pink, or the scene looks flat and unlit.** The render pipeline did not get assigned. Run **Recoil ▸ Run Project Doctor** and read the Console. If it reports that the URP asset could not be loaded, create one with **Assets ▸ Create ▸ Rendering ▸ URP Asset (with Universal Renderer)** and assign it under **Project Settings ▸ Graphics**. The game is built to run without it too, on the Built-in pipeline.
 

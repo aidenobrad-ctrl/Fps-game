@@ -1051,5 +1051,8 @@
 
 /* The menu's art fills the screen whatever its shape, cropping rather than stretching. */
 .menu-backdrop {
-    -unity-background-scale-mode: scale-and-crop;
+    background-size: cover;
+    background-position-x: center;
+    background-position-y: center;
+    background-repeat: no-repeat;
 }

@@ -8,7 +8,7 @@ Phases 1 to 10 (and 9b) exist as code today: movement, the weapon system, loadou
 
 | Area | Choice | Status |
 | --- | --- | --- |
-| Engine | Unity 6, URP, C# | In use |
+| Engine | Unity 6 (6000.6.9f1), URP 17.6, Input System 1.20, C# | In use |
 | Input | Unity Input System | In use |
 | UI | UI Toolkit (UXML + USS) | In use |
 | Netcode | Written for this game: server-authoritative, over UDP | In use |
