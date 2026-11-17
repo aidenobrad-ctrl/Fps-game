@@ -42,12 +42,12 @@ namespace Recoil.Shared.Match
         /// <summary>Players in a mode without teams.</summary>
         [Range(2, 12)] public int maxPlayers = 8;
 
-        /// <summary>Round modes: rounds a side needs. 3 makes a best of five.</summary>
-        [Min(1)] public int roundsToWin = 3;
+        /// <summary>Round modes: rounds a side needs. 5 makes a best of nine.</summary>
+        [Min(1)] public int roundsToWin = FirstTo;
         [Min(5f)] public float roundSeconds = 90f;
 
         /// <summary>Respawning modes: the score that ends the match.</summary>
-        [Min(1)] public int scoreLimit = 50;
+        [Min(1)] public int scoreLimit = FirstTo;
         /// <summary>Respawning modes: how long a match lasts at most.</summary>
         [Min(30f)] public float timeLimitSeconds = 600f;
         [Min(0f)] public float respawnSeconds = 3f;
@@ -75,6 +75,12 @@ namespace Recoil.Shared.Match
         /// <summary>How many players a full match has.</summary>
         public int Capacity => TeamBased ? Mathf.Clamp(teamSize, 1, 5) * Teams.Count : Mathf.Clamp(maxPlayers, 2, 12);
 
+        /// <summary>
+        /// What wins a match: five rounds in Duel and Elimination, five kills in Team Deathmatch
+        /// and Free-for-All. Zone modes count points, so they keep limits in points.
+        /// </summary>
+        public const int FirstTo = 5;
+
         public MatchSettings Clone() => (MatchSettings)MemberwiseClone();
 
         /// <summary>Sensible rules for a mode: the map it plays best on, team size and limits.</summary>
@@ -84,16 +90,16 @@ namespace Recoil.Shared.Match
             switch (mode)
             {
                 case GameModeKind.Duel:
-                    s.teamSize = 1; s.roundsToWin = 3; s.roundSeconds = 90f; s.arenaId = ArenaLayout.DefaultId;
+                    s.teamSize = 1; s.roundsToWin = FirstTo; s.roundSeconds = 90f; s.arenaId = ArenaLayout.DefaultId;
                     break;
                 case GameModeKind.Elimination:
-                    s.teamSize = 3; s.roundsToWin = 4; s.roundSeconds = 120f; s.arenaId = ArenaLayout.CrossroadsId;
+                    s.teamSize = 3; s.roundsToWin = FirstTo; s.roundSeconds = 120f; s.arenaId = ArenaLayout.CrossroadsId;
                     break;
                 case GameModeKind.TeamDeathmatch:
-                    s.teamSize = 5; s.scoreLimit = 50; s.timeLimitSeconds = 600f; s.respawnSeconds = 3f; s.arenaId = ArenaLayout.CrossroadsId;
+                    s.teamSize = 5; s.scoreLimit = FirstTo; s.timeLimitSeconds = 600f; s.respawnSeconds = 3f; s.arenaId = ArenaLayout.CrossroadsId;
                     break;
                 case GameModeKind.FreeForAll:
-                    s.maxPlayers = 8; s.scoreLimit = 25; s.timeLimitSeconds = 600f; s.respawnSeconds = 2f; s.arenaId = ArenaLayout.CrossroadsId;
+                    s.maxPlayers = 8; s.scoreLimit = FirstTo; s.timeLimitSeconds = 600f; s.respawnSeconds = 2f; s.arenaId = ArenaLayout.CrossroadsId;
                     break;
                 case GameModeKind.Domination:
                     s.teamSize = 5; s.scoreLimit = 200; s.timeLimitSeconds = 600f; s.respawnSeconds = 4f; s.arenaId = ArenaLayout.CrossroadsId;
@@ -146,7 +152,8 @@ namespace Recoil.Shared.Match
     {
         public const byte AllSlots = 0x0F;
         public const byte UtilityBit = 1 << Loadout.WeaponSlots;
-        const byte WeaponBits = (1 << Loadout.WeaponSlots) - 1;
+        public const byte WeaponBits = (1 << Loadout.WeaponSlots) - 1;
+        public const int MeleeSlot = (int)WeaponSlotType.Melee;
 
         /// <summary>Empties every slot the mask leaves out. A mask without a weapon leaves the weapons alone.</summary>
         public static Loadout Apply(Loadout loadout, int slotMask)
@@ -295,6 +302,12 @@ namespace Recoil.Shared.Match
         /// <summary>Raised when damage was actually taken.</summary>
         public event Action<PlayerVitals, DamageInfo, DamageResult> Damaged;
 
+        /// <summary>
+        /// A shot landed on the weapon in their hands (<see cref="HitZone.Weapon"/>): they take
+        /// no damage, and this decides whether the weapon breaks. Null: it never does.
+        /// </summary>
+        public Func<PlayerVitals, DamageInfo, bool> WeaponStruck;
+
         public PlayerVitals(int playerId)
         {
             PlayerId = playerId;
@@ -306,6 +319,12 @@ namespace Recoil.Shared.Match
         {
             if (!IsAlive || Invulnerable || info.Amount <= 0f) return default;
             if (CanBeHurtBy != null && info.Attacker != null && !CanBeHurtBy(info.Attacker)) return default;
+
+            if (info.Zone == HitZone.Weapon)
+            {
+                bool broke = WeaponStruck != null && WeaponStruck(this, info);
+                return new DamageResult { WeaponStruck = true, WeaponBroken = broke };
+            }
 
             float applied = Mathf.Min(info.Amount, Current);
             Current -= applied;
@@ -327,19 +346,33 @@ namespace Recoil.Shared.Match
         public Vector3 Position;
         public float Yaw;
         public float EyeHeight;
+        /// <summary>Where they are looking, degrees, down positive. It turns the weapon in their hands.</summary>
+        public float Pitch;
+        /// <summary>The weapon in their hands, as something to be shot at. Not present for bare hands.</summary>
+        public HeldWeapon Held;
 
         public static BodyPose From(in MotorState state) => new BodyPose
         {
             Position = state.Position,
             Yaw = state.Yaw,
             EyeHeight = state.EyeHeight,
+            Pitch = state.Pitch,
         };
+
+        public static BodyPose From(in MotorState state, in HeldWeapon held)
+        {
+            BodyPose pose = From(state);
+            pose.Held = held;
+            return pose;
+        }
 
         public static BodyPose Lerp(in BodyPose a, in BodyPose b, float t) => new BodyPose
         {
             Position = Vector3.Lerp(a.Position, b.Position, t),
             Yaw = LerpAngle(a.Yaw, b.Yaw, t),
             EyeHeight = Mathf.Lerp(a.EyeHeight, b.EyeHeight, t),
+            Pitch = Mathf.Lerp(a.Pitch, b.Pitch, t),
+            Held = t < 0.5f ? a.Held : b.Held,
         };
 
         /// <summary>Blends two angles in degrees the short way round.</summary>

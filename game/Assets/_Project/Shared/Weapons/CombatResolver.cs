@@ -54,6 +54,8 @@ namespace Recoil.Shared.Weapons
                     if (ApplyHit(stats, weaponId, hit.Hitbox, hit.Point, direction, hit.Distance, damageScale, tick, out HitReport report, attacker))
                     {
                         reports.Add(report);
+                        // A weapon is solid metal: the bullet stops in it, whatever it could pierce.
+                        if (hit.Hitbox.zone == HitZone.Weapon) break;
                         if (pierced >= stats.pierceTargets) break;
                         pierced++;
                         damageScale *= stats.pierceDamageKept;
@@ -84,8 +86,8 @@ namespace Recoil.Shared.Weapons
             if (target == null || !target.IsAlive || target == attacker) return false;
 
             float amount = DamageCalculator.Compute(stats, distance, zone) * damageScale;
-            report = Deliver(target, amount, zone, point, direction, distance, weaponId, tick, attacker);
-            return report.Damage > 0f || report.Killed;
+            report = Deliver(target, amount, zone, point, direction, distance, weaponId, tick, attacker, out bool struck);
+            return report.Damage > 0f || report.Killed || struck;
         }
 
         /// <summary>
@@ -120,7 +122,7 @@ namespace Recoil.Shared.Weapons
             }
 
             if (best == null) return false;
-            report = Deliver(best, stats.damage, HitZone.Body, bestPoint, direction, bestDistance, weaponId, tick, attacker);
+            report = Deliver(best, stats.damage, HitZone.Body, bestPoint, direction, bestDistance, weaponId, tick, attacker, out _);
             return report.Damage > 0f || report.Killed;
         }
 
@@ -173,13 +175,13 @@ namespace Recoil.Shared.Weapons
 
                 Vector3 away = point - centre;
                 Vector3 direction = away.sqrMagnitude > 0.0001f ? away.normalized : Vector3.up;
-                HitReport report = Deliver(Targets[i], amount, HitZone.Body, point, direction, TargetDistances[i], weaponId, tick, attacker);
+                HitReport report = Deliver(Targets[i], amount, HitZone.Body, point, direction, TargetDistances[i], weaponId, tick, attacker, out _);
                 if (report.Damage > 0f || report.Killed) reports.Add(report);
             }
         }
 
         static HitReport Deliver(IDamageable target, float amount, HitZone zone, Vector3 point, Vector3 direction,
-            float distance, string weaponId, int tick, IDamageable attacker)
+            float distance, string weaponId, int tick, IDamageable attacker, out bool weaponStruck)
         {
             DamageResult result = target.ApplyDamage(new DamageInfo
             {
@@ -192,6 +194,7 @@ namespace Recoil.Shared.Weapons
                 Attacker = attacker,
             });
 
+            weaponStruck = result.WeaponStruck;
             return new HitReport
             {
                 Tick = tick,
@@ -203,6 +206,7 @@ namespace Recoil.Shared.Weapons
                 Target = target,
                 WeaponId = weaponId,
                 Attacker = attacker,
+                WeaponBroken = result.WeaponBroken,
             };
         }
     }

@@ -455,6 +455,7 @@ namespace Recoil.Client.Duel
             _session.PlayerChanged += OnPlayerChanged;
             _session.PlayerSpawned += OnPlayerSpawned;
             _session.PlayerRearmed += OnPlayerRearmed;
+            _session.WeaponChanged += OnWeaponChanged;
             _session.MatchChanged += OnMatchChanged;
             _session.Killed += OnKilled;
             _session.HitConfirmed += OnHitConfirmed;
@@ -1017,6 +1018,8 @@ namespace Recoil.Client.Duel
         void OnPlayerRearmed(ClientPlayer player, RearmMessage rearm)
         {
             if (player.Id != _session.PlayerId || _rig == null) return;
+            // Elsewhere a rearm is a weapon breaking or one taken; OnWeaponChanged says which.
+            if (_session.Settings.mode != GameModeKind.GunGame) return;
             // Gun Game: a kill moved us up a weapon.
             WeaponBuild build = BuildOf(player.Id, rearm.ActiveSlot);
             _ui.SetNotice(build != null ? "NEW WEAPON: " + build.Weapon.displayName.ToUpperInvariant() : "");
@@ -1095,8 +1098,70 @@ namespace Recoil.Client.Duel
             return utility != null ? utility.displayName : id;
         }
 
+        /// <summary>
+        /// A weapon broke, or was taken from someone taken out: sparks and a crack where it
+        /// broke, and a word on the screen if it was ours or we did it.
+        /// </summary>
+        void OnWeaponChanged(WeaponEventMessage change)
+        {
+            if (_rig == null || change.PlayerId >= _session.Players.Length) return;
+            bool mine = change.PlayerId == _session.PlayerId;
+            bool byUs = change.OtherId == _session.PlayerId;
+            string weapon = WeaponName(change.WeaponId);
+            string who = _session.Players[change.PlayerId].Name.ToUpperInvariant();
+            string other = change.OtherId < _session.Players.Length ? _session.Players[change.OtherId].Name.ToUpperInvariant() : "";
+            string notice = null;
+
+            if (change.Kind == WeaponEventKind.Broken)
+            {
+                Vector3 at = mine ? _rig.ViewModel.Muzzle.position
+                    : _remotes[change.PlayerId] != null ? _remotes[change.PlayerId].WeaponCentre : _rig.Camera.transform.position;
+                _rig.Fx.PlayWeaponBreak(at, mine);
+                if (mine)
+                {
+                    _rig.Sfx.Play(Sfx.WeaponBreak, 1f, 0.03f);
+                    notice = change.Fists ? "YOUR " + weapon + " BROKE  ·  FISTS ONLY" : "YOUR " + weapon + " BROKE";
+                    if (_hud != null) _hud.RefreshSlots();
+                }
+                else
+                {
+                    _rig.Sfx.PlayAt(Sfx.WeaponBreak, at, byUs ? 1f : 0.8f, 0.04f, 3f, 70f);
+                    if (byUs) notice = "YOU BROKE " + who + "'S " + weapon + (change.Fists ? "  ·  THEY'RE ON FISTS" : "");
+                }
+            }
+            else if (mine)
+            {
+                notice = "TOOK " + (other.Length > 0 ? other + "'S " : "") + weapon + "  [" + (change.Slot + 1) + "]";
+                _rig.Sfx.Play(Sfx.Swap, 1f);
+                UiSounds.Play(Sfx.Promote);
+                if (_hud != null) _hud.RefreshSlots();
+            }
+
+            if (notice != null)
+            {
+                _ui.SetNotice(notice);
+                _noticeTimer = 2.5f;
+            }
+        }
+
+        string WeaponName(string weaponId)
+        {
+            WeaponDefinition definition = catalog != null && catalog.weapons != null ? catalog.weapons.FindWeapon(weaponId) : null;
+            return definition != null ? definition.displayName.ToUpperInvariant() : (weaponId ?? "").ToUpperInvariant();
+        }
+
         void OnHitConfirmed(HitMessage hit)
         {
+            if (hit.Zone == Shared.Combat.HitZone.Weapon)
+            {
+                // It rang off their weapon: sparks, and a clank from where it landed. They are not hurt.
+                if (_rig != null)
+                {
+                    _rig.Fx.PlayWeaponHit(hit.Point, hit.Point - _rig.Camera.transform.position);
+                    _rig.Sfx.PlayAt(Sfx.WeaponHit, hit.Point, 0.9f, 0.08f, 2f, 50f);
+                }
+                return;
+            }
             if (hit.Victim < _remotes.Length && _remotes[hit.Victim] != null) _remotes[hit.Victim].Flash();
             if (_rig != null && hit.Victim < _session.Players.Length)
             {

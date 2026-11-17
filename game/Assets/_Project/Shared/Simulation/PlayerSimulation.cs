@@ -218,6 +218,42 @@ namespace Recoil.Shared.Simulation
             LoadoutApplied?.Invoke();
         }
 
+        /// <summary>
+        /// Replaces what is carried, as <see cref="SetLoadout"/> does, except that a weapon the
+        /// new loadout still carries in the same slot, unchanged, carries on where it was: its
+        /// magazine, its reserve, whether it is mid-reload. Used when a weapon breaks or one is
+        /// picked up, so the rest of what someone carries is not refilled by it.
+        /// </summary>
+        /// <param name="freshSlot">A slot whose weapon is new even if it looks the same (one just picked up), or -1.</param>
+        public void Rearm(Loadout loadout, int activeSlot, int freshSlot = -1)
+        {
+            Loadout previous = Loadout;
+            WeaponSimulator[] old = _weapons;
+            var states = new WeaponState[old != null ? old.Length : 0];
+            for (int i = 0; i < states.Length; i++)
+                if (old[i] != null) states[i] = old[i].State;
+
+            SetLoadout(loadout, activeSlot);
+            if (previous == null || old == null) return;
+
+            for (int i = 0; i < _weapons.Length && i < old.Length; i++)
+            {
+                if (i == freshSlot || _weapons[i] == null || old[i] == null) continue;
+                if (!SameBuild(previous.Weapons[i], loadout.Weapons[i])) continue;
+                _weapons[i].SetState(states[i]);
+            }
+        }
+
+        static bool SameBuild(WeaponBuild a, WeaponBuild b)
+        {
+            if (a == null || b == null || a.Weapon != b.Weapon) return false;
+            for (int s = 0; s < WeaponBuild.SlotCount; s++)
+            {
+                if (a.Get((AttachmentSlot)s) != b.Get((AttachmentSlot)s)) return false;
+            }
+            return true;
+        }
+
         /// <summary>Raises <see cref="ActiveChanged"/> for the weapon now in hand, for when it changed while muted.</summary>
         public void AnnounceActiveWeapon() => ActiveChanged?.Invoke(Inventory.ActiveIndex);
 

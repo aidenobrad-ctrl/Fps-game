@@ -426,6 +426,58 @@ namespace Recoil.Client.Audio
             return dry;
         }
 
+        /// <summary>A round striking a weapon: a hard clank and a short, clangy ring of steel.</summary>
+        public static float[] WeaponHit(int seed)
+        {
+            var random = new System.Random(1777 + seed * 41);
+            int count = Mathf.RoundToInt(0.32f * SampleRate);
+            var dry = new float[count];
+            AddCrack(dry, 0.45f, 0f, 0.0004f);
+            AddClack(dry, random, 0.55f, 0f, 2600f + 500f * (float)random.NextDouble());
+            // Struck steel rings at partials that are not whole multiples of each other.
+            float baseHz = 1250f + 300f * (float)random.NextDouble();
+            float[] ratios = { 1f, 2.76f, 5.40f, 8.93f };
+            for (int i = 0; i < count; i++)
+            {
+                float t = i / (float)SampleRate;
+                float ring = 0f;
+                for (int p = 0; p < ratios.Length; p++)
+                    ring += Mathf.Sin(Tau * baseHz * ratios[p] * t) * Mathf.Exp(-t / (0.09f / (1f + p))) / (1f + p * 0.7f);
+                dry[i] += ring * 0.32f * Mathf.Min(1f, t / 0.0005f);
+            }
+            float[] wet = Room(dry, 0.18f, 0.35f, random);
+            Finish(wet, 1.4f);
+            return wet;
+        }
+
+        /// <summary>A weapon shot to pieces: a loud crack, a spring letting go, and parts clattering down.</summary>
+        public static float[] WeaponBreak()
+        {
+            var random = new System.Random(2027);
+            int count = Mathf.RoundToInt(0.75f * SampleRate);
+            var dry = new float[count];
+            AddCrack(dry, 0.8f, 0f, 0.0006f);
+            AddBody(dry, 0.6f, 0f, 140f);
+            AddClack(dry, random, 0.7f, 0.004f, 1900f);
+            // A spring snapping loose: a falling twang.
+            float phase = 0f;
+            for (int i = 0; i < count; i++)
+            {
+                float t = i / (float)SampleRate - 0.02f;
+                if (t < 0f) continue;
+                float f = Mathf.Lerp(900f, 380f, Mathf.Clamp01(t / 0.25f));
+                phase += Tau * f / SampleRate;
+                dry[i] += Mathf.Sin(phase) * 0.18f * Mathf.Exp(-t / 0.12f) * Mathf.Min(1f, t / 0.003f);
+            }
+            // Bits landing.
+            float[] falls = { 0.16f, 0.24f, 0.29f, 0.37f, 0.43f, 0.5f };
+            for (int b = 0; b < falls.Length; b++)
+                AddClack(dry, random, 0.32f * Mathf.Pow(0.75f, b), falls[b] + 0.02f * (float)random.NextDouble(), 1500f + 2200f * (float)random.NextDouble());
+            float[] wet = Room(dry, 0.25f, 0.5f, random);
+            Finish(wet, 1.5f);
+            return wet;
+        }
+
         /// <summary>A spent case hitting the floor and bouncing: brass rings, a shotgun hull thuds.</summary>
         public static float[] Casing(int seed, bool shell)
         {

@@ -33,6 +33,11 @@ namespace Recoil.Shared.Match
         readonly Transform _root;
         readonly List<Part> _parts = new List<Part>(6);
         readonly float _standEyeHeight;
+        /// <summary>The weapon in their hands: a box that turns with where they look. Only there while they hold one.</summary>
+        readonly Transform _weapon;
+        readonly BoxCollider _weaponCollider;
+        readonly Hitbox _weaponHitbox;
+        bool _hittable = true, _holding;
 
         public CharacterController Controller { get; }
         /// <summary>At the feet, turned to face the way the character faces.</summary>
@@ -61,6 +66,15 @@ namespace Recoil.Shared.Match
             // The same shapes as the firing range's dummies and the server's own hit check.
             foreach (BodyShapes.Part part in BodyShapes.Parts)
                 AddPart(part.Name, part.Zone, part.Round, part.Offset, part.Size, layer);
+
+            var weapon = new GameObject("Weapon") { layer = layer };
+            weapon.transform.SetParent(_root, false);
+            _weapon = weapon.transform;
+            _weaponCollider = weapon.AddComponent<BoxCollider>();
+            _weaponCollider.size = Vector3.one;
+            _weaponCollider.enabled = false;
+            _weaponHitbox = weapon.AddComponent<Hitbox>();
+            _weaponHitbox.zone = HitZone.Weapon;
 
             SetPose(new BodyPose { EyeHeight = _standEyeHeight });
         }
@@ -102,6 +116,7 @@ namespace Recoil.Shared.Match
         public void SetOwner(IDamageable owner)
         {
             foreach (Part part in _parts) part.Hitbox.SetOwner(owner);
+            _weaponHitbox.SetOwner(owner);
         }
 
         public void SetPose(in BodyPose pose)
@@ -116,11 +131,23 @@ namespace Recoil.Shared.Match
                 part.Transform.localPosition = BodyShapes.LocalCentre(shape, squash);
                 part.Transform.localScale = BodyShapes.LocalSize(shape, squash);
             }
+
+            _holding = pose.Held.Present;
+            if (_holding)
+            {
+                BodyShapes.WeaponFrame(pose.EyeHeight, _standEyeHeight, pose.Pitch, pose.Held, out Vector3 pocket, out float turn);
+                _weapon.localPosition = pocket + BodyShapes.RotateX(pose.Held.Centre, turn);
+                _weapon.localRotation = Quaternion.Euler(turn, 0f, 0f);
+                _weapon.localScale = pose.Held.Size;
+            }
+            _weaponCollider.enabled = _hittable && _holding;
         }
 
         public void SetHittable(bool hittable)
         {
+            _hittable = hittable;
             foreach (Part part in _parts) part.Collider.enabled = hittable;
+            _weaponCollider.enabled = hittable && _holding;
         }
 
         public void Destroy()

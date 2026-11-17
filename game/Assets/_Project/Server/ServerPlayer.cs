@@ -53,6 +53,16 @@ namespace Recoil.Server
         /// <summary>What of <see cref="LoadoutData"/> they may use: see <see cref="MatchLoadouts"/>.</summary>
         public byte SlotMask = MatchLoadouts.AllSlots;
 
+        /// <summary>What they were placed with (taken weapons included), and what of it was usable then.</summary>
+        public LoadoutData SpawnCarried;
+        public byte SpawnMask = MatchLoadouts.AllSlots;
+        /// <summary>One bit per weapon slot shot out of their hands since they were placed.</summary>
+        public byte Broken;
+        /// <summary>Everything broke: they are fighting with their fists.</summary>
+        public bool OnFists;
+        /// <summary>Weapons taken from players they took out, by slot, in place of their own until they go down. Null for none.</summary>
+        public readonly WeaponBuildData[] Taken = new WeaponBuildData[Loadout.WeaponSlots];
+
         /// <summary>In the world. A ready player is not spawned until the match places them.</summary>
         public bool Spawned;
         /// <summary>Goes up each time they are placed or rearmed. Lets a client tell snapshots from before and after apart.</summary>
@@ -125,6 +135,7 @@ namespace Recoil.Server
             WeaponKills.Clear();
             GunLevel = 0;
             RespawnTick = -1;
+            for (int slot = 0; slot < Taken.Length; slot++) Taken[slot] = null;
         }
     }
 

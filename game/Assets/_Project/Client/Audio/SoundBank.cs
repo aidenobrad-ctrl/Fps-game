@@ -35,6 +35,10 @@ namespace Recoil.Client.Audio
         BodyHit,
         Casing,
         ShellCasing,
+        /// <summary>A shot of ours rang off someone's weapon.</summary>
+        WeaponHit,
+        /// <summary>A weapon broke: ours, or one we shot.</summary>
+        WeaponBreak,
         // Interface: menus, countdowns, the objective.
         CountdownTick,
         CountdownGo,
@@ -197,6 +201,8 @@ namespace Recoil.Client.Audio
                 case Sfx.BodyHit: return SfxSynth.FromSamples("BodyHit", GunshotSynth.BodyHit(0), 0.8f);
                 case Sfx.Casing: return SfxSynth.FromSamples("Casing", GunshotSynth.Casing(0, false), 0.5f);
                 case Sfx.ShellCasing: return SfxSynth.FromSamples("ShellCasing", GunshotSynth.Casing(0, true), 0.5f);
+                case Sfx.WeaponHit: return SfxSynth.FromSamples("WeaponHit", GunshotSynth.WeaponHit(0), 0.75f);
+                case Sfx.WeaponBreak: return SfxSynth.FromSamples("WeaponBreak", GunshotSynth.WeaponBreak(), 0.9f);
                 case Sfx.CountdownTick: return SfxSynth.Beep("CountdownTick", 880f, 0.14f, 0.45f);
                 case Sfx.CountdownGo: return SfxSynth.Beep("CountdownGo", 1320f, 0.45f, 0.5f);
                 case Sfx.ZoneCaptured: return SfxSynth.Chime("ZoneCaptured", 0.1f, 0.5f, 0.35f, SfxSynth.Note(15), SfxSynth.Note(22));

@@ -41,10 +41,10 @@ Hits count the way you saw them: when your bullet visibly lands on someone, your
 
 | Mode | Teams | Respawns | Wins |
 | --- | --- | --- | --- |
-| Duel | 1 v 1 | No, rounds | First to 3 rounds (best of five) |
-| Team Deathmatch | up to 5 v 5 | Yes | First team to the kill limit |
-| Free-for-All | Everyone for themselves, up to 12 | Yes | First to the kill limit |
-| Elimination | up to 5 v 5 | No, rounds | Wipe the other team out; first to 4 rounds |
+| Duel | 1 v 1 | No, rounds | First to 5 rounds (best of nine) |
+| Team Deathmatch | up to 5 v 5 | Yes | First team to 5 kills |
+| Free-for-All | Everyone for themselves, up to 12 | Yes | First to 5 kills |
+| Elimination | up to 5 v 5 | No, rounds | Wipe the other team out; first to 5 rounds |
 | Domination | up to 5 v 5 | Yes | Hold zones A, B and C; each zone held scores a point a second |
 | Hardpoint | up to 5 v 5 | Yes | One zone at a time, moving every minute; hold it alone to score |
 | Gun Game | Everyone for themselves | Yes | Every kill hands you the next weapon; a kill with the last one (the knife) wins. Being knifed sets you back one |
@@ -110,6 +110,8 @@ Recoil.exe -batchmode -nographics -server -fleet http://localhost:5080 -public-a
 - **Countdown.** You can look around and swap weapons; movement and fire unlock when it ends.
 - **Play.** Round modes end a round when one side is wiped out (or on time: more players left, then more health). Respawning modes bring you back a few seconds after you go down, away from enemies, and end at the score limit or when time runs out.
 - **Changing loadout:** **B** or **Esc**. It is used from your next spawn (next round in round modes). Gun Game hands out its own weapons.
+- **Shoot their gun.** A shot that lands on the weapon in someone's hands, not on them, does them no harm but may break it: the harder the shot, the likelier (a pistol round about one in five, a rifle round one in four, a sniper round two in three). You see sparks and hear it ring off; your hit marker turns pale blue. A broken weapon is gone until you are placed again (next round, or your next life), and you switch to the best one you have left. With all three broken you fight with your **fists**, which cannot break. Broken slots show red on the HUD.
+- **Take their gun.** Taking someone out takes the weapon they were holding: it goes into the same slot of your loadout, new and full, in place of yours. If you were on fists, or it replaces the one in your hands, it goes straight into your hands. It is yours until you go down, so a round won carries it into the next round. Not in Gun Game, where the ladder decides what everyone carries.
 - A new match starts by itself a few seconds after the result. If everyone on one side leaves, the other side wins.
 
 On screen: scores, clock and zones at the top; your **weapons along the bottom centre** (the one in hand lit up), with the loadout's name above them; health at the bottom left; ammunition and your grenade at the bottom right; eliminations at the top right; and at the top left your ping, packet loss and a count of corrections (**F3** hides it). Hold **Tab** for the scoreboard. **Esc ▸ Leave match** returns to the menu; **Esc ▸ Settings** changes settings without leaving.
@@ -290,6 +292,8 @@ Damage is to the body up close, then to the head. Every target has 100 health.
 | Launchers | Rocket Launcher (140 blast), Grenade Launcher (110 blast) |
 | Special | Bow (up to 100 / 150), Crossbow (45 / 90), Energy Rifle (up to 110 / 165), Plasma Rifle (25 / 35), Ricochet Blaster (35 / 50, more after each bounce), Paintball Gun (20 / 35), Flamethrower (10 a flame), Throwing Knives (60 / 120), Flare Gun (45 / 60), Slingshot (35 / 70) |
 | Melee | Knife (50), Katana (65), Fists (35), Scythe (80, longest reach), Battle Axe (100, slowest) |
+
+Rockets, grenades, arrows, bolts, throwing knives, discs, flares, plasma, paintballs and slingshot pellets fly as detailed models (made in Blender, in `Resources/Models/Projectiles.bytes`) in the weapon's colours: rockets roll and trail smoke, knives turn end over end, discs spin flat, grenades tumble. The Flamethrower throws fire.
 
 Damage drops off with range for most guns (an Assault Rifle hit is 20 beyond about 55 m). Explosions deal less the further from the centre. Whatever reduces it, what lands is always a multiple of five.
 

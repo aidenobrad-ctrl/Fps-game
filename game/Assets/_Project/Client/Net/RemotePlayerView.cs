@@ -44,6 +44,8 @@ namespace Recoil.Client.Net
         bool _wasVisible;
         int _shownSlot = -1;
         byte _shownSpawn;
+        /// <summary>The weapon in their hands as a box to shoot at, matching the server's.</summary>
+        HeldWeapon _held;
         CharacterLook _shownLook;
 
         public int PlayerId => _playerId;
@@ -55,6 +57,9 @@ namespace Recoil.Client.Net
         bool IShapeTarget.Hittable => Visible && _target != null && !_target.Friendly;
         BodyPose IShapeTarget.Pose => _pose;
         float IShapeTarget.StandEyeHeight => _standEyeHeight;
+
+        /// <summary>The middle of the weapon in their hands, for the sparks when it is hit or breaks.</summary>
+        public Vector3 WeaponCentre => _gun != null ? _gun.position + _gun.forward * 0.25f : Muzzle;
 
         /// <summary>The front of the weapon, where tracers start.</summary>
         public Vector3 Muzzle => _gunMuzzle != null ? _gunMuzzle.position : _weapon.TransformPoint(new Vector3(0f, 0f, 0.5f));
@@ -120,11 +125,14 @@ namespace Recoil.Client.Net
 
             ClientPlayer player = _session.Players[_playerId];
             _look.Apply(player.Look);
-            _body.SetPose(view.Pose);
-            _pose = view.Pose;
+            ShowWeapon(view.ActiveSlot);
+            BodyPose pose = view.Pose;
+            pose.Pitch = view.Pitch;
+            pose.Held = _held;
+            _body.SetPose(pose);
+            _pose = pose;
             _look.Follow();
             UpdateSide(view.Pose.EyeHeight);
-            ShowWeapon(view.ActiveSlot);
             _look.Animate(new SoldierMotion
             {
                 Velocity = view.Velocity,
@@ -203,6 +211,7 @@ namespace Recoil.Client.Net
             _shownLook = player.Look;
 
             WeaponBuild build = player.Loadout != null && slot >= 0 && slot < player.Loadout.Weapons.Length ? player.Loadout.Weapons[slot] : null;
+            _held = BodyShapes.Held(build?.Weapon);
             if (build == null) return;
 
             SoldierView soldier = _look.Soldier;

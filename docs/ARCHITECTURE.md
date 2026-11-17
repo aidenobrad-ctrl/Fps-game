@@ -265,7 +265,7 @@ Phase 3 made loadouts local first, with sync in mind. Phase 5 added the sync, an
 | Interpolation of other players | `ClientSession.TryGetView`, `RemotePlayerView` | |
 | Server checks hits, speed, fire rate, ammo | `GameServer` | By running the simulation itself |
 | 1v1, 2v2, 3v3, 5v5 and free-for-all | `GameMode`, `MatchSettings` | Team size and player count are settings |
-| Duel (best of five), Team Deathmatch, Elimination, Domination, Hardpoint, Free-for-All, Gun Game | `Server/Modes` | |
+| Duel (first to five rounds), Team Deathmatch, Elimination, Domination, Hardpoint, Free-for-All, Gun Game | `Server/Modes` | |
 | Bots for practice and to fill matches | `BotBrain`, `NavGrid`, `GameServer.BalanceBots` | Three skill levels |
 | Private lobbies with custom settings | `DuelUi` host options, `MatchSettings` | Map, mode, size, win limit, bots |
 | Casual matchmaking | backend `MatchmakingService`, `MatchmakingClient`, `FleetAgent` | Guests welcome |
@@ -330,6 +330,16 @@ Measured in the harness, firing at a strafing target at about 170 ms round trip:
 On top of the rewind, the shooter's game reports which players its bullets were seen to hit (`HitClaims`: the command tick, which of that tick's shots, the target and the body part). The server already fired the same bullet from the same command, so it knows exactly where the bullet went; it only checks, with plain geometry rather than the physics engine (`BodyShapes`), that the named target stood across that line at the tick the shooter was looking at, give or take 12 cm plus a little for a moving target (at most 45 cm), and that no wall was in between. A bullet the server's own trace already counted is never counted twice, and a body shot reported as a headshot counts as a body shot. This puts what the shooter saw first: a hit is not lost to the small differences between the picture on screen and the server's record. Every 30 seconds the server logs how many reported hits it accepted and why it turned others down.
 
 The physics hitboxes, the firing range's dummies and this check are all built from one table in `BodyShapes`, a little larger than the bare body so a shot on a helmet or a shoulder pad counts.
+
+### Weapons that break and change hands
+
+Every body has one more hitbox: the weapon in its hands (`HitZone.Weapon`). `BodyShapes.Held` works out its box from the weapon's proportions (a rifle against the shoulder, a pistol held out, a blade tipped up; nothing for bare hands), and `BodyShapes.WeaponFrame` puts it where the soldier holds it: the shoulder pocket, turned with the view's pitch. `BodyPose` carries the pitch and the held weapon, so the physics colliders (`UnityCharacterBody`), the lag-compensation record, the server's check of reported hits and the client's own second opinion all see the same box.
+
+A bullet that meets the weapon stops in it (`CombatResolver.FireBullet`): `PlayerVitals` takes no damage for that zone and asks `WeaponStruck` instead. On the server that rolls `WeaponBreaking.Chance` against the damage the shot would have done (0.1 + 0.006 a point, at most 0.75; `ServerConfig.weaponBreakChance` fixes it for tests) and marks the slot broken. A hit on a weapon is reported like any other (the hit marker, a reported hit), and a reported one is checked against the weapon's box.
+
+At the end of the tick (`GameServer.SettleWeapons`, after every shot and projectile) each player whose weapons changed is rearmed where they stand: what they were placed with, the weapons they took laid over it, less the broken slots, and fists in the melee slot if nothing is left. `PlayerSimulation.Rearm` keeps every weapon that is still carried unchanged where it was (magazine, reserve, a reload under way), so breaking one weapon refills nothing; client and server do it the same way. Then a `WeaponEvent` tells everyone what happened, for the notices, sounds and sparks.
+
+A kill takes the weapon the victim was holding (`GameServer.TakeWeapon`): it goes into the same slot for the killer, fresh, and stays theirs (`ServerPlayer.Taken`) until they go down; a spawn lays it over their own loadout, so a round won carries it on. `GameMode.WeaponPickups` turns this off for Gun Game.
 
 ### A second opinion on every bullet
 

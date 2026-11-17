@@ -1,5 +1,6 @@
 using UnityEngine;
 using Recoil.Shared.Combat;
+using Recoil.Shared.Weapons;
 
 namespace Recoil.Shared.Match
 {
@@ -12,8 +13,104 @@ namespace Recoil.Shared.Match
     /// The parts are a little larger than the bare body: they cover what a character wears,
     /// so a shot that visibly lands on a helmet or a shoulder pad counts.
     /// </summary>
+    /// <summary>
+    /// The weapon in a player's hands, as a box to be shot at. It lives in the frame of the
+    /// shoulder pocket the soldier holds it from, before the view's pitch turns it: x right,
+    /// y up, z along the barrel. Worked out from the weapon's proportions, the same way on the
+    /// server and on every client.
+    /// </summary>
+    public struct HeldWeapon
+    {
+        public bool Present;
+        public Vector3 Centre, Size;
+        /// <summary>How the weapon is tipped in the hold, in degrees about x: a blade points up.</summary>
+        public float Tilt;
+    }
+
     public static class BodyShapes
     {
+        /// <summary>Bare hands. Nothing to break.</summary>
+        public const string FistsId = "melee_fists";
+
+        // Where the soldier holds a weapon from, matching Client/Visuals/SoldierView.cs: the
+        // torso turns about its joint with part of the view's pitch, the weapon with all of it.
+        static readonly Vector3 TorsoJoint = new Vector3(0f, 1.02f, 0f);
+        static readonly Vector3 ShoulderPocket = new Vector3(0.13f, 0.36f, 0.05f);
+        const float TorsoShareOfPitch = 0.4f;
+
+        /// <summary>The box a weapon makes in its holder's hands, or nothing for bare hands.</summary>
+        public static HeldWeapon Held(WeaponDefinition weapon)
+        {
+            if (weapon == null || weapon.weaponId == FistsId) return default;
+            WeaponViewProfile p = weapon.view;
+            float b = Mathf.Max(0.5f, p.bulk);
+            float body = Mathf.Max(0.05f, p.bodyLength);
+            switch (p.kind)
+            {
+                case ViewModelKind.Launcher:
+                    // A tube on the shoulder, back end at the pocket.
+                    return new HeldWeapon { Present = true, Centre = new Vector3(0f, 0f, 0.03f + body * 0.5f), Size = new Vector3(0.13f * b, 0.13f * b, body) };
+                case ViewModelKind.Blade:
+                case ViewModelKind.Thrown:
+                {
+                    // Held out in front, tip up: handle and blade along the tipped axis.
+                    float length = 0.1f + body;
+                    return new HeldWeapon
+                    {
+                        Present = true,
+                        Centre = new Vector3(-0.14f, -0.06f, 0.36f) + new Vector3(0f, 0f, length * 0.5f - 0.05f),
+                        Size = new Vector3(0.05f, 0.06f * b, length),
+                        Tilt = -60f,
+                    };
+                }
+                default:
+                {
+                    bool handgun = p.stockLength <= 0.01f && body < 0.22f;
+                    if (handgun)
+                    {
+                        // Held out at arm's length.
+                        float length = body + p.barrelLength * 0.6f;
+                        return new HeldWeapon
+                        {
+                            Present = true,
+                            Centre = new Vector3(-0.14f, -0.07f, 0.36f - body * 0.5f + length * 0.5f),
+                            Size = new Vector3(0.05f * b, 0.12f * b, length),
+                        };
+                    }
+                    // Butt against the shoulder, muzzle forward. A little taller than the receiver, for the magazine.
+                    float total = p.stockLength + body + p.barrelLength;
+                    return new HeldWeapon
+                    {
+                        Present = true,
+                        Centre = new Vector3(0f, -0.02f * b, 0.03f + total * 0.5f),
+                        Size = new Vector3(0.065f * b, 0.13f * b, total),
+                    };
+                }
+            }
+        }
+
+        /// <summary>
+        /// Where the shoulder pocket is, from the feet, and how far the weapon is turned (degrees
+        /// about x, down positive), for a body looking <paramref name="pitch"/> degrees down.
+        /// </summary>
+        public static void WeaponFrame(float eyeHeight, float standEyeHeight, float pitch, in HeldWeapon held, out Vector3 pocket, out float turn)
+        {
+            // A crouch lowers the hips, and the torso with them, as the soldier does it.
+            float drop = Mathf.Clamp(standEyeHeight - eyeHeight, 0f, 0.9f) * 0.62f;
+            pitch = Mathf.Clamp(pitch, -80f, 80f);
+            Vector3 offset = RotateX(ShoulderPocket, pitch * TorsoShareOfPitch);
+            pocket = TorsoJoint + offset - new Vector3(0f, drop, 0f);
+            turn = pitch + held.Tilt;
+        }
+
+        /// <summary>A vector turned <paramref name="degrees"/> about x, positive tipping +z down, as Unity's rotations do.</summary>
+        public static Vector3 RotateX(Vector3 v, float degrees)
+        {
+            float r = degrees * Mathf.Deg2Rad;
+            float c = Mathf.Cos(r), s = Mathf.Sin(r);
+            return new Vector3(v.x, v.y * c - v.z * s, v.y * s + v.z * c);
+        }
+
         public struct Part
         {
             public string Name;
@@ -79,6 +176,21 @@ namespace Recoil.Shared.Match
                 hitZone = part.Zone;
                 found = true;
             }
+
+            // The weapon in their hands.
+            if (pose.Held.Present && (!zone.HasValue || zone.Value == HitZone.Weapon))
+            {
+                WeaponFrame(pose.EyeHeight, standEyeHeight, pose.Pitch, pose.Held, out Vector3 pocket, out float turn);
+                // Into the weapon's own frame: undo its turn about the pocket.
+                Vector3 wo = RotateX(o - pocket, -turn);
+                Vector3 wd = RotateX(d, -turn);
+                if (RayBox(wo, wd, pose.Held.Centre, pose.Held.Size * 0.5f + Vector3.one * slack, out float t) && t <= maxDistance && t < distance)
+                {
+                    distance = t;
+                    hitZone = HitZone.Weapon;
+                    found = true;
+                }
+            }
             return found;
         }
 
@@ -127,5 +239,16 @@ namespace Recoil.Shared.Match
             if (t2 < far) far = t2;
             return near <= far;
         }
+    }
+
+    /// <summary>How likely a shot on the weapon in someone's hands is to break it.</summary>
+    public static class WeaponBreaking
+    {
+        /// <summary>
+        /// From the damage the shot would have done to its holder: a pistol round about one in
+        /// five, a rifle round one in four, a sniper's two in three. Never below one in ten,
+        /// never above three in four. Bare hands never break.
+        /// </summary>
+        public static float Chance(float damage) => Mathf.Clamp(0.1f + Mathf.Max(0f, damage) * 0.006f, 0.1f, 0.75f);
     }
 }

@@ -7,6 +7,11 @@ namespace Recoil.Shared.Combat
         Body,
         Head,
         Limb,
+        /// <summary>
+        /// The weapon in their hands. It takes the bullet instead of them: no damage, but it
+        /// may break (<see cref="DamageResult.WeaponBroken"/>).
+        /// </summary>
+        Weapon,
     }
 
     /// <summary>One instance of damage, as handed to whatever was hit.</summary>
@@ -28,6 +33,10 @@ namespace Recoil.Shared.Combat
         /// <summary>Health removed. Less than the requested amount on an overkill, 0 if already dead.</summary>
         public float Applied;
         public bool Killed;
+        /// <summary>The shot was taken by the weapon in their hands, not by them.</summary>
+        public bool WeaponStruck;
+        /// <summary>...and it broke.</summary>
+        public bool WeaponBroken;
     }
 
     /// <summary>A hit that dealt damage, for hit markers, damage numbers and stats.</summary>
@@ -45,6 +54,8 @@ namespace Recoil.Shared.Combat
         public string WeaponId;
         /// <summary>Who dealt it, when known.</summary>
         public IDamageable Attacker;
+        /// <summary>A shot on the weapon in their hands (<see cref="HitZone.Weapon"/>) broke it.</summary>
+        public bool WeaponBroken;
     }
 
     public interface IDamageable

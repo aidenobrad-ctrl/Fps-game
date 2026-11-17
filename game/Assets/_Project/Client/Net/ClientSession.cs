@@ -52,6 +52,10 @@ namespace Recoil.Client.Net
         public bool Alive;
         public float Health;
         public byte SpawnCount;
+        /// <summary>One bit per weapon slot shot out of their hands since they were placed.</summary>
+        public byte Broken;
+        /// <summary>Everything broke: they are down to their fists.</summary>
+        public bool OnFists;
         /// <summary>0 or 1, or <see cref="Teams.None"/> in a mode without teams.</summary>
         public int Team = Teams.None;
         public bool Bot;
@@ -175,6 +179,8 @@ namespace Recoil.Client.Net
         public event Action<ClientPlayer, SpawnMessage> PlayerSpawned;
         /// <summary>A player's weapons were swapped where they stand (Gun Game).</summary>
         public event Action<ClientPlayer, RearmMessage> PlayerRearmed;
+        /// <summary>A weapon broke, or changed hands on a kill.</summary>
+        public event Action<WeaponEventMessage> WeaponChanged;
         /// <summary>The previous state, then the new one.</summary>
         public event Action<MatchState, MatchState> MatchChanged;
         public event Action<KillMessage> Killed;
@@ -608,6 +614,16 @@ namespace Recoil.Client.Net
                     break;
                 }
 
+                case NetMessage.WeaponEvent:
+                {
+                    WeaponEventMessage message = NetMessages.ReadWeaponEvent(reader);
+                    if (reader.Failed || message.PlayerId >= _players.Length) break;
+                    _players[message.PlayerId].Broken = message.Broken;
+                    _players[message.PlayerId].OnFists = message.Fists;
+                    WeaponChanged?.Invoke(message);
+                    break;
+                }
+
                 case NetMessage.Rearm:
                 {
                     RearmMessage message = NetMessages.ReadRearm(reader);
@@ -694,6 +710,8 @@ namespace Recoil.Client.Net
             player.Spawned = true;
             player.Alive = true;
             player.Health = Settings.maxHealth;
+            player.Broken = 0;
+            player.OnFists = false;
 
             if (message.PlayerId == PlayerId && _sim != null)
             {
@@ -733,9 +751,10 @@ namespace Recoil.Client.Net
 
             if (message.PlayerId == PlayerId && _sim != null && _hasSpawn)
             {
-                // Same body, same place, new weapons. The server's next word on our state is
-                // about the new weapons, and replaces whatever was predicted with the old ones.
-                _sim.SetLoadout(player.Loadout, message.ActiveSlot);
+                // Same body, same place, new weapons (the ones still carried keep their ammunition,
+                // as on the server). The server's next word on our state is about the new
+                // weapons, and replaces whatever was predicted with the old ones.
+                _sim.Rearm(player.Loadout, message.ActiveSlot);
                 _appliedSpawnCount = message.SpawnCount;
                 _forceRestore = true;
                 _sim.AnnounceActiveWeapon();

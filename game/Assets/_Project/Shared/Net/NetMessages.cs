@@ -50,6 +50,35 @@ namespace Recoil.Shared.Net
         Hurt = 27,
         /// <summary>Reliable. A line of chat, to whoever it was for.</summary>
         ChatLine = 28,
+        /// <summary>Reliable. A weapon broke, or changed hands on a kill.</summary>
+        WeaponEvent = 29,
+    }
+
+    public enum WeaponEventKind : byte
+    {
+        /// <summary>Shot out of <see cref="WeaponEventMessage.PlayerId"/>'s hands by <see cref="WeaponEventMessage.OtherId"/>.</summary>
+        Broken,
+        /// <summary><see cref="WeaponEventMessage.PlayerId"/> took it from <see cref="WeaponEventMessage.OtherId"/>, whom they had just taken out.</summary>
+        Taken,
+    }
+
+    /// <summary>A weapon broke, or was taken from someone taken out. Everyone is told, for the notices and the effects.</summary>
+    public struct WeaponEventMessage
+    {
+        public const int Nobody = 255;
+
+        public WeaponEventKind Kind;
+        /// <summary>Whose weapon broke, or who took one.</summary>
+        public int PlayerId;
+        /// <summary>Who broke it, or whom it was taken from. <see cref="Nobody"/> if nobody.</summary>
+        public int OtherId;
+        /// <summary>The slot it was (or now is) in: 0 primary, 1 secondary, 2 melee.</summary>
+        public byte Slot;
+        public string WeaponId;
+        /// <summary>One bit per slot of <see cref="PlayerId"/> that is now broken.</summary>
+        public byte Broken;
+        /// <summary>Everything else is broken too: they are down to their fists.</summary>
+        public bool Fists;
     }
 
     /// <summary>One bullet the shooter saw land on another player.</summary>
@@ -443,7 +472,7 @@ namespace Recoil.Shared.Net
             for (int i = 0; i < count; i++)
             {
                 into[i] = new HitClaim { Shot = reader.ReadByte(), Target = reader.ReadByte(), Zone = (HitZone)reader.ReadByte() };
-                if (into[i].Zone > HitZone.Limb) reader.Fail();
+                if (into[i].Zone > HitZone.Weapon) reader.Fail();
             }
             return reader.Failed ? 0 : count;
         }
@@ -574,6 +603,29 @@ namespace Recoil.Shared.Net
             Bot = reader.ReadBool(),
             Look = ReadLook(reader),
             AccountId = reader.ReadString(),
+        };
+
+        public static void Write(NetWriter writer, in WeaponEventMessage message)
+        {
+            writer.WriteByte((byte)NetMessage.WeaponEvent);
+            writer.WriteByte((byte)message.Kind);
+            writer.WriteByte((byte)message.PlayerId);
+            writer.WriteByte((byte)message.OtherId);
+            writer.WriteByte(message.Slot);
+            writer.WriteString(message.WeaponId ?? "");
+            writer.WriteByte(message.Broken);
+            writer.WriteByte((byte)(message.Fists ? 1 : 0));
+        }
+
+        public static WeaponEventMessage ReadWeaponEvent(NetReader reader) => new WeaponEventMessage
+        {
+            Kind = (WeaponEventKind)reader.ReadByte(),
+            PlayerId = reader.ReadByte(),
+            OtherId = reader.ReadByte(),
+            Slot = reader.ReadByte(),
+            WeaponId = reader.ReadString(),
+            Broken = reader.ReadByte(),
+            Fists = reader.ReadByte() != 0,
         };
 
         public static void Write(NetWriter writer, in RearmMessage message)

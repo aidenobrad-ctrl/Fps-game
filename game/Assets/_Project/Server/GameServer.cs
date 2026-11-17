@@ -42,6 +42,9 @@ namespace Recoil.Server
         /// only to accounts with a verified email. Needs a ticket key.
         /// </summary>
         public bool rankedOnly;
+
+        /// <summary>The chance a shot on a weapon breaks it. Below 0 (the default): by the shot's damage, see <see cref="WeaponBreaking"/>. For tests.</summary>
+        [NonSerialized] public float weaponBreakChance = -1f;
     }
 
     /// <summary>How a player is placed in the world.</summary>
@@ -81,7 +84,7 @@ namespace Recoil.Server
     /// Nothing here touches the scene directly. It reaches the physical world through
     /// <see cref="IGameWorld"/>, and the network through <see cref="INetSocket"/>.
     /// </summary>
-    public sealed class GameServer : IDisposable
+    public sealed partial class GameServer : IDisposable
     {
         public const int MaxPlayers = NetProtocol.MaxPlayers;
         const float KillPlaneY = -25f;
@@ -331,6 +334,7 @@ namespace Recoil.Server
 
                 _world.SyncPhysics();
                 _projectiles.Step(Tick, SimConstants.TickDelta);
+                SettleWeapons();
 
                 _mode.Update();
                 _lag.Record(Tick, _players);
@@ -473,6 +477,7 @@ namespace Recoil.Server
         {
             player.Vitals.Damaged += OnDamaged;
             player.Vitals.CanBeHurtBy = attacker => _mode.CanHurt(attacker, player);
+            player.Vitals.WeaponStruck = OnWeaponStruck;
             _players[player.Id] = player;
             _placements[player.Id] = default;
         }
@@ -967,7 +972,7 @@ namespace Recoil.Server
 
                 if (_mode.Frozen) MatchRules.Freeze(ref cmd);
                 player.Sim.Step(cmd, SimConstants.TickDelta);
-                player.Body.SetPose(BodyPose.From(player.Sim.Motor.State));
+                player.Body.SetPose(PoseOf(player));
                 ResolveShots(player, cmd);
             }
             if (player.PendingClaims.Count > 0) SettleClaims(player);
@@ -1128,14 +1133,19 @@ namespace Recoil.Server
                 return;
             }
 
-            // The part they named, with a little room; failing that, any part, but never a headshot they did not see.
+            // The part they named, with a little room; failing that, the body or a limb, but
+            // never a headshot or a shot on the weapon they did not see.
             float slack = Mathf.Min(MaxClaimSlack, ClaimSlack + speed * ClaimSlackSeconds);
             float stand = _movement.standEyeHeight;
             HitZone zone = claim.Zone;
-            if (!BodyShapes.Raycast(pose, stand, shot.Origin, shot.Direction, shot.Stats.maxRange, slack, claim.Zone, out float distance, out _))
+            float distance;
+            if (!BodyShapes.Raycast(pose, stand, shot.Origin, shot.Direction, shot.Stats.maxRange, slack, claim.Zone, out distance, out _))
             {
-                if (!BodyShapes.Raycast(pose, stand, shot.Origin, shot.Direction, shot.Stats.maxRange, slack, null, out distance, out zone) ||
-                    zone == HitZone.Head)
+                if (BodyShapes.Raycast(pose, stand, shot.Origin, shot.Direction, shot.Stats.maxRange, slack, HitZone.Body, out distance, out _))
+                    zone = HitZone.Body;
+                else if (BodyShapes.Raycast(pose, stand, shot.Origin, shot.Direction, shot.Stats.maxRange, slack, HitZone.Limb, out distance, out _))
+                    zone = HitZone.Limb;
+                else
                 {
                     _claimTally.NotThere++;
                     return;
@@ -1233,6 +1243,9 @@ namespace Recoil.Server
         /// </summary>
         public void Kill(ServerPlayer victim, ServerPlayer killer, string weaponId, bool headshot)
         {
+            TakeWeapon(victim, killer);
+            // What they had taken goes down with them.
+            for (int slot = 0; slot < victim.Taken.Length; slot++) victim.Taken[slot] = null;
             victim.Vitals.Clear();
             victim.Body.SetHittable(false);
 
@@ -1274,6 +1287,22 @@ namespace Recoil.Server
                 player.Sim = new PlayerSimulation(player.Body.Controller, _movement, PlayerSimulation.SeedFor(player.Id));
             }
 
+            // Weapons taken from people they took out, and still alive to carry, come too (Gun Game hands out its own).
+            if (options.Loadout == null)
+            {
+                carried = WithTaken(carried, player);
+                for (int slot = 0; slot < player.Taken.Length; slot++)
+                    if (player.Taken[slot] != null) mask |= (byte)(1 << slot);
+            }
+            else
+            {
+                for (int slot = 0; slot < player.Taken.Length; slot++) player.Taken[slot] = null;
+            }
+            player.SpawnCarried = carried;
+            player.SpawnMask = mask;
+            player.Broken = 0;
+            player.OnFists = false;
+
             player.Sim.InfiniteReserve = options.UnlimitedAmmo;
             player.Sim.RechargeUtilities = options.RechargeUtility;
             player.Sim.SetLoadout(MatchLoadouts.Apply(LoadoutRules.Resolve(carried, _catalog), mask), activeSlot);
@@ -1287,7 +1316,7 @@ namespace Recoil.Server
             player.SlotMask = mask;
             player.RespawnTick = -1;
             player.Body.SetHittable(true);
-            player.Body.SetPose(BodyPose.From(player.State.Motor));
+            player.Body.SetPose(PoseOf(player));
             player.Brain?.Spawned(this, player);
 
             _placements[player.Id] = new Placement
@@ -1311,8 +1340,23 @@ namespace Recoil.Server
         {
             if (!player.Spawned) return;
             slotMask = slotMask == 0 ? MatchLoadouts.AllSlots : slotMask;
-            player.Sim.SetLoadout(MatchLoadouts.Apply(LoadoutRules.Resolve(loadout, _catalog), slotMask), activeSlot);
+            // A fresh set: nothing broken, nothing taken.
+            player.SpawnCarried = loadout;
+            player.SpawnMask = slotMask;
+            player.Broken = 0;
+            player.OnFists = false;
+            for (int slot = 0; slot < player.Taken.Length; slot++) player.Taken[slot] = null;
+            RearmCore(player, loadout, slotMask, activeSlot, -1);
+        }
+
+        /// <summary>Gives a living player new weapons where they stand. Weapons they still carry, unchanged, keep their ammunition.</summary>
+        void RearmCore(ServerPlayer player, LoadoutData loadout, byte slotMask, int activeSlot, int freshSlot)
+        {
+            if (!player.Spawned) return;
+            slotMask = slotMask == 0 ? MatchLoadouts.AllSlots : slotMask;
+            player.Sim.Rearm(MatchLoadouts.Apply(LoadoutRules.Resolve(loadout, _catalog), slotMask), activeSlot, freshSlot);
             player.Sim.Capture(player.State);
+            player.Body.SetPose(PoseOf(player));
             player.SpawnCount++;
             player.SlotMask = slotMask;
 

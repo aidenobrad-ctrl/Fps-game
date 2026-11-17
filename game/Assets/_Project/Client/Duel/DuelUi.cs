@@ -42,7 +42,7 @@ namespace Recoil.Client.Duel
     public sealed class DuelUi : MonoBehaviour
     {
         const string NameKey = "pb.playerName", AddressKey = "pb.lastAddress", ModeKey = "pb.mode";
-        const string MapKey = "pb.host.map", SizeKey = "pb.host.size", BotsKey = "pb.host.bots", LimitKey = "pb.host.limit";
+        const string MapKey = "pb.host.map", SizeKey = "pb.host.size", BotsKey = "pb.host.bots", LimitKey = "pb.host.limit5.";
         const float KillFeedSeconds = 6f;
         const int KillFeedLines = 5;
 
@@ -149,10 +149,10 @@ namespace Recoil.Client.Duel
         {
             switch (mode)
             {
-                case GameModeKind.Duel: return "One on one, no respawns. First to win three rounds.";
-                case GameModeKind.TeamDeathmatch: return "Two teams, respawns on. First team to the kill limit.";
-                case GameModeKind.FreeForAll: return "Everyone for themselves, respawns on. First to the kill limit.";
-                case GameModeKind.Elimination: return "Two teams, no respawns within a round. Wipe the other team out.";
+                case GameModeKind.Duel: return "One on one, no respawns. First to win five rounds.";
+                case GameModeKind.TeamDeathmatch: return "Two teams, respawns on. First team to five kills.";
+                case GameModeKind.FreeForAll: return "Everyone for themselves, respawns on. First to five kills.";
+                case GameModeKind.Elimination: return "Two teams, no respawns within a round. First to win five rounds.";
                 case GameModeKind.Domination: return "Take and hold three zones. Every zone held scores a point a second.";
                 case GameModeKind.Hardpoint: return "One zone at a time, moving every minute. Hold it alone to score.";
                 case GameModeKind.GunGame: return "Every kill moves you to the next weapon. A knife kill with the last one wins.";
@@ -997,7 +997,7 @@ namespace Recoil.Client.Duel
             }
             else if (defaults.RoundBased)
             {
-                foreach (int rounds in new[] { 2, 3, 4, 5, 6 })
+                foreach (int rounds in new[] { 2, 3, 4, 5, 6, 7 })
                 {
                     _limits.Add(rounds);
                     limitNames.Add(rounds + " rounds (best of " + (rounds * 2 - 1) + ")");
@@ -1007,8 +1007,8 @@ namespace Recoil.Client.Duel
             {
                 int[] options = mode == GameModeKind.Domination ? new[] { 100, 150, 200, 300 }
                     : mode == GameModeKind.Hardpoint ? new[] { 100, 150, 200, 250 }
-                    : mode == GameModeKind.FreeForAll ? new[] { 10, 15, 20, 25, 30 }
-                    : new[] { 20, 30, 50, 75, 100 };
+                    : mode == GameModeKind.FreeForAll ? new[] { 3, 5, 10, 15, 20, 25 }
+                    : new[] { 3, 5, 10, 20, 30, 50 };
                 string unit = defaults.UsesZones ? " points" : " kills";
                 foreach (int limit in options)
                 {

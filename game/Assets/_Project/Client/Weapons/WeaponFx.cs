@@ -65,13 +65,25 @@ namespace Recoil.Client.Weapons
 
         struct ProjectileVisual
         {
+            /// <summary>Unscaled; it carries the trail, and the model or the plain shape under it.</summary>
             public Transform Transform;
+            /// <summary>The plain shape, sized per projectile, for when there is no model.</summary>
+            public Transform Ball;
             public Renderer Renderer;
+            /// <summary>The detailed model (Resources/Models/Projectiles.bytes), at its own size.</summary>
+            public Transform Model;
+            public MeshFilter ModelFilter;
+            public MeshRenderer ModelRenderer;
             public TrailRenderer Trail;
             public int Id;
             public bool Active, Seen;
             public Vector3 MuzzleOffset;
             public float Age;
+            /// <summary>Degrees a second about the model's own axes: a knife turning end over end, a disc spinning.</summary>
+            public Vector3 Spin, SpinAngle;
+            /// <summary>Drawn as fire rather than an object: a flamethrower's.</summary>
+            public bool Flame;
+            public Color FlameColor;
         }
 
         struct WorldFlash
@@ -156,18 +168,29 @@ namespace Recoil.Client.Weapons
 
             for (int i = 0; i < ProjectileCount; i++)
             {
-                GameObject body = GreyboxKit.Visual(pool, "Projectile", PrimitiveType.Sphere,
+                var root = new GameObject("Projectile");
+                root.transform.SetParent(pool, false);
+                GameObject ball = GreyboxKit.Visual(root.transform, "Shape", PrimitiveType.Sphere,
                     Vector3.zero, Vector3.one * 0.1f, GreyboxMaterials.Unlit(BulletTracer), castShadows: false);
-                var trail = body.AddComponent<TrailRenderer>();
+                var model = new GameObject("Model");
+                model.transform.SetParent(root.transform, false);
+                var modelFilter = model.AddComponent<MeshFilter>();
+                var modelRenderer = model.AddComponent<MeshRenderer>();
+                modelRenderer.shadowCastingMode = ShadowCastingMode.Off;
+                var trail = root.AddComponent<TrailRenderer>();
                 trail.emitting = false;
                 trail.textureMode = LineTextureMode.Stretch;
                 trail.shadowCastingMode = ShadowCastingMode.Off;
                 trail.receiveShadows = false;
                 trail.minVertexDistance = 0.15f;
                 trail.autodestruct = false;
-                body.SetActive(false);
-                _projectiles[i].Transform = body.transform;
-                _projectiles[i].Renderer = body.GetComponent<Renderer>();
+                root.SetActive(false);
+                _projectiles[i].Transform = root.transform;
+                _projectiles[i].Ball = ball.transform;
+                _projectiles[i].Renderer = ball.GetComponent<Renderer>();
+                _projectiles[i].Model = model.transform;
+                _projectiles[i].ModelFilter = modelFilter;
+                _projectiles[i].ModelRenderer = modelRenderer;
                 _projectiles[i].Trail = trail;
             }
 
@@ -331,6 +354,31 @@ namespace Recoil.Client.Weapons
             _energy.Emit(point, Vector3.zero, head ? 0.5f : 0.3f, 0.09f, bright);
         }
 
+        /// <summary>A shot ringing off someone's weapon: a spray of bright sparks back the way it came.</summary>
+        public void PlayWeaponHit(Vector3 point, Vector3 shotDirection)
+        {
+            Vector3 back = shotDirection.sqrMagnitude > 0.0001f ? -shotDirection.normalized : Vector3.up;
+            for (int i = 0; i < 14; i++)
+                _sparks.Emit(point, (back * 0.6f + Random.insideUnitSphere * 0.8f).normalized * Random.Range(3f, 9f),
+                    Random.Range(0.01f, 0.018f), Random.Range(0.1f, 0.3f), SparkColor);
+            _energy.Emit(point, Vector3.zero, 0.22f, 0.06f, new Color(1f, 0.9f, 0.7f));
+        }
+
+        /// <summary>A weapon shot to pieces: a burst of sparks, a flash, smoke and bits flying off.</summary>
+        /// <param name="ours">Our own, in front of the camera: smaller, so it does not fill the view.</param>
+        public void PlayWeaponBreak(Vector3 point, bool ours)
+        {
+            float scale = ours ? 0.5f : 1f;
+            for (int i = 0; i < 34; i++)
+                _sparks.Emit(point, (Random.onUnitSphere + Vector3.up * 0.3f).normalized * Random.Range(4f, 12f) * scale,
+                    Random.Range(0.012f, 0.022f) * scale, Random.Range(0.2f, 0.55f), SparkColor);
+            for (int i = 0; i < 8; i++)
+                _smoke.Emit(point + Random.insideUnitSphere * 0.05f, Random.onUnitSphere * 0.6f + Vector3.up * 0.4f,
+                    Random.Range(0.15f, 0.3f) * scale, Random.Range(0.6f, 1.2f), new Color(0.35f, 0.34f, 0.33f, 0.5f));
+            _energy.Emit(point, Vector3.zero, 0.6f * scale, 0.1f, new Color(1f, 0.8f, 0.5f));
+            _lights.Flash(point, new Color(1f, 0.75f, 0.45f), 4f, 4f, 0.15f);
+        }
+
         // ------------------------------------------------------------------ players
 
         /// <summary>A player taken out: their body comes apart into light.</summary>
@@ -382,6 +430,7 @@ namespace Recoil.Client.Weapons
                 Material material;
                 TrailRenderer trail = visual.Trail;
                 trail.emitting = false;
+                trail.sharedMaterial = null;
                 if (stats.explosionRadius > 0f && stats.fuseTime > 0f)
                 {
                     // A grenade: round, with a faint streak behind it.
@@ -401,6 +450,7 @@ namespace Recoil.Client.Weapons
                     // Bolts and blades.
                     size = new Vector3(0.016f, 0.034f, 0.3f);
                     material = GreyboxMaterials.Flat(bodyColor);
+                    SetTrail(trail, EffectResources.Additive(EffectResources.Soft), new Color(1f, 1f, 1f, 0.35f), 0.012f, 0f, 0.08f);
                 }
                 else
                 {
@@ -411,18 +461,83 @@ namespace Recoil.Client.Weapons
                     SetTrail(trail, EffectResources.Additive(EffectResources.Soft), Lighten(accentColor, 0.2f), width * 1.2f, 0f, 0.12f);
                 }
 
+                // The detailed model for this weapon or item, if there is one.
+                string weaponId = WeaponIdOf(id);
+                string modelName = ProjectileModels.For(weaponId, stats);
+                ModelMesh model = modelName != null ? ModelLibrary.Get(ProjectileModels.Set, modelName) : null;
+                visual.Flame = ProjectileModels.IsFlame(weaponId);
+                visual.FlameColor = Lighten(accentColor, 0.5f);
+                if (visual.Flame)
+                {
+                    // A gout of fire, drawn with the fire particles as it goes.
+                    trail.emitting = false;
+                    trail.sharedMaterial = null;
+                    visual.Renderer.enabled = false;
+                    visual.ModelRenderer.enabled = false;
+                }
+                else if (model != null)
+                {
+                    visual.ModelFilter.sharedMesh = model.Mesh;
+                    var materials = new Material[model.Zones.Length];
+                    for (int z = 0; z < materials.Length; z++) materials[z] = ProjectileMaterial(model.Zones[z], modelName, bodyColor, accentColor);
+                    visual.ModelRenderer.sharedMaterials = materials;
+                    visual.ModelRenderer.enabled = true;
+                    visual.Renderer.enabled = false;
+                    visual.Model.localPosition = model.Pivot;
+                    visual.Spin = ProjectileModels.Spin(modelName);
+                }
+                else
+                {
+                    visual.ModelRenderer.enabled = false;
+                    visual.Renderer.enabled = true;
+                    visual.Renderer.sharedMaterial = material;
+                    visual.Ball.localScale = size;
+                    visual.Spin = Vector3.zero;
+                }
+                visual.SpinAngle = new Vector3(0f, 0f, Random.Range(0f, 360f));
+                visual.Model.localRotation = Quaternion.identity;
+
                 visual.Id = id;
                 visual.Active = true;
                 visual.Seen = true;
                 visual.Age = 0f;
-                visual.Renderer.sharedMaterial = material;
-                visual.Transform.localScale = size;
                 // Starts at the muzzle and is updated onto its real path in LateUpdate.
                 visual.MuzzleOffset = fromOwnMuzzle ? _viewModel.Muzzle.position - _player.MotorState.EyePosition : Vector3.zero;
                 visual.Transform.position = fromOwnMuzzle ? _viewModel.Muzzle.position : new Vector3(0f, -1000f, 0f);
                 visual.Transform.gameObject.SetActive(true);
                 trail.Clear();
                 return;
+            }
+        }
+
+        /// <summary>The weapon or item a projectile in flight came from, or null.</summary>
+        string WeaponIdOf(int id)
+        {
+            if (_player == null || _player.Projectiles == null) return null;
+            var live = _player.Projectiles.Live;
+            for (int n = 0; n < live.Count; n++)
+            {
+                if (live[n].Id == id) return live[n].WeaponId;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// A projectile model's materials: its body in the weapon's (or item's) colour, its
+        /// accent in the accent colour, anything that burns or glows brightly unlit, and the
+        /// shared dark and metal finishes.
+        /// </summary>
+        static Material ProjectileMaterial(ModelZone zone, string model, Color body, Color accent)
+        {
+            switch (zone)
+            {
+                case ModelZone.Primary:
+                    // A paintball is the paint, whatever the gun looks like.
+                    return model == "Paintball" ? GreyboxMaterials.Flat(accent) : GreyboxMaterials.Flat(body);
+                case ModelZone.Trim: return GreyboxMaterials.Flat(accent);
+                case ModelZone.Glow: return GreyboxMaterials.Unlit(Lighten(accent, 0.45f));
+                case ModelZone.Metal: return ModelMaterials.Metal;
+                default: return ModelMaterials.Dark;
             }
         }
 
@@ -531,6 +646,18 @@ namespace Recoil.Client.Weapons
                     visual.Transform.position = position + visual.MuzzleOffset * settle;
                     if (projectile.Velocity.sqrMagnitude > 0.01f)
                         visual.Transform.rotation = Quaternion.LookRotation(projectile.Velocity);
+                    if (visual.Spin != Vector3.zero)
+                    {
+                        visual.SpinAngle += visual.Spin * Time.deltaTime;
+                        visual.Model.localRotation = Quaternion.Euler(visual.SpinAngle);
+                    }
+                    if (visual.Flame && visual.Age > 0.02f)
+                    {
+                        Vector3 drift = projectile.Velocity * 0.12f;
+                        for (int f = 0; f < 2; f++)
+                            _fire.Emit(visual.Transform.position + Random.insideUnitSphere * 0.08f, drift + Random.insideUnitSphere * 0.6f,
+                                Random.Range(0.22f, 0.4f) * Mathf.Lerp(0.6f, 1.6f, Mathf.Clamp01(visual.Age / 0.5f)), Random.Range(0.18f, 0.32f), Color.white);
+                    }
                     // Start the trail once the projectile is on its real path, not from where it was parked.
                     if (!visual.Trail.emitting && visual.Trail.sharedMaterial != null && visual.Transform.position.y > -500f && visual.Age > 0f)
                     {

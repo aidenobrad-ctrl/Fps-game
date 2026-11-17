@@ -49,7 +49,7 @@ namespace Recoil.Server
                 record.Tick = tick;
                 record.Hittable = player != null && player.Alive;
                 if (!record.Hittable) continue;
-                record.Pose = BodyPose.From(player.Sim.Motor.State);
+                record.Pose = GameServer.PoseOf(player);
                 record.SpawnCount = player.SpawnCount;
             }
         }
@@ -124,7 +124,7 @@ namespace Recoil.Server
                 ServerPlayer player = players[i];
                 if (player == null || !player.Spawned) continue;
                 player.Body.SetHittable(player.Alive);
-                player.Body.SetPose(BodyPose.From(player.Sim.Motor.State));
+                player.Body.SetPose(GameServer.PoseOf(player));
             }
         }
 

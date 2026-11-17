@@ -34,6 +34,8 @@ namespace Recoil.Client.UI
         const float SlowRefreshInterval = 0.1f;
 
         static readonly Color HitColor = Color.white;
+        /// <summary>A shot that rang off someone's weapon.</summary>
+        static readonly Color WeaponHitColor = new Color(0.55f, 0.82f, 1f);
         static readonly Color HeadshotColor = new Color(1f, 0.72f, 0.1f);
         static readonly Color KillColor = new Color(1f, 0.33f, 0.27f);
 
@@ -432,9 +434,14 @@ namespace Recoil.Client.UI
             _loadoutTitle.text = equipped != null ? equipped.name.ToUpperInvariant() : string.Empty;
         }
 
+        /// <summary>Redraws the weapon slots: after a weapon of ours broke or one was taken.</summary>
+        public void RefreshSlots() => OnLoadoutChanged();
+
         void OnLoadoutChanged()
         {
             if (!_ready) return;
+            // Online, which of our slots are shot out of our hands.
+            byte broken = _player.Session != null && _player.Session.Local != null ? _player.Session.Local.Broken : (byte)0;
 
             // One card per weapon slot along the bottom of the screen: the key that draws it,
             // what kind of slot it is, and the weapon's name. The one in hand is lit up.
@@ -445,7 +452,9 @@ namespace Recoil.Client.UI
                 WeaponBuild build = _player.GetBuild(i);
                 var card = new VisualElement { pickingMode = PickingMode.Ignore };
                 card.AddToClassList("slot");
+                bool shotOut = build == null && (broken & (1 << i)) != 0;
                 card.EnableInClassList("slot--empty", build == null);
+                card.EnableInClassList("slot--broken", shotOut);
 
                 var head = new VisualElement { pickingMode = PickingMode.Ignore };
                 head.AddToClassList("slot-head");
@@ -456,7 +465,7 @@ namespace Recoil.Client.UI
                 head.Add(key);
                 head.Add(role);
 
-                var name = new Label(build != null ? build.Weapon.displayName.ToUpperInvariant() : "—") { pickingMode = PickingMode.Ignore };
+                var name = new Label(build != null ? build.Weapon.displayName.ToUpperInvariant() : shotOut ? "BROKEN" : "—") { pickingMode = PickingMode.Ignore };
                 name.AddToClassList("slot-name");
 
                 card.Add(head);
@@ -819,14 +828,15 @@ namespace Recoil.Client.UI
         {
             if (!_ready) return;
 
-            Color color = hit.Killed ? KillColor : hit.Zone == HitZone.Head ? HeadshotColor : HitColor;
+            Color color = hit.Killed ? KillColor : hit.Zone == HitZone.Head ? HeadshotColor : hit.Zone == HitZone.Weapon ? WeaponHitColor : HitColor;
             for (int i = 0; i < _hitTicks.Length; i++) _hitTicks[i].style.backgroundColor = color;
 
             _hitDuration = HitMarkerTime * (hit.Killed ? 1.8f : 1f);
             _hitTimer = _hitDuration;
             _hitScale = hit.Killed ? 1.45f : hit.Zone == HitZone.Head ? 1.2f : 1f;
 
-            if (GameSettings.ShowDamageNumbers) SpawnDamageNumber(hit, color);
+            // A shot on a weapon does no damage: there is no number to show.
+            if (GameSettings.ShowDamageNumbers && hit.Zone != HitZone.Weapon) SpawnDamageNumber(hit, color);
         }
 
         void UpdateHitMarker(float dt)

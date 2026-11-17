@@ -162,6 +162,9 @@ namespace Recoil.Server.Modes
         }
 
         /// <summary>May <paramref name="attacker"/> hurt <paramref name="victim"/>? Teammates cannot hurt each other.</summary>
+        /// <summary>Taking someone out takes the weapon they were holding. Off where the mode decides what everyone carries.</summary>
+        public virtual bool WeaponPickups => true;
+
         public virtual bool CanHurt(IDamageable attacker, ServerPlayer victim)
         {
             if (!Settings.TeamBased || !(attacker is PlayerVitals vitals) || vitals.PlayerId == victim.Id) return true;

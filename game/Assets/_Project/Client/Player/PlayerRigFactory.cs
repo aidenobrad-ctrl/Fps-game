@@ -73,6 +73,12 @@ namespace Recoil.Client.Player
             player.UtilityThrowStarted += _ => sfx.Play(Sfx.Throw, 0.7f, 0.06f);
             player.HitConfirmed += hit =>
             {
+                // A shot taken by their weapon rather than them: a clank, not a hit.
+                if (hit.Zone == HitZone.Weapon)
+                {
+                    sfx.Play(Sfx.WeaponHit, 0.8f, 0.05f);
+                    return;
+                }
                 if (hit.Killed)
                 {
                     sfx.Play(Sfx.Kill, 0.9f);

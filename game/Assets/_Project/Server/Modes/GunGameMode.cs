@@ -16,6 +16,9 @@ namespace Recoil.Server.Modes
 
         static int Top => GunGameLadder.Length - 1;
 
+        /// <summary>The ladder decides what everyone carries.</summary>
+        public override bool WeaponPickups => false;
+
         protected override SpawnOptions OptionsFor(ServerPlayer player)
         {
             LoadoutData loadout = MatchLoadouts.GunGame(player.GunLevel, Server.Catalog, out byte mask, out int active);
