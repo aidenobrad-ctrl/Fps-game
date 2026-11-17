@@ -103,6 +103,7 @@ namespace Recoil.Client.UI
         Label _fps;
         float _fpsSmoothed;
         string _shownFps;
+        bool _showDebug;
 
         float _gap = 12f;
         float _hitTimer, _hitDuration = HitMarkerTime, _hitScale = 1f;
@@ -533,6 +534,7 @@ namespace Recoil.Client.UI
                 else if (!IsPaused)
                 {
                     if (keyboard.f5Key.wasPressedThisFrame) ResetStatsRequested?.Invoke();
+                    if (keyboard.f3Key.wasPressedThisFrame) _showDebug = !_showDebug;
                     if (keyboard.f1Key.wasPressedThisFrame && _ready)
                         _hints.style.display = _hints.resolvedStyle.display == DisplayStyle.None ? DisplayStyle.Flex : DisplayStyle.None;
                     if (keyboard.bKey.wasPressedThisFrame && _library != null) SetQuickSwapOpen(!IsQuickSwapOpen);
@@ -634,6 +636,12 @@ namespace Recoil.Client.UI
         {
             if (_fps == null) return;
             string text = GameSettings.ShowFps ? Mathf.RoundToInt(_fpsSmoothed) + " FPS   " + (1000f / Mathf.Max(1f, _fpsSmoothed)).ToString("0.0") + " ms" : "";
+            // F3: what the last bullet did, and anything that has gone wrong in effects, sound or the HUD.
+            if (_showDebug && _player != null)
+            {
+                text += (text.Length > 0 ? "\n" : "") + _player.DescribeLastShot();
+                if (_player.LastFault.Length > 0) text += "\nfault: " + _player.LastFault;
+            }
             if (text == _shownFps) return;
             _shownFps = text;
             _fps.text = text;

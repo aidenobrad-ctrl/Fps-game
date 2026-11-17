@@ -20,7 +20,7 @@ namespace Recoil.Client.Net
     /// moment ago and stands the body there.
     /// </summary>
     [DefaultExecutionOrder(10)]
-    public sealed class RemotePlayerView : MonoBehaviour
+    public sealed class RemotePlayerView : MonoBehaviour, IShapeTarget
     {
         const float FlashTime = 0.12f;
         static readonly Color MarkerColor = new Color(0.55f, 0.85f, 1f);
@@ -48,6 +48,13 @@ namespace Recoil.Client.Net
 
         public int PlayerId => _playerId;
         public bool Visible { get; private set; }
+
+        // For the check of our bullets by plain geometry (ShapeTargets). Teammates are passed by.
+        BodyPose _pose;
+        IDamageable IShapeTarget.Owner => _target;
+        bool IShapeTarget.Hittable => Visible && _target != null && !_target.Friendly;
+        BodyPose IShapeTarget.Pose => _pose;
+        float IShapeTarget.StandEyeHeight => _standEyeHeight;
 
         /// <summary>The front of the weapon, where tracers start.</summary>
         public Vector3 Muzzle => _gunMuzzle != null ? _gunMuzzle.position : _weapon.TransformPoint(new Vector3(0f, 0f, 0.5f));
@@ -93,6 +100,7 @@ namespace Recoil.Client.Net
             _marker.gameObject.SetActive(false);
 
             _body.Root.gameObject.SetActive(false);
+            ShapeTargets.Add(this);
         }
 
         /// <summary>Lights the body up for a moment. Called when one of our shots is confirmed.</summary>
@@ -113,6 +121,7 @@ namespace Recoil.Client.Net
             ClientPlayer player = _session.Players[_playerId];
             _look.Apply(player.Look);
             _body.SetPose(view.Pose);
+            _pose = view.Pose;
             _look.Follow();
             UpdateSide(view.Pose.EyeHeight);
             ShowWeapon(view.ActiveSlot);
@@ -228,6 +237,7 @@ namespace Recoil.Client.Net
 
         void OnDestroy()
         {
+            ShapeTargets.Remove(this);
             // The body's root is our child and goes with us; the materials are ours to clean up.
             _look?.Destroy();
             if (_weaponMaterial != null) Destroy(_weaponMaterial);

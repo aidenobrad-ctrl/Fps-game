@@ -5,7 +5,9 @@ using Recoil.Client.Online;
 using Recoil.Client.Player;
 using Recoil.Client.Settings;
 using Recoil.Client.UI;
+using Recoil.Shared.Combat;
 using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
 using Recoil.Shared.Movement;
 using Recoil.Shared.Simulation;
 using Recoil.Shared.Weapons;
@@ -35,6 +37,7 @@ namespace Recoil.Client.FiringRange
         RangeStats _stats;
         HudController _hud;
         LoadoutLibrary _library;
+        RangeLayout _layout;
 
         void Awake()
         {
@@ -57,7 +60,10 @@ namespace Recoil.Client.FiringRange
             Audio.MusicPlayer.SetMenu(false);
             Visuals.ScreenEffects.Calm();
 
+            // Bodies a previous scene registered for hit checks are gone; start a clean list.
+            ShapeTargets.Clear();
             RangeLayout layout = RangeLayout.Build(transform);
+            _layout = layout;
 
             // The player's loadouts: on this computer, or on their account if they are signed in.
             GameServices services = GameServices.Get(catalog);
@@ -90,6 +96,52 @@ namespace Recoil.Client.FiringRange
                 _hud.SetQuitLabel("Main menu");
                 _hud.QuitRequested += () => UnityEngine.SceneManagement.SceneManager.LoadScene(MenuScene);
             }
+        }
+
+        void Start()
+        {
+            try
+            {
+                SelfCheck();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("Recoil self-check could not run: " + e.Message, this);
+            }
+        }
+
+        /// <summary>
+        /// Traces one test bullet (it does no damage) from where the player stands to the
+        /// nearest target and says in the log what it met. If shots ever stop registering,
+        /// this line says at once whether the physics engine can see the targets.
+        /// </summary>
+        void SelfCheck()
+        {
+            if (_layout == null || _layout.Targets.Count == 0) return;
+            TargetDummy target = _layout.Targets[0];
+
+            Vector3 eye = _layout.PlayerSpawn + Vector3.up * movement.standEyeHeight;
+            Vector3 chest = target.transform.position + Vector3.up * 1.16f;
+            float range = Vector3.Distance(eye, chest) + 5f;
+            Vector3 direction = (chest - eye).normalized;
+
+            Physics.SyncTransforms();
+            HitscanHit hit = Hitscan.Trace(eye, direction, range);
+            bool physics = hit.Hitbox != null && ReferenceEquals(hit.Hitbox.Owner, target.Health);
+            bool geometry = ShapeTargets.Trace(eye, direction, range, null, out IShapeTarget seen, out float _, out HitZone _)
+                            && ReferenceEquals(seen.Owner, target.Health);
+
+            if (physics)
+            {
+                Debug.Log("Recoil self-check: a test bullet reached '" + target.name + "' (" + hit.Hitbox.zone + "). Hit detection is working.", this);
+                return;
+            }
+
+            string met = !hit.HasHit ? "nothing"
+                : hit.Collider == null ? "something" : "'" + hit.Collider.name + "' on layer " + hit.Collider.gameObject.layer;
+            Debug.LogWarning("Recoil self-check: the physics engine did not report '" + target.name + "' on a test bullet's path; it met " + met +
+                             " (shot mask " + GameLayers.ShotMask + "). " +
+                             (geometry ? "Geometry finds the target, so hits will be counted that way." : "Geometry did not find it either, which should not happen: please report this line."), this);
         }
 
         void OnEquippedChanged() => _rig.Player.SetLoadout(_library.ResolveEquipped(), _rig.Player.Inventory.ActiveIndex);

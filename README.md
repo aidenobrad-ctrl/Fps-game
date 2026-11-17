@@ -4,7 +4,7 @@ A fast, competitive multiplayer FPS for PC, built in Unity 6.
 
 Eleven phases are built so far: **movement and a firing range**, **the weapon system with 40 weapons and 21 attachments**, **loadouts**, **online play** on a server that owns the match, **accounts** on a backend of their own, **every game mode, bots and matchmaking**, **character customization with weapon skins**, **progression, challenges and ranked**, **sound, effects, settings and performance**, **friends, parties, chat, reports and ranked seasons**, and **three more maps, private-match rules and smarter bots**. Accounts are switched back on; see [Accounts](#accounts). The plan for everything after is in [docs/ROADMAP.md](docs/ROADMAP.md), and how the code is organised is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-> **Not yet run in Unity.** This was written without access to a Unity Editor. The C# was compiled against Unity's reference assemblies and checked against the Unity 6000.6, URP 17.6 and Input System 1.20 sources. The simulation, the weapon data and the netcode were tested outside the engine, including whole matches between a real server and real clients on a simulated bad connection, every game mode, bots playing full matches, and the game's account and matchmaking code against the real backend. But nothing has been opened or played in Unity itself, so the menus, the HUD and everything else you look at are unverified. Expect to report a few first-run issues; [Troubleshooting](#troubleshooting) covers the likely ones.
+> **Developed without a Unity Editor.** The code is written and checked outside the engine: the C# is compiled against Unity's reference assemblies and checked against the Unity 6000.6, URP 17.6 and Input System 1.20 sources, and the simulation, the weapon data and the netcode are tested there, including whole matches between a real server and real clients on a simulated bad connection, every game mode, bots playing full matches, and the game's account and matchmaking code against the real backend. It is then opened and played in Unity 6000.6.9f1, and what that turns up is fixed from the Console's messages. If something looks wrong, [Troubleshooting](#troubleshooting) says what to check and what to send.
 
 ## Open and play
 
@@ -219,7 +219,7 @@ In a match everyone sees your look, and a change shows up for them straight away
 | Esc | Pause: loadouts and settings; in a match, also where you leave it |
 | F5 | Reset session stats (firing range) |
 | F1 | Hide or show the controls panel (firing range) |
-| F3 | Hide or show the connection readout (in a match) |
+| F3 | Shot info: what your last bullet did, and any effect or sound that failed. In a match, also the connection readout |
 
 ## Loadouts
 
@@ -333,6 +333,8 @@ The tests that play whole matches (every mode, bots, matchmaking end to end) nee
 The backend has its own tests; see [backend/README.md](backend/README.md#tests).
 
 ## Troubleshooting
+
+**Shots do not seem to register.** Press **F3**. The line that appears says what your last bullet did: `hit body at 10.2 m for 25`, `stopped by 'Wall North'`, or `met nothing`, and under it `fault:` if an effect, a sound or the HUD threw an error (the game carries on without it, and the Console has the details as a yellow line starting `Recoil:`). On the firing range the Console also has a `Recoil self-check:` line from the moment the scene started, saying whether a test bullet reached the nearest target. Those lines are what to send with a report.
 
 **Hundreds of red errors, many inside `Packages/`, right after opening.** The project and your Unity version disagree about package versions. It is set up for Unity 6000.6.9f1 (see `game/Packages/manifest.json`). Open it with that version; if you already opened it with another one, close Unity, delete the `game/Library` folder and open it again with 6000.6.9f1.
 

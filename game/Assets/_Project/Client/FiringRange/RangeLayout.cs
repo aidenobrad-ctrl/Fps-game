@@ -27,6 +27,8 @@ namespace Recoil.Client.FiringRange
 
         public Vector3 PlayerSpawn { get; private set; }
         public float SpawnYaw { get; private set; }
+        /// <summary>Every practice target, nearest lane first.</summary>
+        public readonly System.Collections.Generic.List<TargetDummy> Targets = new System.Collections.Generic.List<TargetDummy>();
 
         public static RangeLayout Build(Transform root)
         {
@@ -37,7 +39,7 @@ namespace Recoil.Client.FiringRange
             };
 
             BuildShell(Group(root, "Shell"));
-            BuildLanes(Group(root, "Lanes"));
+            layout.BuildLanes(Group(root, "Lanes"));
             BuildMovementCourse(Group(root, "Movement Course"));
             BuildPerch(Group(root, "Perch"));
             return layout;
@@ -60,7 +62,7 @@ namespace Recoil.Client.FiringRange
             GreyboxKit.Box(parent, "Wall East", new Vector3(40.5f, 4f, 44f), new Vector3(1f, 8f, 112f), WallColor);
         }
 
-        static void BuildLanes(Transform parent)
+        void BuildLanes(Transform parent)
         {
             // A painted line every 10 m. Visual only, so there is nothing to trip over.
             Material line = GreyboxMaterials.Flat(LineColor);
@@ -93,9 +95,10 @@ namespace Recoil.Client.FiringRange
             Target(parent, 15.6f, 15.4f);
         }
 
-        static void Target(Transform parent, float x, float z, float travel = 0f, float speed = 0f)
+        void Target(Transform parent, float x, float z, float travel = 0f, float speed = 0f)
         {
             TargetDummy dummy = TargetDummy.Create(parent, "Target " + z + "m", new Vector3(x, 0f, z));
+            Targets.Add(dummy);
             if (travel <= 0f) return;
 
             var mover = dummy.gameObject.AddComponent<TargetMover>();

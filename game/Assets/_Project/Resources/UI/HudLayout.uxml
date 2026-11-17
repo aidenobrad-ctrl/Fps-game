@@ -56,7 +56,7 @@
             <ui:Label class="hint" text="1 2 3 / wheel  switch weapon      R  reload" picking-mode="Ignore" />
             <ui:Label class="hint" text="G  throw grenade      B  swap loadout" picking-mode="Ignore" />
             <ui:Label class="hint" text="Esc  loadouts and settings" picking-mode="Ignore" />
-            <ui:Label class="hint" text="F5  reset stats      F1  hide this" picking-mode="Ignore" />
+            <ui:Label class="hint" text="F5  reset stats      F3  shot info      F1  hide this" picking-mode="Ignore" />
         </ui:VisualElement>
 
         <ui:VisualElement name="range-stats" class="panel range-stats" picking-mode="Ignore">

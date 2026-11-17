@@ -7,6 +7,7 @@ using Recoil.Client.Settings;
 using Recoil.Client.Weapons;
 using Recoil.Shared.Combat;
 using Recoil.Shared.Loadouts;
+using Recoil.Shared.Match;
 using Recoil.Shared.Movement;
 using Recoil.Shared.Net;
 using Recoil.Shared.Simulation;
@@ -61,6 +62,11 @@ namespace Recoil.Client.Player
         // Where the player is drawn, minus where the simulation has them. Not zero just after
         // the server corrects a prediction: the view then slides to the truth instead of jumping.
         Vector3 _viewError;
+        int _faults;
+        bool _warnedSecondOpinion;
+
+        /// <summary>The last thing that went wrong in something listening to this player (effects, sound, HUD); empty if nothing has.</summary>
+        public string LastFault { get; private set; } = "";
 
         public PlayerSimulation Simulation => _sim;
         public PlayerMotor Motor => _sim.Motor;
@@ -144,27 +150,27 @@ namespace Recoil.Client.Player
             _sim = new PlayerSimulation(GetComponent<CharacterController>(), movement, seed: 0x5EED0000u);
 
             // The simulation's events carry slot numbers; listeners want the things in those slots.
-            _sim.WeaponFired += slot => WeaponFired?.Invoke(_sim.Loadout.Weapons[slot]);
-            _sim.ReloadStarted += () => ReloadStarted?.Invoke();
-            _sim.RoundInserted += () => RoundInserted?.Invoke();
-            _sim.ReloadFinished += () => ReloadFinished?.Invoke();
-            _sim.DryFired += () => DryFired?.Invoke();
-            _sim.ThrowStarted += slot => UtilityThrowStarted?.Invoke(_sim.Loadout.Utilities[slot]);
+            _sim.WeaponFired += slot => Raise(WeaponFired, _sim.Loadout.Weapons[slot], "WeaponFired");
+            _sim.ReloadStarted += () => Raise(ReloadStarted, "ReloadStarted");
+            _sim.RoundInserted += () => Raise(RoundInserted, "RoundInserted");
+            _sim.ReloadFinished += () => Raise(ReloadFinished, "ReloadFinished");
+            _sim.DryFired += () => Raise(DryFired, "DryFired");
+            _sim.ThrowStarted += slot => Raise(UtilityThrowStarted, _sim.Loadout.Utilities[slot], "UtilityThrowStarted");
             _sim.ActiveChanged += _ => OnActiveWeaponChanged();
-            _sim.Jumped += () => Jumped?.Invoke();
-            _sim.Landed += impact => Landed?.Invoke(impact);
-            _sim.SlideStarted += () => SlideStarted?.Invoke();
-            _sim.MantleStarted += () => MantleStarted?.Invoke();
+            _sim.Jumped += () => Raise(Jumped, "Jumped");
+            _sim.Landed += impact => Raise(Landed, impact, "Landed");
+            _sim.SlideStarted += () => Raise(SlideStarted, "SlideStarted");
+            _sim.MantleStarted += () => Raise(MantleStarted, "MantleStarted");
             _sim.LoadoutApplied += () =>
             {
                 _previousRecoil = _currentRecoil = Vector2.zero;
-                LoadoutChanged?.Invoke();
+                Raise(LoadoutChanged, "LoadoutChanged");
                 OnActiveWeaponChanged();
             };
 
             if (_session == null)
             {
-                _projectiles.HitConfirmed += report => HitConfirmed?.Invoke(report);
+                _projectiles.HitConfirmed += report => Raise(HitConfirmed, report, "HitConfirmed");
                 _projectiles.Happened += OnProjectileEvent;
             }
             else
@@ -194,7 +200,7 @@ namespace Recoil.Client.Player
         void OnActiveWeaponChanged()
         {
             _viewModel.Show(ActiveBuild);
-            ActiveWeaponChanged?.Invoke(ActiveBuild);
+            Raise(ActiveWeaponChanged, ActiveBuild, "ActiveWeaponChanged");
         }
 
         public void Respawn()
@@ -246,7 +252,7 @@ namespace Recoil.Client.Player
 
         void OnServerHit(HitMessage hit)
         {
-            HitConfirmed?.Invoke(new HitReport
+            Raise(HitConfirmed, new HitReport
             {
                 Tick = _tick,
                 Point = hit.Point,
@@ -254,8 +260,8 @@ namespace Recoil.Client.Player
                 Zone = hit.Zone,
                 Killed = hit.Killed,
                 Distance = Vector3.Distance(_currentMotor.EyePosition, hit.Point),
-            });
-            ShotLanded?.Invoke();
+            }, "HitConfirmed");
+            Raise(ShotLanded, "ShotLanded");
         }
 
         // ------------------------------------------------------------------ simulation
@@ -282,7 +288,17 @@ namespace Recoil.Client.Player
                     _accumulator = 0f;
                     break;
                 }
-                Step();
+                int tick = _tick;
+                try
+                {
+                    Step();
+                }
+                catch (Exception e)
+                {
+                    // Whatever went wrong, the clock moves on: the same tick is never run twice.
+                    Fault("a simulation tick", e);
+                    if (_tick == tick) _tick++;
+                }
                 _accumulator -= SimConstants.TickDelta;
                 steps++;
             }
@@ -292,7 +308,52 @@ namespace Recoil.Client.Player
 
             _viewError *= Mathf.Exp(-CorrectionEase * frame);
             TickAlpha = Mathf.Clamp01(_accumulator / SimConstants.TickDelta);
-            Present(TickAlpha);
+            try
+            {
+                Present(TickAlpha);
+            }
+            catch (Exception e)
+            {
+                Fault("drawing the view", e);
+            }
+        }
+
+        // ------------------------------------------------------------------ keeping going
+
+        // Everything that listens to this player is presentation: effects, sound, the HUD,
+        // statistics. None of it may stop the simulation. An event raised through here hands
+        // a listener's error to Fault and carries on, so a broken effect costs that effect
+        // and nothing else: the shot still lands and the view still turns.
+
+        void Raise(Action listeners, string what)
+        {
+            if (listeners == null) return;
+            try { listeners(); }
+            catch (Exception e) { Fault(what, e); }
+        }
+
+        void Raise<T>(Action<T> listeners, T value, string what)
+        {
+            if (listeners == null) return;
+            try { listeners(value); }
+            catch (Exception e) { Fault(what, e); }
+        }
+
+        void Raise<T1, T2, T3, T4>(Action<T1, T2, T3, T4> listeners, T1 a, T2 b, T3 c, T4 d, string what)
+        {
+            if (listeners == null) return;
+            try { listeners(a, b, c, d); }
+            catch (Exception e) { Fault(what, e); }
+        }
+
+        void Fault(string during, Exception e)
+        {
+            _faults++;
+            LastFault = during + ": " + e.GetType().Name + ": " + e.Message;
+            // The first few in full, then one in a hundred: a fault on every shot must not flood the log.
+            // A warning, not an error, so the Editor's Error Pause does not stop the game over an effect.
+            if (_faults <= 5 || _faults % 100 == 0)
+                Debug.LogWarning("Recoil: something failed during " + during + " (" + _faults + " so far). The game carries on without it.\n" + e, this);
         }
 
         /// <summary>One bit per weapon slot with something in it.</summary>
@@ -341,7 +402,7 @@ namespace Recoil.Client.Player
             if (_session != null)
             {
                 if (fired.Shots.Count > 0) DrawPredictedShots(cmd, fired, _sim.SteppedBuild);
-                if (thrown >= 0) UtilityThrown?.Invoke(_sim.Loadout.Utilities[thrown]);
+                if (thrown >= 0) Raise(UtilityThrown, _sim.Loadout.Utilities[thrown], "UtilityThrown");
                 _session.Commit(cmd);
             }
             else
@@ -379,18 +440,41 @@ namespace Recoil.Client.Player
                 }
                 Vector3 direction = AimMath.Direction(cmd.Yaw + shot.AimOffset.x, cmd.Pitch - shot.AimOffset.y);
                 HitscanHit end = TraceSeen(origin, direction, weapon.Stats.maxRange);
-                if (end.Hitbox != null && end.Hitbox.Owner is RemoteTarget target && _claims.Count < NetMessages.MaxHitClaims)
-                    _claims.Add(new HitClaim { Shot = (byte)i, Target = (byte)target.PlayerId, Zone = end.Hitbox.zone });
+                bool struckBody = end.Hitbox != null;
+                if (end.Hitbox != null && end.Hitbox.Owner is RemoteTarget target)
+                {
+                    if (_claims.Count < NetMessages.MaxHitClaims)
+                        _claims.Add(new HitClaim { Shot = (byte)i, Target = (byte)target.PlayerId, Zone = end.Hitbox.zone });
+                    Note(true, end.Hitbox.zone, 0f, end.Distance, false, null);
+                }
+                else if (!struckBody && ShapeTargets.Trace(origin, direction, end.HasHit ? end.Distance : weapon.Stats.maxRange, null,
+                             out IShapeTarget seen, out float at, out HitZone zone) && seen.Owner is RemoteTarget other)
+                {
+                    // The physics engine saw nobody on this bullet's path; plain geometry says it crossed a player.
+                    WarnSecondOpinion(end);
+                    if (_claims.Count < NetMessages.MaxHitClaims)
+                        _claims.Add(new HitClaim { Shot = (byte)i, Target = (byte)other.PlayerId, Zone = zone });
+                    end.HasHit = true;
+                    end.Distance = at;
+                    end.Point = origin + direction * at;
+                    end.Normal = -direction;
+                    struckBody = true;
+                    Note(true, zone, 0f, at, true, null);
+                }
+                else
+                {
+                    Note(false, HitZone.Body, 0f, end.Distance, false, end.HasHit ? end.Collider : null);
+                }
 
-                ShotFired?.Invoke(new ShotPresentation
+                Raise(ShotFired, new ShotPresentation
                 {
                     Origin = origin,
                     End = end.Point,
                     Normal = end.Normal,
-                    HitWorld = end.HasHit && end.Hitbox == null,
+                    HitWorld = end.HasHit && !struckBody,
                     HitTarget = false,
                     Build = build,
-                });
+                }, "ShotFired");
             }
 
             if (_claims.Count > 0) _session.ClaimHits(cmd.Tick, _claims);
@@ -431,25 +515,31 @@ namespace Recoil.Client.Player
                     {
                         _reports.Clear();
                         HitscanHit end = CombatResolver.FireBullet(origin, direction, stats, weaponId, shot.DamageScale, cmd.Tick, _reports);
-                        foreach (HitReport report in _reports) HitConfirmed?.Invoke(report);
+                        bool struckBody = end.Hitbox != null;
+                        bool byGeometry = _reports.Count == 0 && SecondOpinion(origin, direction, stats, weaponId, shot.DamageScale, cmd.Tick, ref end);
+                        struckBody |= byGeometry;
+                        foreach (HitReport report in _reports) Raise(HitConfirmed, report, "HitConfirmed");
                         bulletLanded |= _reports.Count > 0;
 
-                        ShotFired?.Invoke(new ShotPresentation
+                        if (_reports.Count > 0) Note(true, _reports[0].Zone, _reports[0].Damage, _reports[0].Distance, byGeometry, null);
+                        else Note(false, HitZone.Body, 0f, end.Distance, false, end.HasHit ? end.Collider : null);
+
+                        Raise(ShotFired, new ShotPresentation
                         {
                             Origin = origin,
                             End = end.Point,
                             Normal = end.Normal,
-                            HitWorld = end.HasHit && end.Hitbox == null,
+                            HitWorld = end.HasHit && !struckBody,
                             HitTarget = _reports.Count > 0,
                             Build = build,
-                        });
+                        }, "ShotFired");
                         break;
                     }
 
                     case ShotKind.Projectile:
                     {
                         int id = _projectiles.Spawn(origin, direction, stats, weaponId, shot.DamageScale);
-                        ProjectileLaunched?.Invoke(id, stats, build.Weapon.view.bodyColor, build.Weapon.view.accentColor);
+                        Raise(ProjectileLaunched, id, stats, build.Weapon.view.bodyColor, build.Weapon.view.accentColor, "ProjectileLaunched");
                         break;
                     }
 
@@ -457,8 +547,8 @@ namespace Recoil.Client.Player
                     {
                         if (CombatResolver.MeleeStrike(origin, direction, stats, weaponId, cmd.Tick, out HitReport report))
                         {
-                            HitConfirmed?.Invoke(report);
-                            ShotLanded?.Invoke();
+                            Raise(HitConfirmed, report, "HitConfirmed");
+                            Raise(ShotLanded, "ShotLanded");
                         }
                         break;
                     }
@@ -466,7 +556,76 @@ namespace Recoil.Client.Player
             }
 
             // A shotgun blast counts as one shot landing, however many pellets connected.
-            if (bulletLanded) ShotLanded?.Invoke();
+            if (bulletLanded) Raise(ShotLanded, "ShotLanded");
+        }
+
+        /// <summary>
+        /// Offline. The physics engine found nobody on a bullet's path; before calling it a
+        /// miss, ask plain geometry (<see cref="ShapeTargets"/>). It looks only as far as the
+        /// bullet got, so a wall still shields whoever is behind it. If the bullet did cross a
+        /// body it is counted here, and <paramref name="end"/> moved to where it struck.
+        /// </summary>
+        bool SecondOpinion(Vector3 origin, Vector3 direction, WeaponStats stats, string weaponId, float damageScale, int tick, ref HitscanHit end)
+        {
+            float reach = end.HasHit ? end.Distance : stats.maxRange;
+            if (!ShapeTargets.Trace(origin, direction, reach, null, out IShapeTarget target, out float distance, out HitZone zone)) return false;
+
+            Vector3 point = origin + direction * distance;
+            if (!CombatResolver.ApplyDirectHit(stats, weaponId, target.Owner, zone, point, direction, distance, damageScale, tick, out HitReport report))
+                return false;
+
+            WarnSecondOpinion(end);
+            _reports.Add(report);
+            end.HasHit = true;
+            end.Distance = distance;
+            end.Point = point;
+            end.Normal = -direction;
+            return true;
+        }
+
+        /// <summary>Says once, in the log, that the physics engine and plain geometry disagreed about a bullet.</summary>
+        void WarnSecondOpinion(in HitscanHit physics)
+        {
+            if (_warnedSecondOpinion) return;
+            _warnedSecondOpinion = true;
+            string met = !physics.HasHit ? "nothing"
+                : physics.Collider == null ? "something" : "'" + physics.Collider.name + "' on layer " + physics.Collider.gameObject.layer;
+            Debug.LogWarning("Recoil: a bullet crossed a body that the physics engine did not report (its trace met " + met +
+                             "). The hit was counted by geometry instead, and will be from now on. Shot mask " + GameLayers.ShotMask + ".", this);
+        }
+
+        // What the last bullet did, kept as plain values and put into words only when asked for.
+        bool _noteHit, _noteGeometry;
+        HitZone _noteZone;
+        float _noteDamage, _noteDistance;
+        Collider _noteStop;
+        int _noteCount;
+
+        void Note(bool hit, HitZone zone, float damage, float distance, bool geometry, Collider stop)
+        {
+            _noteHit = hit;
+            _noteZone = zone;
+            _noteDamage = damage;
+            _noteDistance = distance;
+            _noteGeometry = geometry;
+            _noteStop = stop;
+            _noteCount++;
+        }
+
+        /// <summary>What our last bullet did, in a few words. For the debug line on the HUD.</summary>
+        public string DescribeLastShot()
+        {
+            if (_noteCount == 0) return "no bullets fired yet";
+            string text = "bullet " + _noteCount + ": ";
+            if (_noteHit)
+            {
+                text += "hit " + _noteZone.ToString().ToLowerInvariant() + " at " + _noteDistance.ToString("0.0") + " m";
+                if (_noteDamage > 0f) text += " for " + _noteDamage.ToString("0");
+                if (_noteGeometry) text += " (by geometry)";
+            }
+            else if (_noteStop != null) text += "stopped by '" + _noteStop.name + "' at " + _noteDistance.ToString("0.0") + " m";
+            else text += "met nothing";
+            return text;
         }
 
         /// <summary>A utility item leaves the hand: thrown where the player is looking, lobbed slightly upward.</summary>
@@ -474,13 +633,13 @@ namespace Recoil.Client.Player
         {
             Vector3 direction = AimMath.Direction(cmd.Yaw, cmd.Pitch - item.tossPitch);
             int id = _projectiles.Spawn(_currentMotor.EyePosition, direction, item.projectile, item.utilityId, 1f);
-            ProjectileLaunched?.Invoke(id, item.projectile, item.color, item.color);
-            UtilityThrown?.Invoke(item);
+            Raise(ProjectileLaunched, id, item.projectile, item.color, item.color, "ProjectileLaunched");
+            Raise(UtilityThrown, item, "UtilityThrown");
         }
 
         void OnProjectileEvent(ProjectileEvent projectileEvent)
         {
-            if (projectileEvent.HitTarget) ShotLanded?.Invoke();
+            if (projectileEvent.HitTarget) Raise(ShotLanded, "ShotLanded");
         }
 
         // ------------------------------------------------------------------ presentation
@@ -497,6 +656,12 @@ namespace Recoil.Client.Player
             // from this frame's mouse input so aiming has no added latency.
             float yaw = _input.Yaw, pitch = _input.Pitch;
             Vector2 recoil = Vector2.Lerp(_previousRecoil, _currentRecoil, alpha);
+            // Unity refuses a rotation that is not a number, which would leave the view stuck.
+            if (float.IsNaN(recoil.x) || float.IsNaN(recoil.y) || float.IsInfinity(recoil.x) || float.IsInfinity(recoil.y))
+            {
+                recoil = Vector2.zero;
+                _previousRecoil = _currentRecoil = Vector2.zero;
+            }
             Vector3 feet = Vector3.Lerp(a.Position, b.Position, alpha) + _viewError;
             Vector3 eye = feet + Vector3.up * Mathf.Lerp(a.EyeHeight, b.EyeHeight, alpha);
 

@@ -11,7 +11,7 @@ namespace Recoil.Client.Weapons
 {
     /// <summary>
     /// Everything a fight looks like apart from the bodies: muzzle flashes (ours and other
-    /// players'), tracers, bullet holes with sparks and dust, bursts of energy where a shot
+    /// players'), bullets in flight, bullet holes with sparks and dust, bursts of energy where a shot
     /// lands on a player, projectiles and their trails, explosions with fire, smoke, a shock
     /// ring and a scorch mark, and the flashes when a player is taken out or arrives.
     ///
@@ -23,15 +23,25 @@ namespace Recoil.Client.Weapons
         const int TracerCount = 40;
         const int ProjectileCount = 32;
         const int WorldFlashCount = 10;
-        const float TracerSpeed = 340f;
-        const float TracerLength = 6f;
-        const float MinTracerDistance = 2.5f;
+        /// <summary>
+        /// How fast a bullet is drawn flying, m/s. Slower than a real one, on purpose: fast
+        /// enough that it still lands almost as the trigger is pulled, slow enough to be seen
+        /// leaving the gun and crossing the range.
+        /// </summary>
+        const float BulletSpeed = 360f;
+        /// <summary>The glowing streak a bullet drags behind it, in metres.</summary>
+        const float StreakLength = 4.5f;
+        /// <summary>Closer than this there is nothing to draw: the bullet is there already.</summary>
+        const float MinTracerDistance = 1.5f;
         const float FlashTime = 0.04f;
         /// <summary>How long a projectile takes to drift from the muzzle onto its true path.</summary>
         const float MuzzleBlendTime = 0.15f;
 
         // Colours stay at or below 1: the additive material lifts them into glowing (EffectResources.Glow).
         static readonly Color BulletTracer = new Color(1f, 0.82f, 0.5f);
+        /// <summary>The round itself: solid and bright, so it shows against a pale wall or the sky, where a glow alone washes out.</summary>
+        static readonly Color BulletBody = new Color(1f, 0.9f, 0.55f);
+        static readonly Vector3 BulletSize = new Vector3(0.045f, 0.045f, 0.24f);
         static readonly Color FlashColor = new Color(1f, 0.72f, 0.35f);
         static readonly Color SparkColor = new Color(1f, 0.72f, 0.38f);
         static readonly Color DustColor = new Color(0.62f, 0.6f, 0.56f, 0.55f);
@@ -39,12 +49,18 @@ namespace Recoil.Client.Weapons
         /// <summary>An explosion went off: where, and how big. The camera shakes if we are near.</summary>
         public event Action<Vector3, float> Exploded;
 
+        /// <summary>One bullet in flight: a solid round at the front, a streak behind it, and what it does on arrival.</summary>
         struct Tracer
         {
             public LineRenderer Line;
+            public Transform Round;
+            public MeshRenderer RoundRenderer;
             public Vector3 From, Direction;
             public float Length, Travelled;
             public bool Active;
+            /// <summary>It ends on level geometry: sparks, dust and a hole when it gets there.</summary>
+            public bool Impact;
+            public Vector3 ImpactPoint, ImpactNormal, ImpactTravel;
         }
 
         struct ProjectileVisual
@@ -121,14 +137,21 @@ namespace Recoil.Client.Weapons
                 var line = go.AddComponent<LineRenderer>();
                 line.useWorldSpace = true;
                 line.positionCount = 2;
-                line.startWidth = 0.014f;
-                line.endWidth = 0.032f;
+                // Thin at the tail, wide at the round.
+                line.startWidth = 0.012f;
+                line.endWidth = 0.075f;
                 line.textureMode = LineTextureMode.Stretch;
                 line.sharedMaterial = _tracerMaterial;
                 line.shadowCastingMode = ShadowCastingMode.Off;
                 line.receiveShadows = false;
                 line.enabled = false;
                 _tracers[i].Line = line;
+
+                GameObject round = GreyboxKit.Visual(pool, "Bullet", PrimitiveType.Sphere,
+                    Vector3.zero, BulletSize, GreyboxMaterials.Unlit(BulletBody), castShadows: false);
+                round.SetActive(false);
+                _tracers[i].Round = round.transform;
+                _tracers[i].RoundRenderer = round.GetComponent<MeshRenderer>();
             }
 
             for (int i = 0; i < ProjectileCount; i++)
@@ -227,34 +250,55 @@ namespace Recoil.Client.Weapons
             _lights.Flash(muzzle, LightColor(build), 2.5f, 6f, 0.06f);
         }
 
-        /// <summary>A tracer and impact for one bullet or pellet.</summary>
+        /// <summary>One bullet or pellet, seen leaving our gun and flying to where it lands.</summary>
         public void PlayTracer(in ShotPresentation shot) => PlayTracer(shot, _viewModel.Muzzle.position);
 
-        /// <summary>A tracer drawn from somewhere other than our own muzzle: another player's shot.</summary>
+        /// <summary>
+        /// Draws a bullet in flight: a bright round with a streak behind it, from
+        /// <paramref name="from"/> (our muzzle, or another player's) to where the shot ended.
+        /// If it ends on the level, the sparks and the hole appear when the round gets there.
+        ///
+        /// Only the picture travels. What the shot hit was settled the moment it was fired,
+        /// so nobody has to lead a target and every player sees the same result.
+        /// </summary>
         public void PlayTracer(in ShotPresentation shot, Vector3 from)
         {
-            // The tracer leaves the visible muzzle but ends where the bullet actually went.
+            // The round leaves the visible muzzle but ends where the shot actually went.
             Vector3 toEnd = shot.End - from;
             float distance = toEnd.magnitude;
-            if (distance > MinTracerDistance)
+            if (!(distance > MinTracerDistance))
             {
-                ref Tracer tracer = ref _tracers[_nextTracer];
-                _nextTracer = (_nextTracer + 1) % TracerCount;
-                tracer.From = from;
-                tracer.Direction = toEnd / distance;
-                tracer.Length = distance;
-                tracer.Travelled = 0f;
-                tracer.Active = true;
-                bool energy = shot.Build != null && shot.Build.Weapon.audio.kind == ShotSoundKind.Energy;
-                tracer.Line.sharedMaterial = energy ? _energyTracerMaterial : _tracerMaterial;
-                Color color = energy ? Lighten(shot.Build.Weapon.view.accentColor, 0.3f) : BulletTracer;
-                tracer.Line.startColor = new Color(color.r, color.g, color.b, 0.15f);
-                tracer.Line.endColor = new Color(color.r, color.g, color.b, 1f);
-                tracer.Line.enabled = true;
-                UpdateTracer(ref tracer, 0f);
+                // Point blank (or a shot with nowhere to go): no flight to show.
+                if (shot.HitWorld) PlayImpact(shot.End, shot.Normal, shot.End - shot.Origin);
+                return;
             }
 
-            if (shot.HitWorld) PlayImpact(shot.End, shot.Normal, shot.End - shot.Origin);
+            ref Tracer tracer = ref _tracers[_nextTracer];
+            _nextTracer = (_nextTracer + 1) % TracerCount;
+            // Taking over a round still in the air: let it land first, so no impact goes missing.
+            if (tracer.Active && tracer.Impact) PlayImpact(tracer.ImpactPoint, tracer.ImpactNormal, tracer.ImpactTravel);
+
+            tracer.From = from;
+            tracer.Direction = toEnd / distance;
+            tracer.Length = distance;
+            tracer.Travelled = 0f;
+            tracer.Active = true;
+            tracer.Impact = shot.HitWorld;
+            tracer.ImpactPoint = shot.End;
+            tracer.ImpactNormal = shot.Normal;
+            tracer.ImpactTravel = shot.End - shot.Origin;
+
+            bool energy = shot.Build != null && shot.Build.Weapon.audio.kind == ShotSoundKind.Energy;
+            tracer.Line.sharedMaterial = energy ? _energyTracerMaterial : _tracerMaterial;
+            Color color = energy ? Lighten(shot.Build.Weapon.view.accentColor, 0.3f) : BulletTracer;
+            tracer.Line.startColor = new Color(color.r, color.g, color.b, 0f);
+            tracer.Line.endColor = new Color(color.r, color.g, color.b, 1f);
+            tracer.Line.enabled = true;
+
+            tracer.RoundRenderer.sharedMaterial = GreyboxMaterials.Unlit(energy ? Lighten(shot.Build.Weapon.view.accentColor, 0.45f) : BulletBody);
+            tracer.Round.rotation = Quaternion.LookRotation(tracer.Direction);
+            tracer.Round.gameObject.SetActive(true);
+            UpdateTracer(ref tracer, 0f);
         }
 
         /// <summary>A bullet hitting level geometry: a hole, a few sparks, a puff of dust.</summary>
@@ -512,6 +556,14 @@ namespace Recoil.Client.Weapons
         /// <summary>Takes down everything still showing, for a new round.</summary>
         public void ClearWorld()
         {
+            for (int i = 0; i < TracerCount; i++)
+            {
+                ref Tracer tracer = ref _tracers[i];
+                tracer.Active = false;
+                tracer.Impact = false;
+                tracer.Line.enabled = false;
+                tracer.Round.gameObject.SetActive(false);
+            }
             _holes.HideAll();
             _scorches.HideAll();
             _rings.HideAll();
@@ -570,10 +622,23 @@ namespace Recoil.Client.Weapons
             trail.time = time;
         }
 
-        static void UpdateTracer(ref Tracer tracer, float dt)
+        void UpdateTracer(ref Tracer tracer, float dt)
         {
-            tracer.Travelled += TracerSpeed * dt;
-            float tail = Mathf.Max(0f, tracer.Travelled - TracerLength);
+            tracer.Travelled += BulletSpeed * dt;
+
+            // The round has arrived: it is gone, and whatever it struck shows it.
+            if (tracer.Travelled >= tracer.Length)
+            {
+                if (tracer.Round.gameObject.activeSelf) tracer.Round.gameObject.SetActive(false);
+                if (tracer.Impact)
+                {
+                    tracer.Impact = false;
+                    PlayImpact(tracer.ImpactPoint, tracer.ImpactNormal, tracer.ImpactTravel);
+                }
+            }
+
+            // The streak catches up with where the round stopped, then it is over.
+            float tail = Mathf.Max(0f, tracer.Travelled - StreakLength);
             if (tail >= tracer.Length)
             {
                 tracer.Active = false;
@@ -582,8 +647,10 @@ namespace Recoil.Client.Weapons
             }
 
             float head = Mathf.Min(tracer.Travelled, tracer.Length);
+            Vector3 front = tracer.From + tracer.Direction * head;
             tracer.Line.SetPosition(0, tracer.From + tracer.Direction * tail);
-            tracer.Line.SetPosition(1, tracer.From + tracer.Direction * head);
+            tracer.Line.SetPosition(1, front);
+            if (tracer.Travelled < tracer.Length) tracer.Round.position = front;
         }
 
         static Gradient SmokeFade()

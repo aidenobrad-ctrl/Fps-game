@@ -1,36 +1,57 @@
-using System.Collections.Generic;
 using UnityEngine;
-using Recoil.Shared.Match;
 using Recoil.Client.Visuals;
 using Recoil.Shared.Combat;
+using Recoil.Shared.Cosmetics;
+using Recoil.Shared.Match;
+using Recoil.Shared.Movement;
 using Recoil.Shared.Simulation;
 
 namespace Recoil.Client.FiringRange
 {
     /// <summary>
-    /// A practice target shaped like a player, with head, body and limb hitboxes. It takes
-    /// damage like a real opponent, drops when its health runs out and stands back up a
-    /// moment later.
+    /// A practice target: the same soldier a player is, in a bright training uniform, with a
+    /// player's hitboxes (head, body, limbs). It takes damage like a real opponent, flashes
+    /// when hit, drops when its health runs out and stands back up a moment later. One that
+    /// is being moved along a line walks as it goes.
+    ///
+    /// The model is only looked at. What a bullet meets is the standard set of hitboxes
+    /// (<see cref="UnityCharacterBody"/>), so practice here carries over to a match.
     /// </summary>
-    public sealed class TargetDummy : MonoBehaviour
+    public sealed class TargetDummy : MonoBehaviour, IShapeTarget
     {
-        static readonly Color BodyColor = new Color(0.92f, 0.38f, 0.24f);
-        static readonly Color HeadColor = new Color(1f, 0.72f, 0.3f);
-        static readonly Color FlashColor = new Color(1f, 1f, 1f);
-        const float FlashTime = 0.1f;
+        const float FlashTime = 0.12f;
         const float BarWidth = 0.6f;
+        /// <summary>Targets face back up the range, towards the firing line.</summary>
+        const float Facing = 180f;
+
+        // So a row of targets is not a row of twins.
+        static readonly string[] Headgear = { "none", "cap", "helmet", "beanie", "headset", "bandana" };
+        static readonly string[] SkinTones = { "medium", "fair", "tan", "light", "brown", "olive", "deep", "porcelain" };
+        static MovementConfig _shape;
+        static int _made;
 
         public float respawnDelay = 1.5f;
 
-        readonly List<Collider> _colliders = new List<Collider>();
-        readonly List<Renderer> _renderers = new List<Renderer>();
+        UnityCharacterBody _body;
+        CharacterLookView _look;
         Health _health;
-        Material _bodyMaterial, _headMaterial, _barMaterial;
+        Collider _blocker;
+        Material _barMaterial;
         Transform _healthBar;
+        Renderer _barRenderer;
+        float _standEyeHeight;
         float _flash;
         float _respawnTimer;
+        bool _present = true;
+        Vector3 _lastPosition, _velocity;
 
         public Health Health => _health;
+
+        // For the check of bullets by plain geometry (ShapeTargets).
+        IDamageable IShapeTarget.Owner => _health;
+        bool IShapeTarget.Hittable => _present;
+        BodyPose IShapeTarget.Pose => new BodyPose { Position = transform.position, Yaw = transform.eulerAngles.y + Facing, EyeHeight = _standEyeHeight };
+        float IShapeTarget.StandEyeHeight => _standEyeHeight;
 
         public static TargetDummy Create(Transform parent, string name, Vector3 position, float maxHealth = 100f)
         {
@@ -61,48 +82,40 @@ namespace Recoil.Client.FiringRange
             blocker.radius = 0.3f;
             blocker.height = 1.8f;
             blocker.center = new Vector3(0f, 0.9f, 0f);
-            _colliders.Add(blocker);
+            _blocker = blocker;
 
-            // Each dummy owns its materials so a hit flash only lights up the one that was hit.
-            _bodyMaterial = new Material(GreyboxMaterials.Flat(BodyColor));
-            _headMaterial = new Material(GreyboxMaterials.Flat(HeadColor));
+            // A player's hitboxes, standing, and the soldier drawn over them.
+            if (_shape == null) _shape = ScriptableObject.CreateInstance<MovementConfig>();
+            _standEyeHeight = _shape.standEyeHeight;
+            _body = new UnityCharacterBody(name, _shape, withController: false, server: false);
+            _body.Root.SetParent(transform, false);
+            _body.Root.localPosition = Vector3.zero;
+            _body.Root.localRotation = Quaternion.Euler(0f, Facing, 0f);
+            _body.SetOwner(_health);
+
+            _look = new CharacterLookView(_body);
+            _look.Apply(new CharacterLook
+            {
+                // Training orange over dark gear: nobody mistakes one for a player.
+                suitColor = "#D9662B",
+                trimColor = "#2B2E34",
+                pattern = "plain",
+                headgear = Headgear[_made % Headgear.Length],
+                skin = SkinTones[_made % SkinTones.Length],
+                back = "none",
+            });
+            _look.SetSide(true, friendly: false);
+            _made++;
+
             _barMaterial = new Material(GreyboxMaterials.Unlit(Color.green));
-
-            // The same shapes as a player's body, so practice here carries over to a match.
-            foreach (BodyShapes.Part part in BodyShapes.Parts)
-                BodyPart(part.Name, part.Round ? PrimitiveType.Sphere : PrimitiveType.Cube, part.Zone, part.Offset, part.Size,
-                    part.Zone == HitZone.Head ? _headMaterial : _bodyMaterial);
-
             GameObject bar = GreyboxKit.Visual(transform, "HealthBar", PrimitiveType.Cube,
-                new Vector3(0f, 1.95f, 0f), new Vector3(BarWidth, 0.05f, 0.03f), _barMaterial, castShadows: false);
+                new Vector3(0f, 2.02f, 0f), new Vector3(BarWidth, 0.05f, 0.03f), _barMaterial, castShadows: false);
             _healthBar = bar.transform;
-            _renderers.Add(bar.GetComponent<Renderer>());
+            _barRenderer = bar.GetComponent<Renderer>();
             RefreshHealthBar();
-        }
 
-        void BodyPart(string partName, PrimitiveType shape, HitZone zone, Vector3 position, Vector3 scale, Material material)
-        {
-            GameObject part = GreyboxKit.Visual(transform, partName, shape, position, scale, material);
-            part.layer = GameLayers.Hitbox;
-
-            // Unit-sized colliders; the part's scale gives them their real size.
-            Collider collider;
-            if (shape == PrimitiveType.Sphere)
-            {
-                var sphere = part.AddComponent<SphereCollider>();
-                sphere.radius = 0.5f;
-                collider = sphere;
-            }
-            else
-            {
-                var box = part.AddComponent<BoxCollider>();
-                box.size = Vector3.one;
-                collider = box;
-            }
-
-            part.AddComponent<Hitbox>().zone = zone;
-            _colliders.Add(collider);
-            _renderers.Add(part.GetComponent<Renderer>());
+            _lastPosition = transform.position;
+            ShapeTargets.Add(this);
         }
 
         void OnDamaged(DamageInfo info, DamageResult result)
@@ -119,17 +132,39 @@ namespace Recoil.Client.FiringRange
 
         void Update()
         {
+            float dt = Time.deltaTime;
+
+            // How fast it is being moved, smoothed, so the legs walk at the pace it travels.
+            if (dt > 0f)
+            {
+                Vector3 moved = (transform.position - _lastPosition) / dt;
+                _velocity = Vector3.Lerp(_velocity, moved, 1f - Mathf.Exp(-12f * dt));
+            }
+            _lastPosition = transform.position;
+
+            if (_present)
+            {
+                _look.Animate(new SoldierMotion
+                {
+                    Velocity = _velocity,
+                    Yaw = transform.eulerAngles.y + Facing,
+                    Pitch = 0f,
+                    EyeHeight = _standEyeHeight,
+                    StandEyeHeight = _standEyeHeight,
+                    Stance = Stance.Standing,
+                    Grounded = true,
+                }, dt);
+            }
+
             if (_flash > 0f)
             {
-                _flash -= Time.deltaTime;
-                float t = Mathf.Clamp01(_flash / FlashTime);
-                GreyboxMaterials.SetColor(_bodyMaterial, Color.Lerp(BodyColor, FlashColor, t));
-                GreyboxMaterials.SetColor(_headMaterial, Color.Lerp(HeadColor, FlashColor, t));
+                _flash -= dt;
+                _look.Flash(Mathf.Clamp01(_flash / FlashTime));
             }
 
             if (_respawnTimer > 0f)
             {
-                _respawnTimer -= Time.deltaTime;
+                _respawnTimer -= dt;
                 if (_respawnTimer <= 0f)
                 {
                     _health.Revive();
@@ -141,8 +176,16 @@ namespace Recoil.Client.FiringRange
 
         void SetPresent(bool present)
         {
-            foreach (Collider collider in _colliders) collider.enabled = present;
-            foreach (Renderer renderer in _renderers) renderer.enabled = present;
+            _present = present;
+            _blocker.enabled = present;
+            _body.SetHittable(present);
+            _body.Root.gameObject.SetActive(present);
+            _barRenderer.enabled = present;
+            if (present)
+            {
+                _flash = 0f;
+                _look.Flash(0f);
+            }
         }
 
         void RefreshHealthBar()
@@ -154,8 +197,9 @@ namespace Recoil.Client.FiringRange
 
         void OnDestroy()
         {
-            if (_bodyMaterial != null) Destroy(_bodyMaterial);
-            if (_headMaterial != null) Destroy(_headMaterial);
+            ShapeTargets.Remove(this);
+            // The body's root is our child and goes with us; the materials are ours to clean up.
+            _look?.Destroy();
             if (_barMaterial != null) Destroy(_barMaterial);
         }
     }

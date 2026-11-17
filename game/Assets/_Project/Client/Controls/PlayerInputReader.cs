@@ -85,7 +85,14 @@ namespace Recoil.Client.Controls
         /// </summary>
         public void SampleFrame(float lookScale)
         {
-            Vector2 delta = _look.ReadValue<Vector2>() * (DegreesPerCount * lookScale);
+            // A scale that is zero, negative or not a number would leave the view stuck.
+            if (!(lookScale > 0f) || float.IsInfinity(lookScale)) lookScale = 1f;
+
+            Vector2 delta = ReadLook() * (DegreesPerCount * lookScale);
+            if (float.IsNaN(delta.x) || float.IsInfinity(delta.x)) delta.x = 0f;
+            if (float.IsNaN(delta.y) || float.IsInfinity(delta.y)) delta.y = 0f;
+            if (float.IsNaN(Yaw)) Yaw = 0f;
+            if (float.IsNaN(Pitch)) Pitch = 0f;
             Yaw = Mathf.Repeat(Yaw + delta.x + 180f, 360f) - 180f;
             Pitch = Mathf.Clamp(Pitch - delta.y, -MaxPitch, MaxPitch);
 
@@ -114,6 +121,18 @@ namespace Recoil.Client.Controls
             float wheel = _scroll.ReadValue<Vector2>().y;
             if (wheel > 0.01f) _scrollSteps--;
             else if (wheel < -0.01f) _scrollSteps++;
+        }
+
+        /// <summary>
+        /// How far the mouse moved this frame, in counts. Read straight from the mouse rather
+        /// than through the Look action: an action only reports while it counts as "in
+        /// progress", and turning the view must never wait on that, whatever buttons are held.
+        /// The action is the fallback when there is no mouse.
+        /// </summary>
+        Vector2 ReadLook()
+        {
+            Mouse mouse = Mouse.current;
+            return mouse != null ? mouse.delta.ReadValue() : _look.ReadValue<Vector2>();
         }
 
         void Latch(InputAction action, InputButtons button)

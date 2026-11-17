@@ -106,7 +106,7 @@ game/
     │   ├── UI/               HUD, pause menu and loadout screen logic
     │   ├── Settings/         Player settings
     │   ├── Visuals/          Prototype geometry and materials
-    │   └── FiringRange/      The range: layout, targets, stats
+    │   └── FiringRange/      The range: layout, targets (the soldier model in training orange over a player's hitboxes), stats
     ├── Server/             The authority: game server, players, lag compensation
     │   ├── Modes/            The rules of each game mode
     │   ├── Bots/             Bot behaviour and navigation
@@ -331,6 +331,14 @@ On top of the rewind, the shooter's game reports which players its bullets were 
 
 The physics hitboxes, the firing range's dummies and this check are all built from one table in `BodyShapes`, a little larger than the bare body so a shot on a helmet or a shoulder pad counts.
 
+### A second opinion on every bullet
+
+The client traces its own bullets with the physics engine (`Hitscan`). When that trace reports nobody, the same question is put to plain geometry before the shot is called a miss: `ShapeTargets` holds every body our bullets can meet on this client (the range's targets, other players as drawn), each as a pose and the `BodyShapes` table, and is searched only as far as the bullet got, so a wall still shields whoever is behind it. On the range a body found that way takes the damage; in a match it becomes a hit claim like any other. The two agree whenever the physics engine sees the hitboxes, so normally this adds nothing; it is there so that a layer, a collider or a physics setting gone wrong costs a warning in the log (once) instead of every shot in the game.
+
+Nothing that listens to the local player may stop the simulation either. `LocalPlayerController` raises every event (shot fired, hit confirmed, reload, landing) through a guard: a listener that throws (an effect, a sound, the HUD) is logged and skipped, the tick completes, and the view is drawn. Without that, one broken effect on the fire event would leave the weapon's cooldown unset and the frame undrawn, which shows up as shots that do nothing and a view that will not turn. The view's angles are checked for not-a-number before they reach the camera, and mouse movement is read straight from the mouse (`Mouse.current.delta`) rather than through an action.
+
+The firing range starts with a self-check: one test bullet, traced both ways at the nearest target, with the result in the log. **F3** shows what the last bullet did and the last fault, if any.
+
 Projectiles are not rewound. They are launched when the server runs the command, fly in server time, and everyone is shown the same flight.
 
 ### What the server refuses
@@ -467,7 +475,7 @@ Effects are drawn with one small shader of the game's own (`Resources/Shaders/Re
 | --- | --- |
 | `FxParticles` | One particle system per kind (sparks, dust, smoke, fire, energy), told where to put particles with `Emit`; one system serves every effect of its kind at once |
 | `FxQuads`, `FxLights` | Pools of flat squares (bullet holes, scorch marks, shock rings) and point lights (flashes), lent out in turn |
-| `WeaponFx` | Muzzle flashes (a mesh of crossed flames and a star), tracers, impacts, energy bursts on players, the body coming apart on a kill, the arrival shimmer, projectile trails, explosions. Raises `Exploded` for the camera shake |
+| `WeaponFx` | Muzzle flashes (a mesh of crossed flames and a star), bullets in flight (a solid bright round with a streak, drawn flying at 360 m/s from the muzzle to where the shot ended; the sparks and the hole appear when it arrives; only the picture travels, the hit was settled when the trigger was pulled), impacts, energy bursts on players, the body coming apart on a kill, the arrival shimmer, projectile trails, explosions. Raises `Exploded` for the camera shake |
 | `ScreenEffects` | A global post-processing volume made in code: bloom, tonemapping, colour, vignette, colour fringing; red edges when hurt or low, grey when out |
 | `GraphicsSetup` | Video settings into the engine: quality presets on the pipeline asset (put back as they were when play stops in the Editor), camera anti-aliasing, frame cap, VSync, window mode |
 | `FirstPersonCamera` | Explosion shake and the flinch when hit; only the picture moves, never the aim |
