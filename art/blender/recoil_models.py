@@ -9,7 +9,7 @@ Unity's left-handed space. Each model is split into zones (material slots) that 
 colours at run time: a player's suit, trim and visor colours, team colours on the shoulders,
 and a weapon skin's colours on a gun.
 
-Two files come out:
+These files come out:
 
   Soldier.bytes   the soldier, skinned to a fifteen-bone skeleton: a realistic body and face
                   (art/blender/human.py, from the CC0 MakeHuman base mesh) in a fitted
@@ -21,9 +21,11 @@ Two files come out:
                   suppressor, stock, grip, magazines, sights, launcher and blade parts), each
                   modelled to fill a unit box so the builder can stretch it to any weapon's
                   proportions.
-  Projectiles.bytes  what flies: a rocket, grenades, arrows and bolts, a throwing knife, a
-                  disc, a flare, plasma, a paintball and a pellet, at the size they are drawn,
-                  pointing along +z (the way they travel).
+  Guns.bytes      every weapon, modelled whole at its real size, with the named points that
+                  say how it is held and fitted (guns.py), and the first-person hands that hold
+                  them (hands.py);
+  Projectiles.bytes  what flies: the RPG-7's grenade, a 40mm grenade, the M67, RGN, MK3A2 and
+                  C4, at their real size, pointing along +z (the way they travel).
 
 The format is described in Client/Visuals/ModelLibrary.cs, which reads it.
 """
@@ -612,12 +614,20 @@ def pose_bones(motion, gun_profile=None, gun_att=None):
         return world, None
 
     mount = world["Torso"] @ Matrix.Translation((0.13, 0.36, 0.05)) @ unity_euler(view_pitch * 0.6 - lean, 0, 0)
-    b, body_len = gun_profile["bulk"], gun_profile["body"]
-    rear = -(body_len * 0.5 + gun_profile["stock"])
-    gun_root = mount @ Matrix.Translation((0, 0, -rear - 0.03))
-    grip = gun_root @ Vector((0, -0.075 * b, -body_len * 0.28))
-    handguard = gun_profile["barrel"] * 0.55
-    support = gun_root @ Vector((0, 0.004 * b - 0.026 * b, body_len * 0.5 + max(handguard, 0.04) * 0.5))
+    if "points" in gun_profile:
+        # A whole weapon model: held by its own points, its butt against the shoulder.
+        pts = gun_profile["points"]
+        gun_root = mount @ Matrix.Translation((0, 0, -pts["Butt"][2] - 0.03))
+        grip = gun_root @ Vector(pts["Grip"][:3])
+        held = pts.get("Support") or pts.get("Foregrip") or pts["Grip"]
+        support = gun_root @ Vector(held[:3])
+    else:
+        b, body_len = gun_profile["bulk"], gun_profile["body"]
+        rear = -(body_len * 0.5 + gun_profile["stock"])
+        gun_root = mount @ Matrix.Translation((0, 0, -rear - 0.03))
+        grip = gun_root @ Vector((0, -0.075 * b, -body_len * 0.28))
+        handguard = gun_profile["barrel"] * 0.55
+        support = gun_root @ Vector((0, 0.004 * b - 0.026 * b, body_len * 0.5 + max(handguard, 0.04) * 0.5))
     up = (gun_root.to_3x3() @ Vector((0, 1, 0))).normalized()
     fwd = (gun_root.to_3x3() @ Vector((0, 0, 1))).normalized()
     right = (gun_root.to_3x3() @ Vector((1, 0, 0))).normalized()
@@ -679,7 +689,16 @@ def posed_soldier(pieces, gear, motion, gun=None, gun_objects=None, origin=(0, 0
     for obj, bone in worn:
         rigid = [(BONE_INDEX[bone], BONE_INDEX[bone], 0.0)] * len(obj.data.vertices)
         made.append(posed_copy(obj, bone, rigid, world, place, obj.name + "_worn" + tag))
-    if gun is not None:
+    if gun is not None and "points" in gun[0]:
+        for obj in gun[0]["objects"]:
+            if obj.name.endswith(".Mount"):
+                continue
+            g = bpy.data.objects.new(obj.name + "_held" + tag, obj.data)
+            bpy.context.scene.collection.objects.link(g)
+            g["pivot"] = [0, 0, 0]
+            g.matrix_world = place @ gun_root
+            made.append(g)
+    elif gun is not None:
         meshes = {o.name.split(".")[0]: o.data for o in gun_objects}
         for name, pos, size, rot_x in gun_layout(*gun):
             g = bpy.data.objects.new(name + "_held" + tag, meshes[name])
@@ -927,165 +946,9 @@ def vanes(part, z, length, height, thickness, zone, count=3, root_r=0.0):
 
 
 def projectile_models():
-    """
-    What flies, at the size it is drawn (a little larger than life where life would be too
-    small to see at range), pointing along +z, centred on where the simulation has it.
-    Zones: primary is the weapon's (or item's) body colour, trim its accent colour, glow a
-    bright unlit version of the accent, dark and metal the shared materials.
-    """
-    parts = []
-
-    # A rocket: an ogive warhead, a body with a band, swept fins and a burning motor.
-    p = Part("Rocket")
-    p.lathe([(-0.27, 0.0), (-0.27, 0.026), (-0.255, 0.034), (-0.24, 0.036)], "metal", 32)
-    p.lathe([(-0.24, 0.036), (-0.2, 0.04), (0.06, 0.04)], "primary", 32)
-    p.lathe([(0.06, 0.0405), (0.1, 0.0405)], "trim", 32)
-    p.lathe([(0.1, 0.04), (0.14, 0.04)] + ogive(0.14, 0.31, 0.04, 14, tip=0.004)[1:], "primary", 32)
-    p.lathe([(0.305, 0.006), (0.316, 0.0)], "metal", 16)
-    p.lathe([(-0.278, 0.0), (-0.278, 0.022), (-0.272, 0.024)], "glow", 24)
-    fins(p, -0.19, 0.11, 0.038, 0.05, 0.004, "dark", count=4, sweep=0.45)
-    p.lathe([(-0.02, 0.0405), (0.0, 0.0405)], "dark", 32)
-    parts.append(p)
-
-    # A 40 mm grenade, made big enough to follow: a rounded nose on a short case.
-    p = Part("Grenade40")
-    p.lathe([(-0.055, 0.0), (-0.055, 0.03), (-0.05, 0.036), (-0.02, 0.036)], "dark", 32)
-    p.lathe([(-0.02, 0.0375), (0.0, 0.0375)], "trim", 32)
-    p.lathe([(0.0, 0.036)] + dome(0.0, 0.07, 0.036, 10)[1:], "primary", 32)
-    p.lathe([(0.004, 0.0372), (0.012, 0.0372)], "metal", 32)
-    p.lathe([(-0.06, 0.0), (-0.06, 0.012), (-0.056, 0.014)], "glow", 16)
-    parts.append(p)
-
-    # A hand grenade: a ridged egg, the fuse on top, the spoon down its side and the ring.
-    p = Part("FragGrenade")
-    egg = [(-0.042, 0.0)] + [(-0.042 + 0.084 * t, 0.032 * math.sin(math.pi * t) ** 0.8 * (1 - 0.12 * t)) for t in [i / 20 for i in range(1, 20)]] + [(0.042, 0.0)]
-    p.lathe(egg, "primary", 36)
-    for i in range(1, 6):
-        t = i / 6
-        z = -0.042 + 0.084 * t
-        r = 0.032 * math.sin(math.pi * t) ** 0.8 * (1 - 0.12 * t)
-        p.lathe([(z - 0.0018, r + 0.0006), (z + 0.0018, r + 0.0006)], "dark", 36)
-    p.lathe([(0.04, 0.0), (0.04, 0.012), (0.055, 0.012), (0.058, 0.009), (0.058, 0.0)], "metal", 20)
-    p.box((0.0, 0.016, 0.03), (0.008, 0.004, 0.07), "metal", bevel=0.001, rot=(-12, 0, 0))
-    p.ring((0.0, -0.013, 0.058), (1, 0, 0), 0.009, 0.0065, 0.002, "metal", 20)
-    parts.append(p)
-
-    # An impact grenade: a squat can with a domed striker and a glowing band.
-    p = Part("ImpactGrenade")
-    p.lathe([(-0.045, 0.0), (-0.045, 0.026), (-0.04, 0.03), (0.02, 0.03)], "primary", 32)
-    p.lathe([(0.0, 0.0306), (0.01, 0.0306)], "glow", 32)
-    p.lathe([(0.02, 0.03)] + dome(0.02, 0.05, 0.03, 8)[1:], "dark", 32)
-    p.lathe([(0.046, 0.008), (0.055, 0.006), (0.056, 0.0)], "metal", 16)
-    parts.append(p)
-
-    # A sticky grenade: a ball in a tacky shell, studded, with a glowing seam.
-    p = Part("StickyGrenade")
-    p.sphere((0, 0, 0), 0.035, "primary", u=32, v=18)
-    p.lathe([(-0.003, 0.0362), (0.003, 0.0362)], "glow", 32)
-    for i in range(14):
-        a = i * 2.39996
-        y = 1 - 2 * (i + 0.5) / 14
-        rr = math.sqrt(max(0.0, 1 - y * y))
-        d = Vector((math.cos(a) * rr, y, math.sin(a) * rr))
-        p.sphere(tuple(d * 0.035), 0.007, "dark", u=10, v=6)
-    parts.append(p)
-
-    # A shock charge: a puck with prongs and a glowing coil.
-    p = Part("ShockCharge")
-    p.lathe([(-0.018, 0.0), (-0.018, 0.04), (-0.012, 0.046), (0.012, 0.046), (0.018, 0.04), (0.018, 0.0)], "primary", 36)
-    p.ring((0, 0, 0), (0, 0, 1), 0.049, 0.043, 0.012, "glow", 36)
-    for k in range(3):
-        a = math.radians(90 + k * 120)
-        base = Vector((math.cos(a) * 0.026, math.sin(a) * 0.026, 0.018))
-        p.cylinder(base, base + Vector((0, 0, 0.018)), 0.004, 0.0025, "metal", segments=10)
-        p.sphere(tuple(base + Vector((0, 0, 0.02))), 0.004, "glow", u=10, v=6)
-    parts.append(p)
-
-    # A ricochet disc: thin, bevelled, a glowing rim and a hub. It flies flat.
-    p = Part("Disc")
-    p.lathe([(-0.006, 0.0), (-0.006, 0.05), (-0.002, 0.07), (0.002, 0.07), (0.006, 0.05), (0.006, 0.0)], "primary", 48)
-    p.ring((0, 0, 0), (0, 0, 1), 0.073, 0.068, 0.004, "glow", 48)
-    p.lathe([(-0.0085, 0.0), (-0.0085, 0.016), (0.0085, 0.016), (0.0085, 0.0)], "dark", 24)
-    for k in range(6):
-        a = math.radians(k * 60)
-        p.box((math.cos(a) * 0.036, math.sin(a) * 0.036, 0.0), (0.012, 0.012, 0.0136), "trim", bevel=0.002, rot=(0, 0, k * 60))
-    # Lie it flat: the disc's face up, rim leading.
-    for v in p.bm.verts:
-        v.co = Vector((v.co.x, v.co.z, v.co.y))
-    parts.append(p)
-
-    # An arrow: a broadhead, a long shaft, three vanes and a nock.
-    p = Part("Arrow")
-    p.lathe([(-0.36, 0.0), (-0.36, 0.005), (0.33, 0.005), (0.33, 0.0)], "primary", 12)
-    p.lathe([(0.325, 0.0), (0.325, 0.0065), (0.345, 0.0065), (0.345, 0.0)], "dark", 12)
-    p.box((0, 0, 0.375), (0.026, 0.0025, 0.06), "metal", bevel=0.0008, taper=None)
-    p.box((0, 0, 0.375), (0.0025, 0.026, 0.06), "metal", bevel=0.0008)
-    p.lathe([(0.345, 0.0055), (0.36, 0.0055)] + ogive(0.36, 0.42, 0.0055, 6)[1:], "metal", 12)
-    vanes(p, -0.29, 0.1, 0.018, 0.0015, "trim", count=3, root_r=0.005)
-    p.lathe([(-0.375, 0.0), (-0.375, 0.006), (-0.36, 0.006), (-0.36, 0.0)], "dark", 12)
-    parts.append(p)
-
-    # A crossbow bolt: shorter and thicker, a field point, stiff vanes.
-    p = Part("Bolt")
-    p.lathe([(-0.2, 0.0), (-0.2, 0.0065), (0.17, 0.0065), (0.17, 0.0)], "primary", 14)
-    p.lathe([(0.165, 0.007), (0.18, 0.007)] + ogive(0.18, 0.225, 0.007, 8)[1:], "metal", 14)
-    vanes(p, -0.15, 0.08, 0.015, 0.002, "trim", count=3, root_r=0.0065)
-    p.lathe([(-0.205, 0.0), (-0.205, 0.007), (-0.195, 0.007), (-0.195, 0.0)], "dark", 14)
-    parts.append(p)
-
-    # A throwing knife: a narrow blade and a wrapped handle with a ring. It spins in flight.
-    p = Part("ThrowingKnife")
-    p.box((0, 0, 0.055), (0.003, 0.028, 0.11), "metal", bevel=0.0008, taper=(1.0, 0.25))
-    p.box((0, -0.006, 0.055), (0.0045, 0.012, 0.11), "metal", bevel=0.001)
-    for v in p.bm.verts:
-        if v.co.z > 0.1:
-            v.co.y *= 0.2
-    p.lathe([(-0.07, 0.0), (-0.07, 0.008), (0.0, 0.008), (0.0, 0.0)], "dark", 14)
-    for i in range(5):
-        z = -0.06 + i * 0.013
-        p.lathe([(z, 0.0088), (z + 0.004, 0.0088)], "trim", 14)
-    p.ring((0, 0, -0.082), (1, 0, 0), 0.013, 0.008, 0.004, "metal", 20)
-    parts.append(p)
-
-    # A flare: a cartridge burning bright at the front.
-    p = Part("Flare")
-    p.lathe([(-0.05, 0.0), (-0.05, 0.016), (0.02, 0.016)], "dark", 24)
-    p.lathe([(-0.052, 0.0), (-0.052, 0.019), (-0.045, 0.019), (-0.045, 0.016)], "metal", 24)
-    p.lathe([(0.02, 0.016)] + dome(0.02, 0.05, 0.016, 8)[1:], "glow", 24)
-    p.sphere((0, 0, 0.03), 0.026, "glow", u=20, v=12)
-    parts.append(p)
-
-    # Plasma: a bright core inside two spinning rings, pointed fore and aft.
-    p = Part("Plasma")
-    p.lathe([(-0.1, 0.0)] + [(-0.1 + 0.2 * t, 0.024 * math.sin(math.pi * t) ** 0.6) for t in [i / 16 for i in range(1, 16)]] + [(0.1, 0.0)], "glow", 24)
-    for z, r in ((-0.03, 0.034), (0.03, 0.03)):
-        p.ring((0, 0, z), (0, 0, 1), r, r - 0.005, 0.006, "trim", 32)
-    parts.append(p)
-
-    # A ricochet blaster's charge: a faceted ball of light.
-    p = Part("Spark")
-    res = bmesh.ops.create_icosphere(p.bm, subdivisions=2, radius=0.03)
-    for f in {f for v in res["verts"] for f in v.link_faces}:
-        f.material_index = ZONES["glow"]
-    res = bmesh.ops.create_icosphere(p.bm, subdivisions=1, radius=0.042)
-    shell = list({f for v in res["verts"] for f in v.link_faces})
-    for f in shell:
-        f.material_index = ZONES["trim"]
-    bmesh.ops.delete(p.bm, geom=[f for i, f in enumerate(shell) if i % 3 == 0], context='FACES_ONLY')
-    parts.append(p)
-
-    # A paintball: a glossy ball with its seam.
-    p = Part("Paintball")
-    p.sphere((0, 0, 0), 0.03, "primary", u=28, v=16)
-    p.ring((0, 0, 0), (0, 1, 0), 0.0305, 0.028, 0.003, "trim", 28)
-    parts.append(p)
-
-    # A slingshot pellet: a steel ball, big enough to see.
-    p = Part("Pellet")
-    p.sphere((0, 0, 0), 0.022, "metal", u=24, v=14)
-    parts.append(p)
-
-    return parts
+    """What flies (guns.projectiles): the RPG-7's grenade, a 40mm grenade, and the thrown items."""
+    import guns
+    return guns.projectiles(Part, ogive)
 
 
 # ---------------------------------------------------------------------------- export
@@ -1140,14 +1003,81 @@ def export(objects, path, magic=b"RCM1"):
     print(f"wrote {path}: {len(objects)} meshes, {total_tris} triangles, {len(out) // 1024} KB")
 
 
-def box_uv(co, normal):
-    """Texture coordinates projected along the face's main axis, two repeats a metre."""
+def export_points(objects, path):
+    """
+    RCM3: as RCM2 with no bones (uint8 0), then the meshes as RCM2 writes a rigid one, each
+    followed by its named points: uint8 count, then per point a name and six floats (a
+    position and a direction). The weapons and the first-person hands, with the points
+    that say how to hold them (see guns.py).
+    """
+    out = bytearray(b"RCM3")
+    out += struct.pack("<B", 0)
+    out += struct.pack("<H", len(objects))
+    total_tris = 0
+    for obj in objects:
+        mesh = obj.data
+        mesh.calc_normals_split()
+        mesh.calc_loop_triangles()
+        pivot = Vector(obj["pivot"]) if "pivot" in obj else Vector()
+        scale = float(obj.get("uv_scale", 2.0))
+        vertices, lookup, by_zone = [], {}, {}
+        for tri in mesh.loop_triangles:
+            corner = []
+            for loop_index in tri.loops:
+                loop = mesh.loops[loop_index]
+                co = mesh.vertices[loop.vertex_index].co
+                n = loop.normal
+                uv = box_uv(co, tri.normal, scale)
+                key = (loop.vertex_index, round(n.x, 3), round(n.y, 3), round(n.z, 3), round(uv[0], 4), round(uv[1], 4))
+                if key not in lookup:
+                    lookup[key] = len(vertices)
+                    p = co - pivot
+                    vertices.append((p.x, p.y, p.z, n.x, n.y, n.z, uv[0], uv[1]))
+                corner.append(lookup[key])
+            by_zone.setdefault(tri.material_index, []).extend((corner[0], corner[2], corner[1]))
+            total_tris += 1
+        assert len(vertices) < 65536, obj.name
+        name = obj.name.encode("utf-8")
+        out += struct.pack("<B", len(name)) + name
+        out += struct.pack("<3f", *pivot)
+        out += struct.pack("<B", 0)
+        out += struct.pack("<H", len(vertices))
+        for v in vertices:
+            out += struct.pack("<8f", *v)
+        out += struct.pack("<B", len(by_zone))
+        for zone in sorted(by_zone):
+            indices = by_zone[zone]
+            out += struct.pack("<BI", zone, len(indices))
+            out += struct.pack("<%dH" % len(indices), *indices)
+        points = obj.get("points", {})
+        out += struct.pack("<B", len(points))
+        for point_name in sorted(points.keys()):
+            data = point_name.encode("utf-8")
+            out += struct.pack("<B", len(data)) + data
+            out += struct.pack("<6f", *[float(x) for x in points[point_name]])
+    with open(path, "wb") as f:
+        f.write(out)
+    print(f"wrote {path}: {len(objects)} meshes, {total_tris} triangles, {len(out) // 1024} KB")
+
+
+def weapon_models():
+    """Every weapon (guns.py) and the first-person hands (hands.py), as objects."""
+    import guns, hands
+    made = []
+    for g in guns.all_weapons(Part):
+        made += g.objects()
+    made += hands.objects(Part)
+    return made
+
+
+def box_uv(co, normal, scale=2.0):
+    """Texture coordinates projected along the face's main axis, `scale` repeats a metre."""
     ax, ay, az = abs(normal.x), abs(normal.y), abs(normal.z)
     if ax >= ay and ax >= az:
-        return (co.z * 2.0, co.y * 2.0)
+        return (co.z * scale, co.y * scale)
     if ay >= az:
-        return (co.x * 2.0, co.z * 2.0)
-    return (co.x * 2.0, co.y * 2.0)
+        return (co.x * scale, co.z * scale)
+    return (co.x * scale, co.y * scale)
 
 
 # ---------------------------------------------------------------------------- previews
@@ -1426,9 +1356,19 @@ def render_backdrop(path, samples=160):
         for m in gun_set:
             obj.data.materials.append(m)
 
-    rifle = (dict(bulk=1.0, body=0.3, barrel=0.3, stock=0.2, mag=0.14), dict(sight="reddot", grip="vertical", barrel="suppressor"))
-    marksman = (dict(bulk=1.05, body=0.34, barrel=0.5, stock=0.24, mag=0.08), dict(sight="scope", barrel="muzzle"))
-    lmg = (dict(bulk=1.3, body=0.36, barrel=0.4, stock=0.22, mag=0.12), dict(mag="drum"))
+    # Real weapons, whole: an M4A1, an AK-47 and an M249.
+    import guns
+    def real(build):
+        g = build(Part)
+        objects = g.objects()
+        for obj in objects:
+            for m in gun_set:
+                obj.data.materials.append(m)
+            obj.hide_render = True
+        return (dict(points=objects[0]["points"], objects=objects), {})
+    rifle = real(lambda P: guns.ar15(P, "ar_m4a1", 0.405, 0.255, -0.345))
+    marksman = real(guns.ak47)
+    lmg = real(guns.m249)
     blue = (0.15, 0.35, 0.8, 1)
     figures = [
         (rifle, dict(speed=0, phase=0, pitch=4), (1.15, 0, 0.95), -38, "Helmet", "AssaultPack",
@@ -1553,6 +1493,11 @@ def main():
     os.makedirs(out, exist_ok=True)
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    if "--weapons" in argv:
+        # Only the weapons, the hands and the projectiles: quick, without the soldier.
+        export_points(weapon_models(), os.path.join(out, "Guns.bytes"))
+        export([p.to_object() for p in projectile_models()], os.path.join(out, "Projectiles.bytes"))
+        return
     if "--projectiles" in argv:
         # Only the projectiles, for working on them without rebuilding the soldier.
         projectile_objects = [p.to_object() for p in projectile_models()]
@@ -1569,6 +1514,10 @@ def main():
     export(gun_objects, os.path.join(out, "GunParts.bytes"))
     projectile_objects = [p.to_object() for p in projectile_models()]
     export(projectile_objects, os.path.join(out, "Projectiles.bytes"))
+    weapon_objects = weapon_models()
+    export_points(weapon_objects, os.path.join(out, "Guns.bytes"))
+    for obj in weapon_objects:
+        obj.hide_render = True
     if not preview_dir:
         return
 
@@ -1609,4 +1558,5 @@ def main():
         lineup += posed_soldier(pieces, gear, rest, origin=((i - 3.5) * 0.75, 0, 0), yaw=180 if i % 2 else 0, headgear=hg, back=back, tag="_l%d" % i)
     shot("lineup.png", lineup, (0, 1.5, 6.5), (0, 1.0, 0), lens=40, size=(1600, 800))
 
-main()
+if __name__ == "__main__":
+    main()

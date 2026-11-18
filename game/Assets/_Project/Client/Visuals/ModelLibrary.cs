@@ -15,13 +15,29 @@ namespace Recoil.Client.Visuals
         public bool Skinned;
         /// <summary>Metres of surface per unit of texture coordinates: how big a pattern laid over its UVs comes out.</summary>
         public float TexelScale;
+        /// <summary>The model's named points: where a weapon is held, fitted and fired from.</summary>
+        public IReadOnlyList<ModelPoint> Points = System.Array.Empty<ModelPoint>();
+
+        /// <summary>A named point of the model, if it has one.</summary>
+        public bool TryPoint(string name, out ModelPoint point)
+        {
+            foreach (ModelPoint candidate in Points)
+            {
+                if (candidate.Name != name) continue;
+                point = candidate;
+                return true;
+            }
+            point = default;
+            return false;
+        }
     }
 
     /// <summary>
     /// The game's Blender-made models (Resources/Models/*.bytes), read once and kept. Sets:
     /// "Soldier", a player's skinned body and skeleton (and the first-person sleeves and
-    /// gloves); "Gear", headgear and back items; "GunParts", the detailed parts weapons are
-    /// built from.
+    /// gloves); "Gear", headgear and back items; "Guns", every weapon modelled whole at its
+    /// real size, with the points that say how to hold it, and the first-person hands;
+    /// "GunParts", the parts a weapon without a model of its own is built from.
     ///
     /// If a file is missing or unreadable the game carries on with its simple shapes: callers
     /// get null and fall back.
@@ -133,7 +149,7 @@ namespace Recoil.Client.Visuals
             return new ModelMesh
             {
                 Name = data.Name, Pivot = data.Pivot, Mesh = mesh, Zones = data.Zones, Skinned = data.Skinned,
-                TexelScale = TexelScale(data),
+                TexelScale = TexelScale(data), Points = data.Points.ToArray(),
             };
         }
 
@@ -291,9 +307,22 @@ namespace Recoil.Client.Visuals
         static (Texture2D Normal, Texture2D Shade) MapsFor(string maps)
         {
             if (Maps.TryGetValue(maps, out (Texture2D, Texture2D) known)) return known;
-            var found = (Resources.Load<Texture2D>("Models/" + maps + "Normal"), Resources.Load<Texture2D>("Models/" + maps + "Shade"));
+            var found = (NormalMap("Models/" + maps + "Normal"), Resources.Load<Texture2D>("Models/" + maps + "Shade"));
             Maps[maps] = found;
             return found;
+        }
+
+        /// <summary>
+        /// A normal map, or null if there is none or it was imported as a colour picture
+        /// (decoded as colour it would light everything wrongly, so it is better left off).
+        /// </summary>
+        static Texture2D NormalMap(string path)
+        {
+            Texture2D map = Resources.Load<Texture2D>(path);
+            if (map == null || !map.isDataSRGB) return map;
+            Debug.LogWarning("Recoil: Resources/" + path + " is imported as a colour picture, not a normal map, so it is left off. " +
+                             "Select it in the Project window and set Texture Type to Normal map.");
+            return null;
         }
 
         static void LoadBases()
@@ -352,7 +381,7 @@ namespace Recoil.Client.Visuals
             if (_texturesLooked) return;
             _texturesLooked = true;
             _skinTexture = Resources.Load<Texture2D>("Models/SkinAlbedo");
-            _skinNormal = Resources.Load<Texture2D>("Models/SkinNormal");
+            _skinNormal = NormalMap("Models/SkinNormal");
             _eyeTexture = Resources.Load<Texture2D>("Models/EyeAlbedo");
         }
 

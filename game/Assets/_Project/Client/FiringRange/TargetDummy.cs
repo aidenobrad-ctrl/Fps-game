@@ -30,6 +30,15 @@ namespace Recoil.Client.FiringRange
         static readonly string[] Hairstyles = { "crew", "side_part", "buzz", "curly", "slick_back", "bun", "mohawk", "shaved", "crew" };
         static MovementConfig _shape;
         static int _made;
+        static bool _reportedLook;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            _shape = null;
+            _made = 0;
+            _reportedLook = false;
+        }
 
         public float respawnDelay = 1.5f;
 
@@ -94,19 +103,34 @@ namespace Recoil.Client.FiringRange
             _body.Root.localRotation = Quaternion.Euler(0f, Facing, 0f);
             _body.SetOwner(_health);
 
-            _look = new CharacterLookView(_body);
-            _look.Apply(new CharacterLook
+            // The soldier drawn over the hitboxes. Only a picture: if it cannot be built, the
+            // target still stands, takes hits and shows its health, and the log says why once.
+            try
             {
-                // Training orange over dark gear: nobody mistakes one for a player.
-                suitColor = "#D9662B",
-                trimColor = "#2B2E34",
-                pattern = "plain",
-                headgear = Headgear[_made % Headgear.Length],
-                skin = SkinTones[_made % SkinTones.Length],
-                hair = Hairstyles[_made % Hairstyles.Length],
-                back = "none",
-            });
-            _look.SetSide(true, friendly: false);
+                _look = new CharacterLookView(_body);
+                _look.Apply(new CharacterLook
+                {
+                    // Training orange over dark gear: nobody mistakes one for a player.
+                    suitColor = "#D9662B",
+                    trimColor = "#2B2E34",
+                    pattern = "plain",
+                    headgear = Headgear[_made % Headgear.Length],
+                    skin = SkinTones[_made % SkinTones.Length],
+                    hair = Hairstyles[_made % Hairstyles.Length],
+                    back = "none",
+                });
+                _look.SetSide(true, friendly: false);
+            }
+            catch (System.Exception e)
+            {
+                _look = null;
+                if (!_reportedLook)
+                {
+                    _reportedLook = true;
+                    Debug.LogError("Recoil: a practice target's soldier model could not be built; targets are shown as plain shapes. The cause follows.", this);
+                    Debug.LogException(e, this);
+                }
+            }
             _made++;
 
             _barMaterial = new Material(GreyboxMaterials.Unlit(Color.green));
@@ -144,7 +168,7 @@ namespace Recoil.Client.FiringRange
             }
             _lastPosition = transform.position;
 
-            if (_present)
+            if (_present && _look != null)
             {
                 _look.Animate(new SoldierMotion
                 {
@@ -161,7 +185,7 @@ namespace Recoil.Client.FiringRange
             if (_flash > 0f)
             {
                 _flash -= dt;
-                _look.Flash(Mathf.Clamp01(_flash / FlashTime));
+                _look?.Flash(Mathf.Clamp01(_flash / FlashTime));
             }
 
             if (_respawnTimer > 0f)
@@ -186,7 +210,7 @@ namespace Recoil.Client.FiringRange
             if (present)
             {
                 _flash = 0f;
-                _look.Flash(0f);
+                _look?.Flash(0f);
             }
         }
 

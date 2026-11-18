@@ -125,6 +125,87 @@ namespace Recoil.Tests
             }
         }
 
+        /// <summary>Every weapon's id, read from its asset (WPN_*.asset) without the editor.</summary>
+        static List<string> WeaponIds()
+        {
+            string root = Environment.GetEnvironmentVariable("RECOIL_PROJECT") ?? "";
+            var ids = new List<string>();
+            foreach (string folder in new[] { Path.Combine(root, "Assets/_Project/Content/Weapons"), "Assets/_Project/Content/Weapons" })
+            {
+                if (!Directory.Exists(folder)) continue;
+                foreach (string file in Directory.GetFiles(folder, "WPN_*.asset"))
+                {
+                    foreach (string line in File.ReadLines(file))
+                    {
+                        string trimmed = line.Trim();
+                        if (trimmed.StartsWith("weaponId: ")) ids.Add(trimmed.Substring("weaponId: ".Length).Trim());
+                    }
+                }
+                if (ids.Count > 0) break;
+            }
+            Assert.That(ids, Is.Not.Empty, "the weapon assets were not found");
+            return ids;
+        }
+
+        [Test]
+        public void EveryWeapon_HasAWholeModel_WithThePointsItIsHeldBy()
+        {
+            Dictionary<string, ModelData> models = Load(ViewModelBuilder.WeaponSet).ToDictionary(m => m.Name);
+            foreach (string id in WeaponIds())
+            {
+                if (id == "melee_fists") continue;
+                Assert.That(models.ContainsKey(id), id + " has no model in Guns.bytes");
+                ModelData model = models[id];
+                WellFormed(model);
+                var points = model.Points.ToDictionary(p => p.Name);
+                Assert.That(points.ContainsKey("Grip") && points.ContainsKey("Muzzle"), id + ": a grip and a muzzle");
+                bool blade = id.StartsWith("melee_");
+                if (!blade)
+                {
+                    Assert.That(points.ContainsKey("Eye") && points.ContainsKey("Butt"), id + ": where the eye goes and the butt");
+                    bool handgun = points["Butt"].Position.z > -0.12f;
+                    if (!handgun) Assert.That(points.ContainsKey("Support") || points.ContainsKey("Foregrip"), id + ": somewhere for the left hand");
+                    // The sights are above the bore and behind the muzzle; the grip below it.
+                    Assert.That(points["Eye"].Position.y, Is.GreaterThan(0f), id);
+                    Assert.That(points["Grip"].Position.y, Is.LessThan(0f), id);
+                    Assert.That(points["Muzzle"].Position.z, Is.GreaterThan(points["Eye"].Position.z + 0.2f), id);
+                }
+                foreach (ModelPoint point in model.Points)
+                    Assert.That(Mathf.Abs(point.Direction.magnitude - 1f), Is.LessThan(0.01f), id + " " + point.Name);
+                // A real size: no weapon is longer than a .50 rifle.
+                foreach (Vector3 p in model.Positions)
+                {
+                    Assert.That(Mathf.Abs(p.x), Is.LessThan(0.2f), id);
+                    Assert.That(Mathf.Abs(p.z), Is.LessThan(1.05f), id);
+                }
+            }
+        }
+
+        [Test]
+        public void TheHands_AreThere_EachWithItsWrist()
+        {
+            Dictionary<string, ModelData> models = Load(ViewModelBuilder.WeaponSet).ToDictionary(m => m.Name);
+            foreach (string hand in new[] { "HandGripR", "HandHoldR", "HandHoldL", "HandSupportL", "HandPistolL" })
+            {
+                Assert.That(models.ContainsKey(hand), hand);
+                WellFormed(models[hand]);
+                Assert.That(models[hand].Points.Any(p => p.Name == "Wrist"), hand + " has a wrist");
+                foreach (Vector3 p in models[hand].Positions) Assert.That(p.magnitude, Is.LessThan(0.25f), hand);
+            }
+        }
+
+        [Test]
+        public void EveryProjectile_HasAModel()
+        {
+            Dictionary<string, ModelData> models = Load(ProjectileModels.Set).ToDictionary(m => m.Name);
+            foreach (string id in new[] { "rl_rpg7", "gl_m32", "m67_frag", "rgn_impact", "c4_charge", "mk3_concussion" })
+            {
+                string model = ProjectileModels.For(id, null);
+                Assert.That(model != null && models.ContainsKey(model), id + " -> " + model);
+                WellFormed(models[model]);
+            }
+        }
+
         [Test]
         public void EveryWeaponPart_HasAModel_ThatFillsItsBox()
         {

@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: WPN_melee_field_knife
   m_EditorClassIdentifier: 
   weaponId: melee_field_knife
-  displayName: Knife
-  description: 'Fast and always ready. Two cuts.'
+  displayName: Combat Knife
+  description: 'A seven-inch fighting knife. Fast and always ready: two cuts kill.'
   weaponClass: 9
   slot: 2
   unlockLevel: 1
@@ -29,7 +29,7 @@ MonoBehaviour:
     pellets: 1
     pierceTargets: 0
     pierceDamageKept: 0.75
-    damage: 50
+    damage: 55
     headMultiplier: 1
     limbMultiplier: 1
     falloffStart: 1000
@@ -88,13 +88,14 @@ MonoBehaviour:
   attachments: []
   view:
     kind: 2
-    bodyLength: 0.17
+    bodyLength: 0.18
     bulk: 1
     barrelLength: 0.3
     stockLength: 0.2
     magazineLength: 0.14
-    bodyColor: {r: 0.62, g: 0.65, b: 0.7, a: 1}
-    accentColor: {r: 0.15, g: 0.85, b: 1, a: 1}
+    bodyColor: {r: 0.085, g: 0.09, b: 0.1, a: 1}
+    accentColor: {r: 0.62, g: 0.65, b: 0.7, a: 1}
+    darkColor: {r: 0.0468, g: 0.0495, b: 0.055, a: 1}
   audio:
     kind: 3
     pitch: 1

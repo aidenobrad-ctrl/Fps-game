@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   presetId: rusher
   displayName: Rusher
-  description: 'Get close and stay close. Fast hands, fast feet.'
-  primary: {fileID: 11400000, guid: a4f848e8d1972eebbaefd993015fce45, type: 2}
+  description: 'An MP5 and a .45 for clearing rooms fast.'
+  primary: {fileID: 11400000, guid: 843546bd6ce459475c7a7e2e10718627, type: 2}
   primaryAttachments:
   - {fileID: 11400000, guid: e31b4cf7f4f9e8daeb0b6ff9924e6ee0, type: 2}
-  - {fileID: 11400000, guid: 15612471dfbbb722e66de53e9d9648a1, type: 2}
-  secondary: {fileID: 11400000, guid: 0a15440df62ed227a3a3d6e249ab7a4f, type: 2}
+  - {fileID: 11400000, guid: 544b4d67a6a8b3c512f4ae072f7a831b, type: 2}
+  secondary: {fileID: 11400000, guid: 4f0821de01761cf3ccd01e82b689be09, type: 2}
   secondaryAttachments: []
-  melee: {fileID: 11400000, guid: e9cd4900d9da3c6fc339ff39bcf2c5b1, type: 2}
-  utility: {fileID: 11400000, guid: edc0b1651e82dd70e1f880d1c10de4c0, type: 2}
+  melee: {fileID: 11400000, guid: ef73fb28ebc5638186e866d1363b3474, type: 2}
+  utility: {fileID: 11400000, guid: 3a91f2bcfef483ad50a7401f67ba8857, type: 2}
   perkSet: {fileID: 11400000, guid: 3b1db5a585e809888e9abdfbbacbe84f, type: 2}

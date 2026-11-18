@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   presetId: sharpshooter
   displayName: Sharpshooter
-  description: 'One shot from far away, quietly.'
-  primary: {fileID: 11400000, guid: bff9e195415835ad77024f6af6fb58f6, type: 2}
+  description: 'A suppressed M24 and a quiet sidearm.'
+  primary: {fileID: 11400000, guid: 977886e0c00e2951c6c7ef46def1d4cd, type: 2}
   primaryAttachments:
   - {fileID: 11400000, guid: 28fbf477d29c8f2049314b19f5d907fa, type: 2}
-  secondary: {fileID: 11400000, guid: 310667811d5b4c1145a6cf18447f95d7, type: 2}
+  secondary: {fileID: 11400000, guid: 6fcf1c4a31b0385a91f503f3b4f784e6, type: 2}
   secondaryAttachments:
   - {fileID: 11400000, guid: 28fbf477d29c8f2049314b19f5d907fa, type: 2}
   melee: {fileID: 11400000, guid: e7a331c50b20c566955bf4b462141e37, type: 2}
-  utility: {fileID: 11400000, guid: 3b38c5c467931de36dff563b087dead5, type: 2}
+  utility: {fileID: 11400000, guid: 76ea1f969d8a3ae7d599bea68c8bb4e2, type: 2}
   perkSet: {fileID: 11400000, guid: 01b6839a97866eac95b727eca781b94b, type: 2}

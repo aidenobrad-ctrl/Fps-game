@@ -1,0 +1,108 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6a251fe876909704af95a88ea478068, type: 3}
+  m_Name: WPN_sr_m107
+  m_EditorClassIdentifier: 
+  weaponId: sr_m107
+  displayName: M107
+  description: '.50 BMG semi-automatic anti-materiel rifle. One hit anywhere kills, through two targets at once; ten rounds, 13 kilograms to carry, and a kick to match.'
+  weaponClass: 4
+  slot: 0
+  unlockLevel: 28
+  stats:
+    fireMode: 1
+    roundsPerMinute: 120
+    burstCount: 3
+    burstCooldown: 0.2
+    chargeTime: 0.6
+    minChargeDamage: 0.35
+    ballistics: 0
+    pellets: 1
+    pierceTargets: 2
+    pierceDamageKept: 0.85
+    damage: 150
+    headMultiplier: 1.5
+    limbMultiplier: 1
+    falloffStart: 400
+    falloffEnd: 800
+    minDamageMultiplier: 0.9
+    maxRange: 1500
+    projectileSpeed: 60
+    projectileGravity: 0
+    projectileLifetime: 5
+    projectileRadius: 0.05
+    bounces: 0
+    bounceSpeedKept: 0.6
+    bounceDamageMultiplier: 1
+    explosionRadius: 0
+    explosionEdgeDamage: 0.25
+    fuseTime: 0
+    detonateOnTarget: 1
+    meleeRange: 2.2
+    meleeRadius: 0.45
+    meleeHitDelay: 0.12
+    magazineSize: 10
+    reserveAmmo: 30
+    reloadStyle: 0
+    reloadTime: 3.4
+    emptyReloadTime: 4.2
+    reloadIntroTime: 0
+    adsTime: 0.55
+    adsZoom: 8
+    hipMoveMultiplier: 0.82
+    adsMoveMultiplier: 0.69
+    sprintToFireTime: 0.42
+    equipTime: 1
+    holsterTime: 0.45
+    hipSpread: 6
+    adsSpread: 0
+    moveSpreadPenalty: 3
+    airSpreadPenalty: 3
+    crouchSpreadMultiplier: 0.8
+    bloomPerShot: 0
+    maxBloom: 0
+    bloomRecovery: 5
+    adsBloomMultiplier: 0.2
+    recoilPattern:
+    - {x: 0.3, y: 5}
+    recoilLoopStart: 0
+    recoilRandomness: 0.12
+    recoilVerticalScale: 1
+    recoilHorizontalScale: 1
+    adsRecoilMultiplier: 0.75
+    crouchRecoilMultiplier: 0.85
+    recoilSnappiness: 14
+    recoilRecovery: 8
+    recoilRecoveryDelay: 0.12
+    recoilResetTime: 0.35
+  reticle: 4
+  attachments:
+  - {fileID: 11400000, guid: 9bbb22842c1e974ed9f3cde99ab748e6, type: 2}
+  - {fileID: 11400000, guid: b6b35a37f7d5eaf3115602c03e93a623, type: 2}
+  - {fileID: 11400000, guid: f8aee4251d8b0f3e0a4f45a02882ea3b, type: 2}
+  - {fileID: 11400000, guid: 3ddd05335cec6df3a100b9686cfbb4e3, type: 2}
+  view:
+    kind: 0
+    bodyLength: 0.5
+    bulk: 1.35
+    barrelLength: 0.6
+    stockLength: 0.3
+    magazineLength: 0.1
+    bodyColor: {r: 0.52, g: 0.43, b: 0.3, a: 1}
+    accentColor: {r: 0.4, g: 1, b: 0.45, a: 1}
+    darkColor: {r: 0.085, g: 0.09, b: 0.1, a: 1}
+  audio:
+    kind: 0
+    pitch: 0.55
+    weight: 1.5
+    tail: 0.65
+    volume: 1

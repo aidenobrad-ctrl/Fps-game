@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   presetId: marksman
   displayName: Marksman
-  description: 'Hold a long lane and make each shot count.'
-  primary: {fileID: 11400000, guid: ddd03fba1dfa55f353d3767cc05eddf0, type: 2}
+  description: 'An M14 EBR with a 3x optic, to hold a long lane and make each shot count.'
+  primary: {fileID: 11400000, guid: ee5e28fb208b2b7683cf06330a092e68, type: 2}
   primaryAttachments:
   - {fileID: 11400000, guid: 9bbb22842c1e974ed9f3cde99ab748e6, type: 2}
   - {fileID: 11400000, guid: 000f0b30cfdd566799826e38e4bc2216, type: 2}
-  secondary: {fileID: 11400000, guid: fdbda20c309c3246b60dd02764ab998e, type: 2}
+  secondary: {fileID: 11400000, guid: 4181cf36b039dad4c3718737f206d584, type: 2}
   secondaryAttachments:
   - {fileID: 11400000, guid: f95313d2c50561b865952851718eecf8, type: 2}
   melee: {fileID: 11400000, guid: e7a331c50b20c566955bf4b462141e37, type: 2}
-  utility: {fileID: 11400000, guid: ab30681abe28888d4278e4f50181af1f, type: 2}
+  utility: {fileID: 11400000, guid: 7f58c44dc9aff2ad4a78f8d290446f49, type: 2}
   perkSet: {fileID: 11400000, guid: 01b6839a97866eac95b727eca781b94b, type: 2}

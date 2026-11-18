@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf495866b88359d8f1b6e8c964588444, type: 3}
+  m_Name: LDT_recon
+  m_EditorClassIdentifier: 
+  presetId: recon
+  displayName: Recon
+  description: 'Quiet weapons for getting behind them: an MP5SD and a suppressed M17.'
+  primary: {fileID: 11400000, guid: 5745a279d68680676286dc9762e10ba3, type: 2}
+  primaryAttachments:
+  - {fileID: 11400000, guid: f95313d2c50561b865952851718eecf8, type: 2}
+  secondary: {fileID: 11400000, guid: 6fcf1c4a31b0385a91f503f3b4f784e6, type: 2}
+  secondaryAttachments:
+  - {fileID: 11400000, guid: 28fbf477d29c8f2049314b19f5d907fa, type: 2}
+  melee: {fileID: 11400000, guid: 776fa9f6a2c4023ea8a1f400c93eda93, type: 2}
+  utility: {fileID: 11400000, guid: 76ea1f969d8a3ae7d599bea68c8bb4e2, type: 2}
+  perkSet: {fileID: 11400000, guid: 3b1db5a585e809888e9abdfbbacbe84f, type: 2}

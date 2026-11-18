@@ -222,7 +222,7 @@ namespace Recoil.Client.Net
                 ViewModelLayout layout = ViewModelBuilder.Build(soldier.WeaponMount, build, player.Look.SkinFor(build.Weapon.weaponId), castShadows: true);
                 _gun = layout.Root;
                 _gunMuzzle = layout.Muzzle;
-                bool handgun = layout.Support == null;
+                bool handgun = layout.Handgun;
                 _gun.localPosition = handgun ? new Vector3(-0.14f, -0.06f, 0.36f) : new Vector3(0f, 0f, -layout.RearZ - 0.03f);
                 _gun.localRotation = layout.Kind == ViewModelKind.Blade || layout.Kind == ViewModelKind.Thrown
                     ? Quaternion.Euler(-60f, 0f, 0f) : Quaternion.identity;

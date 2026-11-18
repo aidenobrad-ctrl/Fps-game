@@ -120,7 +120,7 @@ namespace Recoil.Client.Cosmetics
                 _weaponModel.localPosition = Vector3.zero;
                 return;
             }
-            bool handgun = layout.Support == null;
+            bool handgun = layout.Handgun;
             _weaponModel.localPosition = handgun ? new Vector3(-0.14f, -0.06f, 0.36f) : new Vector3(0f, 0f, -layout.RearZ - 0.03f);
             if (layout.Kind == ViewModelKind.Blade || layout.Kind == ViewModelKind.Thrown) _weaponModel.localRotation = Quaternion.Euler(-60f, 0f, 0f);
             soldier.Hold(layout.Grip, layout.Support);

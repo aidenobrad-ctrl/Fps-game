@@ -39,6 +39,7 @@ namespace Recoil.Client.Weapons
 
         // Colours stay at or below 1: the additive material lifts them into glowing (EffectResources.Glow).
         static readonly Color BulletTracer = new Color(1f, 0.82f, 0.5f);
+        static readonly Color FireGlow = new Color(1f, 0.62f, 0.25f);
         /// <summary>The round itself: solid and bright, so it shows against a pale wall or the sky, where a glow alone washes out.</summary>
         static readonly Color BulletBody = new Color(1f, 0.9f, 0.55f);
         static readonly Vector3 BulletSize = new Vector3(0.045f, 0.045f, 0.24f);
@@ -81,9 +82,6 @@ namespace Recoil.Client.Weapons
             public float Age;
             /// <summary>Degrees a second about the model's own axes: a knife turning end over end, a disc spinning.</summary>
             public Vector3 Spin, SpinAngle;
-            /// <summary>Drawn as fire rather than an object: a flamethrower's.</summary>
-            public bool Flame;
-            public Color FlameColor;
         }
 
         struct WorldFlash
@@ -112,10 +110,30 @@ namespace Recoil.Client.Weapons
         float _flashTimer;
         static Mesh _flashMesh;
 
+        /// <summary>True once every pool is built; until then (or if building failed) every effect is skipped.</summary>
+        bool _ready;
+
         public void Initialize(WeaponViewModel viewModel, LocalPlayerController player)
         {
             _viewModel = viewModel;
             _player = player;
+            try
+            {
+                Build();
+                _ready = true;
+            }
+            catch (Exception e)
+            {
+                // Effects are only pictures: without them the game plays on, and this says once why they are missing.
+                _ready = false;
+                Debug.LogError("Recoil: the weapon effects could not be set up, so shots will show no flashes, tracers or impacts. " +
+                               "The cause follows.", this);
+                Debug.LogException(e, this);
+            }
+        }
+
+        void Build()
+        {
 
             Transform pool = new GameObject("Effects").transform;
             _pool = pool.gameObject;
@@ -211,7 +229,7 @@ namespace Recoil.Client.Weapons
 
             // Our own flash rides on the weapon in our hands.
             _flash = new GameObject("Muzzle Flash");
-            _flash.transform.SetParent(viewModel.Muzzle, false);
+            _flash.transform.SetParent(_viewModel.Muzzle, false);
             _flash.AddComponent<MeshFilter>().sharedMesh = FlashMesh();
             _flashRenderer = _flash.AddComponent<MeshRenderer>();
             _flashRenderer.sharedMaterials = flashMaterials;
@@ -220,7 +238,7 @@ namespace Recoil.Client.Weapons
             _flash.SetActive(false);
 
             var lightObject = new GameObject("Muzzle Light");
-            lightObject.transform.SetParent(viewModel.Muzzle, false);
+            lightObject.transform.SetParent(_viewModel.Muzzle, false);
             _flashLight = lightObject.AddComponent<Light>();
             _flashLight.type = LightType.Point;
             _flashLight.color = new Color(1f, 0.72f, 0.4f);
@@ -241,6 +259,7 @@ namespace Recoil.Client.Weapons
         /// <summary>Muzzle flash, once per shot. Only for weapons that go bang: not suppressed ones, blades, bows or thrown knives.</summary>
         public void PlayMuzzle(WeaponBuild build)
         {
+            if (!_ready) return;
             if (!Flashes(build)) return;
             _flashTimer = FlashTime;
             _flash.SetActive(true);
@@ -262,6 +281,7 @@ namespace Recoil.Client.Weapons
         /// <summary>Another player's muzzle flash, out in the world.</summary>
         public void PlayRemoteMuzzle(Vector3 muzzle, Vector3 direction, WeaponBuild build)
         {
+            if (!_ready) return;
             if (!Flashes(build) || direction.sqrMagnitude < 0.0001f) return;
             ref WorldFlash flash = ref _worldFlashes[_nextWorldFlash];
             _nextWorldFlash = (_nextWorldFlash + 1) % WorldFlashCount;
@@ -274,7 +294,11 @@ namespace Recoil.Client.Weapons
         }
 
         /// <summary>One bullet or pellet, seen leaving our gun and flying to where it lands.</summary>
-        public void PlayTracer(in ShotPresentation shot) => PlayTracer(shot, _viewModel.Muzzle.position);
+        public void PlayTracer(in ShotPresentation shot)
+        {
+            if (!_ready || _viewModel == null || _viewModel.Muzzle == null) return;
+            PlayTracer(shot, _viewModel.Muzzle.position);
+        }
 
         /// <summary>
         /// Draws a bullet in flight: a bright round with a streak behind it, from
@@ -286,6 +310,7 @@ namespace Recoil.Client.Weapons
         /// </summary>
         public void PlayTracer(in ShotPresentation shot, Vector3 from)
         {
+            if (!_ready) return;
             // The round leaves the visible muzzle but ends where the shot actually went.
             Vector3 toEnd = shot.End - from;
             float distance = toEnd.magnitude;
@@ -327,6 +352,7 @@ namespace Recoil.Client.Weapons
         /// <summary>A bullet hitting level geometry: a hole, a few sparks, a puff of dust.</summary>
         public void PlayImpact(Vector3 point, Vector3 normal, Vector3 travel)
         {
+            if (!_ready) return;
             if (normal.sqrMagnitude < 0.0001f) return;
             if (Recoil.Client.Audio.SfxPlayer.Current != null) Recoil.Client.Audio.SfxPlayer.Current.PlayImpact(point);
             _holes.Place(point, normal, Random.Range(0.06f, 0.09f), Color.white);
@@ -343,6 +369,7 @@ namespace Recoil.Client.Weapons
         /// <summary>A shot landing on a player: a burst of energy in their colour. No blood.</summary>
         public void PlayBodyHit(Vector3 point, Vector3 shotDirection, Color color, bool head)
         {
+            if (!_ready) return;
             Vector3 along = shotDirection.sqrMagnitude > 0.0001f ? shotDirection.normalized : Vector3.up;
             Color bright = Lighten(color, 0.35f);
             int count = head ? 22 : 12;
@@ -357,6 +384,7 @@ namespace Recoil.Client.Weapons
         /// <summary>A shot ringing off someone's weapon: a spray of bright sparks back the way it came.</summary>
         public void PlayWeaponHit(Vector3 point, Vector3 shotDirection)
         {
+            if (!_ready) return;
             Vector3 back = shotDirection.sqrMagnitude > 0.0001f ? -shotDirection.normalized : Vector3.up;
             for (int i = 0; i < 14; i++)
                 _sparks.Emit(point, (back * 0.6f + Random.insideUnitSphere * 0.8f).normalized * Random.Range(3f, 9f),
@@ -368,6 +396,7 @@ namespace Recoil.Client.Weapons
         /// <param name="ours">Our own, in front of the camera: smaller, so it does not fill the view.</param>
         public void PlayWeaponBreak(Vector3 point, bool ours)
         {
+            if (!_ready) return;
             float scale = ours ? 0.5f : 1f;
             for (int i = 0; i < 34; i++)
                 _sparks.Emit(point, (Random.onUnitSphere + Vector3.up * 0.3f).normalized * Random.Range(4f, 12f) * scale,
@@ -384,6 +413,7 @@ namespace Recoil.Client.Weapons
         /// <summary>A player taken out: their body comes apart into light.</summary>
         public void PlayDerez(Vector3 feet, float height, Color suit, Color trim)
         {
+            if (!_ready) return;
             Color a = Lighten(suit, 0.25f);
             Color b = Lighten(trim, 0.35f);
             for (int i = 0; i < 56; i++)
@@ -401,6 +431,7 @@ namespace Recoil.Client.Weapons
         /// <summary>A player arriving: light rising from a ring at their feet.</summary>
         public void PlaySpawn(Vector3 feet, Color color)
         {
+            if (!_ready) return;
             Color bright = Lighten(color, 0.3f);
             for (int i = 0; i < 32; i++)
             {
@@ -421,6 +452,7 @@ namespace Recoil.Client.Weapons
         /// <param name="fromOwnMuzzle">False for a projectile someone else launched: it is drawn on its real path from the start.</param>
         public void TrackProjectile(int id, WeaponStats stats, Color bodyColor, Color accentColor, bool fromOwnMuzzle)
         {
+            if (!_ready) return;
             for (int i = 0; i < ProjectileCount; i++)
             {
                 ref ProjectileVisual visual = ref _projectiles[i];
@@ -465,17 +497,7 @@ namespace Recoil.Client.Weapons
                 string weaponId = WeaponIdOf(id);
                 string modelName = ProjectileModels.For(weaponId, stats);
                 ModelMesh model = modelName != null ? ModelLibrary.Get(ProjectileModels.Set, modelName) : null;
-                visual.Flame = ProjectileModels.IsFlame(weaponId);
-                visual.FlameColor = Lighten(accentColor, 0.5f);
-                if (visual.Flame)
-                {
-                    // A gout of fire, drawn with the fire particles as it goes.
-                    trail.emitting = false;
-                    trail.sharedMaterial = null;
-                    visual.Renderer.enabled = false;
-                    visual.ModelRenderer.enabled = false;
-                }
-                else if (model != null)
+                if (model != null)
                 {
                     visual.ModelFilter.sharedMesh = model.Mesh;
                     var materials = new Material[model.Zones.Length];
@@ -531,11 +553,10 @@ namespace Recoil.Client.Weapons
         {
             switch (zone)
             {
-                case ModelZone.Primary:
-                    // A paintball is the paint, whatever the gun looks like.
-                    return model == "Paintball" ? GreyboxMaterials.Flat(accent) : GreyboxMaterials.Flat(body);
+                case ModelZone.Primary: return GreyboxMaterials.Flat(body);
                 case ModelZone.Trim: return GreyboxMaterials.Flat(accent);
-                case ModelZone.Glow: return GreyboxMaterials.Unlit(Lighten(accent, 0.45f));
+                // A rocket motor's flame, a detonator's light: fire-coloured, whatever the weapon's colours.
+                case ModelZone.Glow: return GreyboxMaterials.Unlit(FireGlow);
                 case ModelZone.Metal: return ModelMaterials.Metal;
                 default: return ModelMaterials.Dark;
             }
@@ -543,6 +564,7 @@ namespace Recoil.Client.Weapons
 
         public void OnProjectileEvent(ProjectileEvent projectileEvent)
         {
+            if (!_ready) return;
             switch (projectileEvent.Kind)
             {
                 case ProjectileEventKind.Explosion:
@@ -558,6 +580,7 @@ namespace Recoil.Client.Weapons
         /// <summary>Fire, smoke, sparks, a shock ring, a scorch mark and a flash of light.</summary>
         public void PlayExplosion(Vector3 point, Vector3 normal, float radius)
         {
+            if (!_ready) return;
             radius = Mathf.Max(radius, 1f);
             _lights.Flash(point + Vector3.up * 0.3f, new Color(1f, 0.65f, 0.3f), 9f, radius * 3.5f, 0.35f);
 
@@ -591,6 +614,7 @@ namespace Recoil.Client.Weapons
 
         void Update()
         {
+            if (!_ready) return;
             float dt = Time.deltaTime;
 
             if (_flashTimer > 0f)
@@ -625,7 +649,7 @@ namespace Recoil.Client.Weapons
         /// <summary>Runs after the player's update, so projectile positions use this frame's tick blend.</summary>
         void LateUpdate()
         {
-            if (_player == null) return;
+            if (!_ready || _player == null || _player.Projectiles == null) return;
 
             for (int i = 0; i < ProjectileCount; i++) _projectiles[i].Seen = false;
 
@@ -650,13 +674,6 @@ namespace Recoil.Client.Weapons
                     {
                         visual.SpinAngle += visual.Spin * Time.deltaTime;
                         visual.Model.localRotation = Quaternion.Euler(visual.SpinAngle);
-                    }
-                    if (visual.Flame && visual.Age > 0.02f)
-                    {
-                        Vector3 drift = projectile.Velocity * 0.12f;
-                        for (int f = 0; f < 2; f++)
-                            _fire.Emit(visual.Transform.position + Random.insideUnitSphere * 0.08f, drift + Random.insideUnitSphere * 0.6f,
-                                Random.Range(0.22f, 0.4f) * Mathf.Lerp(0.6f, 1.6f, Mathf.Clamp01(visual.Age / 0.5f)), Random.Range(0.18f, 0.32f), Color.white);
                     }
                     // Start the trail once the projectile is on its real path, not from where it was parked.
                     if (!visual.Trail.emitting && visual.Trail.sharedMaterial != null && visual.Transform.position.y > -500f && visual.Age > 0f)
@@ -683,6 +700,7 @@ namespace Recoil.Client.Weapons
         /// <summary>Takes down everything still showing, for a new round.</summary>
         public void ClearWorld()
         {
+            if (!_ready) return;
             for (int i = 0; i < TracerCount; i++)
             {
                 ref Tracer tracer = ref _tracers[i];

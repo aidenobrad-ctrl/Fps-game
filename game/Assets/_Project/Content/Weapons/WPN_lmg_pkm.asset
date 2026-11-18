@@ -1,0 +1,128 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6a251fe876909704af95a88ea478068, type: 3}
+  m_Name: WPN_lmg_pkm
+  m_EditorClassIdentifier: 
+  weaponId: lmg_pkm
+  displayName: PKM
+  description: '7.62x54mmR general-purpose machine gun. A 100-round belt of full-power rifle rounds at 650 a minute: three to the body anywhere on the map, through cover and into whoever is behind.'
+  weaponClass: 2
+  slot: 0
+  unlockLevel: 24
+  stats:
+    fireMode: 0
+    roundsPerMinute: 650
+    burstCount: 3
+    burstCooldown: 0.2
+    chargeTime: 0.6
+    minChargeDamage: 0.35
+    ballistics: 0
+    pellets: 1
+    pierceTargets: 1
+    pierceDamageKept: 0.7
+    damage: 45
+    headMultiplier: 3
+    limbMultiplier: 0.75
+    falloffStart: 60
+    falloffEnd: 110
+    minDamageMultiplier: 0.8
+    maxRange: 800
+    projectileSpeed: 60
+    projectileGravity: 0
+    projectileLifetime: 5
+    projectileRadius: 0.05
+    bounces: 0
+    bounceSpeedKept: 0.6
+    bounceDamageMultiplier: 1
+    explosionRadius: 0
+    explosionEdgeDamage: 0.25
+    fuseTime: 0
+    detonateOnTarget: 1
+    meleeRange: 2.2
+    meleeRadius: 0.45
+    meleeHitDelay: 0.12
+    magazineSize: 100
+    reserveAmmo: 200
+    reloadStyle: 0
+    reloadTime: 6.2
+    emptyReloadTime: 6.8
+    reloadIntroTime: 0
+    adsTime: 0.5
+    adsZoom: 1.25
+    hipMoveMultiplier: 0.86
+    adsMoveMultiplier: 0.76
+    sprintToFireTime: 0.38
+    equipTime: 1
+    holsterTime: 0.45
+    hipSpread: 3.2
+    adsSpread: 0.08
+    moveSpreadPenalty: 2.4
+    airSpreadPenalty: 3
+    crouchSpreadMultiplier: 0.8
+    bloomPerShot: 0.14
+    maxBloom: 1.3
+    bloomRecovery: 5
+    adsBloomMultiplier: 0.2
+    recoilPattern:
+    - {x: 0.104, y: 0.7}
+    - {x: 0.009, y: 0.659}
+    - {x: 0.012, y: 0.618}
+    - {x: -0.006, y: 0.578}
+    - {x: -0.07, y: 0.537}
+    - {x: -0.104, y: 0.496}
+    - {x: 0.192, y: 0.18}
+    - {x: -0.046, y: 0.18}
+    - {x: -0.256, y: 0.18}
+    - {x: -0.317, y: 0.18}
+    - {x: -0.192, y: 0.18}
+    - {x: 0.046, y: 0.18}
+    - {x: 0.256, y: 0.18}
+    - {x: 0.317, y: 0.18}
+    - {x: 0.192, y: 0.18}
+    - {x: -0.046, y: 0.18}
+    - {x: -0.256, y: 0.18}
+    - {x: -0.317, y: 0.18}
+    recoilLoopStart: 6
+    recoilRandomness: 0.12
+    recoilVerticalScale: 1
+    recoilHorizontalScale: 1
+    adsRecoilMultiplier: 0.75
+    crouchRecoilMultiplier: 0.85
+    recoilSnappiness: 28
+    recoilRecovery: 7
+    recoilRecoveryDelay: 0.12
+    recoilResetTime: 0.35
+  reticle: 0
+  attachments:
+  - {fileID: 11400000, guid: 9ae6080a6981af55082842fd53486649, type: 2}
+  - {fileID: 11400000, guid: 9bbb22842c1e974ed9f3cde99ab748e6, type: 2}
+  - {fileID: 11400000, guid: b6b35a37f7d5eaf3115602c03e93a623, type: 2}
+  - {fileID: 11400000, guid: cbe55f16203f6178b40a28f137b9c638, type: 2}
+  - {fileID: 11400000, guid: e861d531faf35e04dfd877b9ed2cad4a, type: 2}
+  - {fileID: 11400000, guid: cac71da591c30ba7b76f5be7c7364e9d, type: 2}
+  - {fileID: 11400000, guid: 3ddd05335cec6df3a100b9686cfbb4e3, type: 2}
+  view:
+    kind: 0
+    bodyLength: 0.42
+    bulk: 1.3
+    barrelLength: 0.44
+    stockLength: 0.26
+    magazineLength: 0.14
+    bodyColor: {r: 0.3, g: 0.17, b: 0.09, a: 1}
+    accentColor: {r: 0.4, g: 1, b: 0.45, a: 1}
+    darkColor: {r: 0.07, g: 0.075, b: 0.09, a: 1}
+  audio:
+    kind: 0
+    pitch: 0.85
+    weight: 1.3
+    tail: 0.34
+    volume: 0.8

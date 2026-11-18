@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   presetId: breacher
   displayName: Breacher
-  description: 'First through the door, with a blade for whoever is left.'
-  primary: {fileID: 11400000, guid: 0f3120612cfa400a276a3cdb30f9c011, type: 2}
+  description: 'First through the door with a pump gun.'
+  primary: {fileID: 11400000, guid: 4eab6e02624fe37543222390ad36b3d7, type: 2}
   primaryAttachments:
   - {fileID: 11400000, guid: 3c6aaeff1a758fd310e22cbd54f8ac29, type: 2}
   - {fileID: 11400000, guid: cac71da591c30ba7b76f5be7c7364e9d, type: 2}
-  secondary: {fileID: 11400000, guid: 7698fb58393cc0fd9be4b7d29ab9f77e, type: 2}
+  secondary: {fileID: 11400000, guid: 4f0821de01761cf3ccd01e82b689be09, type: 2}
   secondaryAttachments: []
-  melee: {fileID: 11400000, guid: 0356491e142f2ff5600f5f89998ebf4c, type: 2}
-  utility: {fileID: 11400000, guid: edc0b1651e82dd70e1f880d1c10de4c0, type: 2}
+  melee: {fileID: 11400000, guid: 422a535478c222335325d151644135dc, type: 2}
+  utility: {fileID: 11400000, guid: 3a91f2bcfef483ad50a7401f67ba8857, type: 2}
   perkSet: {fileID: 11400000, guid: 43fe55dc6d0167817de8c89de7131e07, type: 2}

@@ -48,10 +48,10 @@ namespace Recoil.Tests
                 weaponSkin = "gilded",
                 weaponSkins = new[]
                 {
-                    new WeaponSkinChoice { weaponId = "ar_hadron", skinId = "carbon" },
-                    new WeaponSkinChoice { weaponId = "ar_hadron", skinId = "magma" },        // a second skin for the same weapon
-                    new WeaponSkinChoice { weaponId = "smg_sprocket", skinId = "gilded" },    // the same as every weapon already has
-                    new WeaponSkinChoice { weaponId = "sg_breaker", skinId = "no-such-skin" },
+                    new WeaponSkinChoice { weaponId = "ar_m4a1", skinId = "carbon" },
+                    new WeaponSkinChoice { weaponId = "ar_m4a1", skinId = "magma" },        // a second skin for the same weapon
+                    new WeaponSkinChoice { weaponId = "smg_mp5", skinId = "gilded" },    // the same as every weapon already has
+                    new WeaponSkinChoice { weaponId = "sg_m870", skinId = "no-such-skin" },
                     new WeaponSkinChoice { weaponId = new string('x', 80), skinId = "carbon" },
                     null,
                 },
@@ -62,8 +62,8 @@ namespace Recoil.Tests
             Assert.That(clean.pattern, Is.EqualTo("tiger"));
             Assert.That(clean.headgear, Is.EqualTo("helmet"));
             Assert.That(clean.weaponSkins.Length, Is.EqualTo(1));
-            Assert.That(clean.SkinFor("ar_hadron").Id, Is.EqualTo("carbon"));
-            Assert.That(clean.SkinFor("smg_sprocket").Id, Is.EqualTo("gilded"));
+            Assert.That(clean.SkinFor("ar_m4a1").Id, Is.EqualTo("carbon"));
+            Assert.That(clean.SkinFor("smg_mp5").Id, Is.EqualTo("gilded"));
             Assert.That(clean.SkinFor("anything_else").Id, Is.EqualTo("gilded"));
             Assert.That(LookRules.Sanitize(null), Is.Not.Null);
 
@@ -77,18 +77,18 @@ namespace Recoil.Tests
         public void WeaponSkins_CanBeSetOneAtATime_OrForEveryWeapon()
         {
             var look = new CharacterLook();
-            look.SetSkin("ar_hadron", "tiger");
-            look.SetSkin("pistol_notch", "neon_grid");
-            Assert.That(look.SkinFor("ar_hadron").Id, Is.EqualTo("tiger"));
-            Assert.That(look.SkinFor("pistol_notch").Id, Is.EqualTo("neon_grid"));
-            Assert.That(look.SkinFor("sg_breaker").Factory, Is.True);
+            look.SetSkin("ar_m4a1", "tiger");
+            look.SetSkin("pistol_m17", "neon_grid");
+            Assert.That(look.SkinFor("ar_m4a1").Id, Is.EqualTo("tiger"));
+            Assert.That(look.SkinFor("pistol_m17").Id, Is.EqualTo("neon_grid"));
+            Assert.That(look.SkinFor("sg_m870").Factory, Is.True);
 
-            look.SetSkin("ar_hadron", "factory");
+            look.SetSkin("ar_m4a1", "factory");
             Assert.That(look.weaponSkins.Length, Is.EqualTo(1), "choosing the skin every weapon has removes the weapon's own");
 
             look.SetSkinForAll("arctic");
             Assert.That(look.weaponSkins, Is.Empty);
-            Assert.That(look.SkinFor("pistol_notch").Id, Is.EqualTo("arctic"));
+            Assert.That(look.SkinFor("pistol_m17").Id, Is.EqualTo("arctic"));
         }
 
         [Test]
@@ -185,14 +185,14 @@ namespace Recoil.Tests
 
                 library.Edit(look => look.Set(CosmeticSlot.Headgear, "beanie"));
                 library.Edit(look => look.Set(CosmeticSlot.SuitColor, "#204060"));
-                library.Edit(look => look.SetSkin("ar_hadron", "gilded"));
+                library.Edit(look => look.SetSkin("ar_m4a1", "gilded"));
                 Assert.That(changes, Is.EqualTo(3));
                 Assert.That(library.Look.updatedAt, Is.GreaterThanOrEqualTo(now));
 
                 var again = new CosmeticsLibrary(file, () => now);
                 Assert.That(again.Look.headgear, Is.EqualTo("beanie"));
                 Assert.That(again.Look.suitColor, Is.EqualTo("#204060"));
-                Assert.That(again.Look.SkinFor("ar_hadron").Id, Is.EqualTo("gilded"));
+                Assert.That(again.Look.SkinFor("ar_m4a1").Id, Is.EqualTo("gilded"));
 
                 File.WriteAllText(file, "{ this is not json");
                 var broken = new CosmeticsLibrary(file, () => now);

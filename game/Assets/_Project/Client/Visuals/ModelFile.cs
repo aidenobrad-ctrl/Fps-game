@@ -33,6 +33,17 @@ namespace Recoil.Client.Visuals
         Boots = 12,
     }
 
+    /// <summary>
+    /// A named place on a model and a direction there: where a weapon is held, where its
+    /// muzzle is, where an optic sits (see art/blender/guns.py).
+    /// </summary>
+    public struct ModelPoint
+    {
+        public string Name;
+        public Vector3 Position;
+        public Vector3 Direction;
+    }
+
     /// <summary>One bone of a skinned model: its name, the bone it hangs from (-1 for none), and its joint.</summary>
     public struct ModelBone
     {
@@ -55,6 +66,8 @@ namespace Recoil.Client.Visuals
         public byte[] Bone0, Bone1;
         public float[] Weight1;
         public bool Skinned => Bone0 != null;
+        /// <summary>The model's named points (RCM3 files); empty for the others.</summary>
+        public readonly List<ModelPoint> Points = new List<ModelPoint>();
     }
 
     /// <summary>Everything in a model file: its skeleton (empty for rigid parts) and its meshes.</summary>
@@ -65,7 +78,7 @@ namespace Recoil.Client.Visuals
     }
 
     /// <summary>
-    /// Reads the model files made by art/blender/recoil_models.py. Two versions:
+    /// Reads the model files made by art/blender/recoil_models.py. Three versions:
     ///
     ///   RCM1 (rigid parts): "RCM1"; uint16 mesh count; then per mesh: name (uint8 length,
     ///   UTF-8), pivot (3 floats), uint16 vertex count, vertices (position 3 floats, normal 3
@@ -76,6 +89,10 @@ namespace Recoil.Client.Visuals
     ///   parent, pivot; then as RCM1, except that each mesh has a flags byte after its pivot
     ///   (1: skinned), and a skinned mesh's vertices each end with two uint8 bones and the
     ///   float weight of the second.
+    ///
+    ///   RCM3 (weapons and the hands that hold them): as RCM2 with no bones, every mesh
+    ///   followed by its named points: uint8 count, then per point a name and six floats,
+    ///   a position and a direction.
     ///
     /// All little-endian, positions in metres relative to the pivot (a skinned mesh: in the
     /// model's rest pose), in the game's frame, triangles wound for Unity. Plain C#, so it can
@@ -90,7 +107,8 @@ namespace Recoil.Client.Visuals
             var set = new ModelSet();
             using var reader = new BinaryReader(new MemoryStream(bytes));
             string magic = Encoding.ASCII.GetString(reader.ReadBytes(4));
-            bool v2 = magic == "RCM2";
+            bool points = magic == "RCM3";
+            bool v2 = magic == "RCM2" || points;
             if (!v2 && magic != "RCM1") throw new InvalidDataException("Not a Recoil model file.");
 
             if (v2)
@@ -151,6 +169,19 @@ namespace Recoil.Client.Visuals
                         if (indices[i] >= vertices) throw new InvalidDataException(model.Name + ": an index points past the vertices.");
                     }
                     model.Indices[s] = indices;
+                }
+                if (points)
+                {
+                    int pointCount = reader.ReadByte();
+                    for (int p = 0; p < pointCount; p++)
+                    {
+                        model.Points.Add(new ModelPoint
+                        {
+                            Name = ReadName(reader),
+                            Position = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                            Direction = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                        });
+                    }
                 }
                 set.Models.Add(model);
             }

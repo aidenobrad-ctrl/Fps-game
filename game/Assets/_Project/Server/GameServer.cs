@@ -1277,6 +1277,8 @@ namespace Recoil.Server
             {
                 carried = WeaponRules.Apply(carried, _catalog, Settings.weapons);
                 mask &= WeaponRules.Mask(Settings.weapons);
+                // The rule took the utility item away and there was nothing it allows to give instead.
+                if (string.IsNullOrEmpty(carried.utility)) mask &= unchecked((byte)~MatchLoadouts.UtilityBit);
                 if (!MatchLoadouts.Allows(mask, activeSlot)) activeSlot = WeaponRules.FirstSlot(Settings.weapons);
             }
 

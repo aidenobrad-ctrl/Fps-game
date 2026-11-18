@@ -67,7 +67,7 @@ namespace Recoil.Client.Visuals
         readonly Vector3 _upperRestL, _upperRestR, _foreRestL, _foreRestR;
 
         Material _uniform, _gear, _skin, _lips, _team;
-        float _phase, _gait, _air, _slide;
+        float _phase, _gait, _air, _slide, _sprint, _time;
         Transform _grip, _support;
 
         public Transform Root => _root;
@@ -79,60 +79,68 @@ namespace Recoil.Client.Visuals
         {
             _root = new GameObject("Soldier").transform;
             _root.SetParent(parent, false);
-
-            // The skeleton, from the file: each bone at its joint, hanging from its parent.
-            IReadOnlyList<ModelBone> skeleton = ModelLibrary.Bones(Set);
-            var transforms = new Transform[skeleton.Count];
-            for (int i = 0; i < skeleton.Count; i++)
+            try
             {
-                ModelBone bone = skeleton[i];
-                var t = new GameObject(bone.Name).transform;
-                Transform holder = bone.Parent < 0 ? _root : transforms[bone.Parent];
-                t.SetParent(holder, false);
-                t.localPosition = bone.Pivot - (bone.Parent < 0 ? Vector3.zero : skeleton[bone.Parent].Pivot);
-                transforms[i] = t;
-                _bones[bone.Name] = t;
-                _pivots[bone.Name] = bone.Pivot;
-            }
+                // The skeleton, from the file: each bone at its joint, hanging from its parent.
+                IReadOnlyList<ModelBone> skeleton = ModelLibrary.Bones(Set);
+                var transforms = new Transform[skeleton.Count];
+                for (int i = 0; i < skeleton.Count; i++)
+                {
+                    ModelBone bone = skeleton[i];
+                    var t = new GameObject(bone.Name).transform;
+                    Transform holder = bone.Parent < 0 ? _root : transforms[bone.Parent];
+                    t.SetParent(holder, false);
+                    t.localPosition = bone.Pivot - (bone.Parent < 0 ? Vector3.zero : skeleton[bone.Parent].Pivot);
+                    transforms[i] = t;
+                    _bones[bone.Name] = t;
+                    _pivots[bone.Name] = bone.Pivot;
+                }
 
-            // Every skinned mesh in the file, all on the one skeleton.
-            foreach (ModelMesh model in ModelLibrary.All(Set))
+                // Every skinned mesh in the file, all on the one skeleton.
+                foreach (ModelMesh model in ModelLibrary.All(Set))
+                {
+                    if (!model.Skinned) continue;
+                    var meshObject = new GameObject(model.Name);
+                    meshObject.transform.SetParent(_root, false);
+                    var renderer = meshObject.AddComponent<SkinnedMeshRenderer>();
+                    renderer.sharedMesh = model.Mesh;
+                    renderer.bones = transforms;
+                    renderer.rootBone = _bones["Pelvis"];
+                    // Generous, so a crouch or a slide never takes the body outside its bounds.
+                    renderer.localBounds = new Bounds(Vector3.zero, new Vector3(2.4f, 2.8f, 2.4f));
+                    renderer.shadowCastingMode = castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
+                    renderer.receiveShadows = castShadows;
+                    // The uniform's and the kit's baked maps: the cloth's weave and stitching, and the shade in its folds.
+                    ModelMaterials.ApplyMaps(renderer, model.Name, model.TexelScale);
+                    _parts.Add((renderer, model.Zones));
+                }
+                Refresh();
+
+                _pelvisRest = _bones["Pelvis"].localPosition;
+                _thigh = Length("ThighL", "ShinL");
+                _shin = Length("ShinL", "FootL");
+                _upperArm = Length("UpperArmL", "ForearmL");
+                _forearm = Length("ForearmL", "HandL");
+                _ankle = _pivots["FootL"].y;
+                _hipDrop = _pivots["Pelvis"].y - _pivots["ThighL"].y;
+                _upperRestL = _pivots["ForearmL"] - _pivots["UpperArmL"];
+                _upperRestR = _pivots["ForearmR"] - _pivots["UpperArmR"];
+                _foreRestL = _pivots["HandL"] - _pivots["ForearmL"];
+                _foreRestR = _pivots["HandR"] - _pivots["ForearmR"];
+
+                // The gun's pivot is the right shoulder pocket.
+                _weaponPivot = new GameObject("Weapon Pivot").transform;
+                _weaponPivot.SetParent(_bones["Torso"], false);
+                _weaponPivot.localPosition = new Vector3(0.13f, 0.36f, 0.05f);
+                WeaponMount = new GameObject("Weapon Mount").transform;
+                WeaponMount.SetParent(_weaponPivot, false);
+            }
+            catch
             {
-                if (!model.Skinned) continue;
-                var meshObject = new GameObject(model.Name);
-                meshObject.transform.SetParent(_root, false);
-                var renderer = meshObject.AddComponent<SkinnedMeshRenderer>();
-                renderer.sharedMesh = model.Mesh;
-                renderer.bones = transforms;
-                renderer.rootBone = _bones["Pelvis"];
-                // Generous, so a crouch or a slide never takes the body outside its bounds.
-                renderer.localBounds = new Bounds(Vector3.zero, new Vector3(2.4f, 2.8f, 2.4f));
-                renderer.shadowCastingMode = castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = castShadows;
-                // The uniform's and the kit's baked maps: the cloth's weave and stitching, and the shade in its folds.
-                ModelMaterials.ApplyMaps(renderer, model.Name, model.TexelScale);
-                _parts.Add((renderer, model.Zones));
+                // Leave nothing half built behind for whoever handles the failure.
+                Object.Destroy(_root.gameObject);
+                throw;
             }
-            Refresh();
-
-            _pelvisRest = _bones["Pelvis"].localPosition;
-            _thigh = Length("ThighL", "ShinL");
-            _shin = Length("ShinL", "FootL");
-            _upperArm = Length("UpperArmL", "ForearmL");
-            _forearm = Length("ForearmL", "HandL");
-            _ankle = _pivots["FootL"].y;
-            _hipDrop = _pivots["Pelvis"].y - _pivots["ThighL"].y;
-            _upperRestL = _pivots["ForearmL"] - _pivots["UpperArmL"];
-            _upperRestR = _pivots["ForearmR"] - _pivots["UpperArmR"];
-            _foreRestL = _pivots["HandL"] - _pivots["ForearmL"];
-            _foreRestR = _pivots["HandR"] - _pivots["ForearmR"];
-
-            // The gun's pivot is the right shoulder pocket.
-            _weaponPivot = new GameObject("Weapon Pivot").transform;
-            _weaponPivot.SetParent(_bones["Torso"], false);
-            _weaponPivot.localPosition = new Vector3(0.13f, 0.36f, 0.05f);
-            WeaponMount = new GameObject("Weapon Mount").transform;
-            WeaponMount.SetParent(_weaponPivot, false);
         }
 
         float Length(string from, string to) => Mathf.Max(0.05f, (_pivots[to] - _pivots[from]).magnitude);
@@ -223,34 +231,47 @@ namespace Recoil.Client.Visuals
             _air = Mathf.MoveTowards(_air, airborne ? 1f : 0f, dt * 6f);
             _slide = Mathf.MoveTowards(_slide, sliding ? 1f : 0f, dt * 8f);
 
-            // A full stride every 1.6 m at a run; a sprint's is longer.
+            // A full stride every 1.4 m at a walk, 1.6 m at a run; a sprint's is longer.
             float stride = Mathf.Lerp(1.4f, 2.1f, Mathf.InverseLerp(5.6f, 8.6f, speed));
             _phase = Mathf.Repeat(_phase + speed * dt * (2f * Mathf.PI / stride), 2f * Mathf.PI);
+            _time += dt;
             float amplitude = Mathf.Clamp(speed / 5.6f, 0f, 1.3f) * _gait;
             float forward = speed > 0.05f ? localZ / speed : 1f;
             float sideways = speed > 0.05f ? localX / speed : 0f;
+            _sprint = Mathf.MoveTowards(_sprint, !airborne && !sliding && speed > 6.6f && forward > 0.7f ? 1f : 0f, dt * 5f);
 
             // Crouching lowers the hips; the legs bend to keep the feet on the floor.
             float stand = Mathf.Max(0.5f, motion.StandEyeHeight);
             float drop = Mathf.Clamp(stand - motion.EyeHeight, 0f, 0.9f) * 0.62f;
             drop = Mathf.Lerp(drop, 0.48f, _slide);
-            float bob = amplitude * 0.035f * Mathf.Abs(Mathf.Cos(_phase));
+            // The hips are lowest as each foot lands at a run, highest over the standing foot at a walk.
+            float running = Mathf.InverseLerp(2.5f, 4.5f, speed);
+            float landing = Mathf.Abs(Mathf.Cos(_phase));
+            float bob = amplitude * 0.035f * Mathf.Lerp(1f - landing, landing, running);
+            // And they shift over whichever foot is down, and turn with the stride.
+            float shift = amplitude * 0.022f * Mathf.Cos(_phase) * (1f - 0.5f * running);
+            float twist = amplitude * 8f * Mathf.Sin(_phase) * Mathf.Clamp(forward, -1f, 1f);
             Transform pelvis = _bones["Pelvis"];
-            pelvis.localPosition = _pelvisRest - new Vector3(0f, drop + bob, 0f);
+            pelvis.localPosition = _pelvisRest + new Vector3(shift, -drop - bob, 0f);
+            pelvis.localRotation = Quaternion.Euler(0f, twist, amplitude * 3f * Mathf.Cos(_phase) * (1f - running));
             float hipHeight = _pelvisRest.y - _hipDrop - drop - bob;
             LegBend(hipHeight, out float thighBase, out float kneeBase);
 
             Leg("L", _phase, thighBase, kneeBase, amplitude, forward, sideways, front: false);
             Leg("R", _phase + Mathf.PI, thighBase, kneeBase, amplitude, forward, sideways, front: true);
 
-            // The upper body: a lean into a run, back in a slide, and a share of the view's pitch.
+            // The upper body: a lean into a run (more at a sprint), back in a slide, and a share
+            // of the view's pitch. The shoulders turn against the hips so the gun stays steady,
+            // and standing still the chest rises and falls.
             float pitch = Mathf.Clamp(motion.Pitch, -80f, 80f);
-            float lean = amplitude * 7f * Mathf.Clamp01(forward) - _slide * 18f;
-            _bones["Torso"].localRotation = Quaternion.Euler(pitch * 0.4f + lean, -_slide * 15f, 0f);
-            _bones["Head"].localRotation = Quaternion.Euler(pitch * 0.35f - lean * 0.6f, _slide * 15f, 0f);
-            _weaponPivot.localRotation = Quaternion.Euler(pitch * 0.6f - lean, _slide * 15f, 0f);
+            float lean = amplitude * 7f * Mathf.Clamp01(forward) + _sprint * 8f - _slide * 18f;
+            float breath = (1f - Mathf.Clamp01(amplitude)) * Mathf.Sin(_time * 1.7f) * 1.2f;
+            _bones["Torso"].localRotation = Quaternion.Euler(pitch * 0.4f + lean + breath, -twist - _slide * 15f, 0f);
+            _bones["Head"].localRotation = Quaternion.Euler(pitch * 0.35f - lean * 0.6f - breath, _slide * 15f, 0f);
+            // At a sprint the gun comes down and across the chest.
+            _weaponPivot.localRotation = Quaternion.Euler(pitch * 0.6f * (1f - _sprint) - lean + _sprint * 28f, _slide * 15f - _sprint * 30f, _sprint * -12f);
 
-            Arms();
+            Arms(amplitude);
         }
 
         /// <summary>Hip and knee angles that put the ankle straight under a hip at this height.</summary>
@@ -272,6 +293,8 @@ namespace Recoil.Client.Visuals
             float pitch = thighBase - swing * amplitude * 30f * forward - lift * 0.4f;
             float roll = swing * amplitude * 16f * sideways;
             float knee = kneeBase + lift;
+            // Heel first as the leg comes down in front, rolling off the toes behind.
+            float roll01 = amplitude * (-12f * Mathf.Max(0f, swing) + 18f * Mathf.Max(0f, -swing) * Mathf.Max(0f, -Mathf.Cos(phase)));
 
             // In the air the knees come up; in a slide one leg leads and the other folds under.
             pitch = Mathf.Lerp(pitch, front ? -38f : -12f, _air);
@@ -282,19 +305,20 @@ namespace Recoil.Client.Visuals
             _bones["Thigh" + side].localRotation = Quaternion.Euler(pitch, 0f, roll);
             _bones["Shin" + side].localRotation = Quaternion.Euler(knee, 0f, 0f);
             // Keep the sole flat on the floor, toes lifting a little through the swing.
-            _bones["Foot" + side].localRotation = Quaternion.Euler(-(pitch + knee) - lift * 0.2f, 0f, -roll);
+            _bones["Foot" + side].localRotation = Quaternion.Euler(-(pitch + knee) - lift * 0.2f + roll01 * (1f - _air) * (1f - _slide), 0f, -roll);
         }
 
-        void Arms()
+        void Arms(float amplitude)
         {
             Quaternion body = _root.rotation;
             if (_grip == null)
             {
-                // Empty hands: the arms hang as the model rests, a little away from the kit.
-                _bones["UpperArmL"].localRotation = Quaternion.Euler(0f, 0f, -3f);
-                _bones["UpperArmR"].localRotation = Quaternion.Euler(0f, 0f, 3f);
-                _bones["ForearmL"].localRotation = Quaternion.Euler(-4f, 0f, 0f);
-                _bones["ForearmR"].localRotation = Quaternion.Euler(-4f, 0f, 0f);
+                // Empty hands: the arms hang a little away from the kit and swing against the legs.
+                float swing = Mathf.Sin(_phase) * amplitude * 24f;
+                _bones["UpperArmL"].localRotation = Quaternion.Euler(swing, 0f, -3f);
+                _bones["UpperArmR"].localRotation = Quaternion.Euler(-swing, 0f, 3f);
+                _bones["ForearmL"].localRotation = Quaternion.Euler(-4f - amplitude * 30f + Mathf.Max(0f, swing) * 0.6f, 0f, 0f);
+                _bones["ForearmR"].localRotation = Quaternion.Euler(-4f - amplitude * 30f + Mathf.Max(0f, -swing) * 0.6f, 0f, 0f);
                 return;
             }
 

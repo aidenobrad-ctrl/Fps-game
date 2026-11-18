@@ -644,7 +644,7 @@ namespace Recoil.Client.UI
                 case WeaponClass.Lmg: return "LIGHT MACHINE GUNS";
                 case WeaponClass.Shotgun: return "SHOTGUNS";
                 case WeaponClass.Sniper: return "SNIPER RIFLES";
-                case WeaponClass.Marksman: return "MARKSMAN RIFLES";
+                case WeaponClass.Marksman: return "BATTLE & MARKSMAN RIFLES";
                 case WeaponClass.Pistol: return "PISTOLS";
                 case WeaponClass.Launcher: return "LAUNCHERS";
                 case WeaponClass.Special: return "SPECIAL";

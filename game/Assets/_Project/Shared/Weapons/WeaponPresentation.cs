@@ -22,6 +22,11 @@ namespace Recoil.Shared.Weapons
         [Min(0f)] public float magazineLength = 0.14f;
         public Color bodyColor = new Color(0.16f, 0.17f, 0.2f);
         public Color accentColor = new Color(0.15f, 0.85f, 1f);
+        [Tooltip("The darker finish: receivers, grips and the like. Left clear, it is the body colour darkened.")]
+        public Color darkColor = Color.clear;
+
+        /// <summary>The darker finish, as set or worked out from the body colour.</summary>
+        public Color DarkColor => darkColor.a > 0f ? darkColor : new Color(bodyColor.r * 0.55f, bodyColor.g * 0.55f, bodyColor.b * 0.55f, 1f);
     }
 
     /// <summary>Parameters for the synthesised placeholder shot sound.</summary>

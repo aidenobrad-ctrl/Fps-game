@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   presetId: assault
   displayName: Assault
-  description: 'A rifle for every range, with a sight and a steadier grip.'
-  primary: {fileID: 11400000, guid: 5f92c4e7698deb9fafb0752c8289e0bb, type: 2}
+  description: 'An M4A1 with a red dot and a foregrip: good at every range.'
+  primary: {fileID: 11400000, guid: 28b6687a9e6ad658126ee701d7f5d8f9, type: 2}
   primaryAttachments:
   - {fileID: 11400000, guid: f95313d2c50561b865952851718eecf8, type: 2}
   - {fileID: 11400000, guid: f0ccfc29c240b707a378dce542d86b1c, type: 2}
-  secondary: {fileID: 11400000, guid: 310667811d5b4c1145a6cf18447f95d7, type: 2}
+  secondary: {fileID: 11400000, guid: 6fcf1c4a31b0385a91f503f3b4f784e6, type: 2}
   secondaryAttachments: []
   melee: {fileID: 11400000, guid: e7a331c50b20c566955bf4b462141e37, type: 2}
-  utility: {fileID: 11400000, guid: 7b11223ef436b8c010a6f236f868451f, type: 2}
+  utility: {fileID: 11400000, guid: 845f41b936a286968800990f88596bd1, type: 2}
   perkSet: {fileID: 11400000, guid: b7716b83694479bb1f63f8b9b512b532, type: 2}

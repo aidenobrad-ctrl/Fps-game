@@ -93,8 +93,9 @@ MonoBehaviour:
     barrelLength: 0.3
     stockLength: 0.2
     magazineLength: 0.14
-    bodyColor: {r: 0.42, g: 0.36, b: 0.27, a: 1}
-    accentColor: {r: 0.42, g: 0.36, b: 0.27, a: 1}
+    bodyColor: {r: 0.085, g: 0.09, b: 0.1, a: 1}
+    accentColor: {r: 0.085, g: 0.09, b: 0.1, a: 1}
+    darkColor: {r: 0.0468, g: 0.0495, b: 0.055, a: 1}
   audio:
     kind: 3
     pitch: 1.4

@@ -694,6 +694,9 @@ namespace Recoil.Client.Player
                 MoveAmount = b.Grounded ? Mathf.Clamp01(b.HorizontalSpeed / _sim.Motor.Config.sprintSpeed) : 0f,
                 Yaw = viewYaw,
                 Pitch = viewPitch,
+                MagazineEmpty = stats.UsesAmmo && weapon.AmmoInMagazine <= 0,
+                SwapsMagazine = stats.reloadStyle == ReloadStyle.Magazine,
+                Airborne = !b.Grounded,
             }, Time.deltaTime);
         }
 

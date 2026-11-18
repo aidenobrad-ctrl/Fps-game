@@ -1,0 +1,110 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6a251fe876909704af95a88ea478068, type: 3}
+  m_Name: WPN_sg_aa12
+  m_EditorClassIdentifier: 
+  weaponId: sg_aa12
+  displayName: AA-12
+  description: 'Fully automatic 12-gauge, 300 rounds a minute from an 8-round box. Its recoil system keeps it on target; two shells kill up close.'
+  weaponClass: 3
+  slot: 0
+  unlockLevel: 26
+  stats:
+    fireMode: 0
+    roundsPerMinute: 300
+    burstCount: 3
+    burstCooldown: 0.2
+    chargeTime: 0.6
+    minChargeDamage: 0.35
+    ballistics: 0
+    pellets: 9
+    pierceTargets: 0
+    pierceDamageKept: 0.75
+    damage: 10
+    headMultiplier: 2
+    limbMultiplier: 0.8
+    falloffStart: 6
+    falloffEnd: 18
+    minDamageMultiplier: 0.3
+    maxRange: 50
+    projectileSpeed: 60
+    projectileGravity: 0
+    projectileLifetime: 5
+    projectileRadius: 0.05
+    bounces: 0
+    bounceSpeedKept: 0.6
+    bounceDamageMultiplier: 1
+    explosionRadius: 0
+    explosionEdgeDamage: 0.25
+    fuseTime: 0
+    detonateOnTarget: 1
+    meleeRange: 2.2
+    meleeRadius: 0.45
+    meleeHitDelay: 0.12
+    magazineSize: 8
+    reserveAmmo: 40
+    reloadStyle: 0
+    reloadTime: 3
+    emptyReloadTime: 3.6
+    reloadIntroTime: 0
+    adsTime: 0.28
+    adsZoom: 1.15
+    hipMoveMultiplier: 0.93
+    adsMoveMultiplier: 0.88
+    sprintToFireTime: 0.24
+    equipTime: 0.6
+    holsterTime: 0.3
+    hipSpread: 2.8
+    adsSpread: 2.2
+    moveSpreadPenalty: 0.4
+    airSpreadPenalty: 1
+    crouchSpreadMultiplier: 0.8
+    bloomPerShot: 0
+    maxBloom: 0
+    bloomRecovery: 5
+    adsBloomMultiplier: 0.2
+    recoilPattern:
+    - {x: 0.25, y: 1.5}
+    recoilLoopStart: 0
+    recoilRandomness: 0.3
+    recoilVerticalScale: 1
+    recoilHorizontalScale: 1
+    adsRecoilMultiplier: 0.75
+    crouchRecoilMultiplier: 0.85
+    recoilSnappiness: 28
+    recoilRecovery: 9
+    recoilRecoveryDelay: 0.12
+    recoilResetTime: 0.35
+  reticle: 0
+  attachments:
+  - {fileID: 11400000, guid: f95313d2c50561b865952851718eecf8, type: 2}
+  - {fileID: 11400000, guid: 9ae6080a6981af55082842fd53486649, type: 2}
+  - {fileID: 11400000, guid: 3c6aaeff1a758fd310e22cbd54f8ac29, type: 2}
+  - {fileID: 11400000, guid: c92efc48bdc9d36f8ca7f9e6b37cf357, type: 2}
+  - {fileID: 11400000, guid: 3ddd05335cec6df3a100b9686cfbb4e3, type: 2}
+  - {fileID: 11400000, guid: e31b4cf7f4f9e8daeb0b6ff9924e6ee0, type: 2}
+  view:
+    kind: 0
+    bodyLength: 0.3
+    bulk: 1.3
+    barrelLength: 0.3
+    stockLength: 0.26
+    magazineLength: 0.12
+    bodyColor: {r: 0.085, g: 0.09, b: 0.1, a: 1}
+    accentColor: {r: 0.4, g: 1, b: 0.45, a: 1}
+    darkColor: {r: 0.0468, g: 0.0495, b: 0.055, a: 1}
+  audio:
+    kind: 0
+    pitch: 0.8
+    weight: 1.35
+    tail: 0.3
+    volume: 0.88

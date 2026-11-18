@@ -129,6 +129,17 @@ You opened the project, liked it, and asked for a round of changes before the ne
 - **Lean removed.** Q and E no longer tilt; the movement code, its settings and the camera tilt are gone, and servers ignore the old lean input.
 - **Accounts switched off** until they are made required. The backend stays in the repository, tested.
 
+## After the realistic soldier
+
+You asked for real weapons and for the game to stop erroring. In:
+
+- **Real weapons only**, with their real calibres, rates of fire, magazines and handling: M4A1, AK-47, M16A4, FAMAS; MP5, MP5SD, UMP45, P90, MAC-10; Remington 870, M1014, AA-12, double-barrel and sawed-off; M249, PKM; M14 EBR, SVD, Mk 17; M24, L115A3, M107; M17, M1911A1, .357 revolver, Beretta 93R, Skorpion; RPG-7, M32; combat knife, machete, E-tool, tomahawk. Damage follows the cartridge, rifles kill with a head shot, the arcade weapons are gone, and the utility items are an M67, an RGN, C4 and an MK3A2. Classes: assault rifles, submachine guns, shotguns, light machine guns, battle and marksman rifles, sniper rifles, pistols, launchers, melee.
+- **Every weapon modelled whole at its real size**, with points for how it is held and fitted: optics on its rail, iron sights that fold away under them, magazines that lengthen, drums, foregrips the left hand moves to, its own scope or ring sight.
+- **Hands that hold the weapon**: gloved hands posed round the pistol grip (a finger on the trigger), under the handguard or on a foregrip, and round the right hand on a pistol; forearms run to elbows below the camera, so nothing comes up in front of the sights.
+- **Skins over the whole weapon**, at one scale on every part.
+- **Movement**: the gun canted at the hip, bobbing with each step, breathing, dipping on landing; magazines drop out and go in on a reload. Other players' hips sway and turn with the stride, their feet roll heel to toe, and at a sprint their gun comes across the chest.
+- **Errors**: the parts that could take the game down a frame at a time now carry on without the piece that failed, and the first errors of a session, each with where it came from, go to `Logs/Recoil-errors.txt`.
+
 ## Phase 6: Every game mode, bots and matchmaking
 
 You asked for all the game modes and matchmaking together, so this phase also took in the modes, bots and private lobbies that were planned for Phase 9.

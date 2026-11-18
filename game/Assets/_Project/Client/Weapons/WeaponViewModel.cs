@@ -21,6 +21,11 @@ namespace Recoil.Client.Weapons
         public float MoveAmount;
         public float Yaw;
         public float Pitch;
+        /// <summary>Nothing left in the magazine: a launcher shows no rocket.</summary>
+        public bool MagazineEmpty;
+        /// <summary>Reloads by changing the magazine, rather than a round at a time.</summary>
+        public bool SwapsMagazine;
+        public bool Airborne;
     }
 
     /// <summary>
@@ -31,8 +36,10 @@ namespace Recoil.Client.Weapons
     /// </summary>
     public sealed class WeaponViewModel : MonoBehaviour
     {
-        static readonly Vector3 SprintOffset = new Vector3(-0.07f, -0.03f, -0.06f);
-        static readonly Vector3 SprintEuler = new Vector3(10f, -35f, 6f);
+        static readonly Vector3 SprintOffset = new Vector3(-0.06f, -0.035f, -0.05f);
+        static readonly Vector3 SprintEuler = new Vector3(14f, -32f, 12f);
+        static readonly Vector3 HandgunSprintOffset = new Vector3(-0.02f, -0.07f, -0.06f);
+        static readonly Vector3 HandgunSprintEuler = new Vector3(32f, -8f, 4f);
         static readonly Vector3 ReloadOffset = new Vector3(0f, -0.09f, -0.02f);
         static readonly Vector3 ReloadEuler = new Vector3(-22f, 8f, 22f);
         static readonly Vector3 LoweredOffset = new Vector3(0f, -0.34f, -0.05f);
@@ -40,13 +47,16 @@ namespace Recoil.Client.Weapons
         const float SwingTime = 0.3f;
 
         ViewModelLayout _layout;
+        FirstPersonArms _arms;
         Transform _muzzleAnchor;
+        Vector3 _magazineRest;
 
         float _kick, _kickVelocity;
         float _sprintBlend, _reloadBlend, _lowerBlend = 1f;
         float _swing;
         Vector2 _sway;
-        float _bobTime;
+        float _bobTime, _breathTime, _air, _landing;
+        bool _wasAirborne;
         float _lastYaw, _lastPitch;
         bool _hasLastAngles;
 
@@ -92,7 +102,17 @@ namespace Recoil.Client.Weapons
 
             _shownBuild = build;
             _layout = ViewModelBuilder.Build(transform, build, CosmeticsLibrary.SkinFor(build.Weapon.weaponId));
-            FirstPersonArms.Attach(_layout, CosmeticsLibrary.Local?.Look);
+            if (_layout.Magazine != null) _magazineRest = _layout.Magazine.localPosition;
+            try
+            {
+                _arms = FirstPersonArms.Attach(_layout, CosmeticsLibrary.Local?.Look, transform);
+            }
+            catch (System.Exception e)
+            {
+                // The weapon is still there to shoot with; only the arms are missing.
+                _arms = null;
+                Debug.LogException(e, this);
+            }
             _kick = _kickVelocity = 0f;
             _swing = 0f;
             _reloadBlend = 0f;
@@ -156,18 +176,38 @@ namespace Recoil.Client.Weapons
 
             float ads = Mathf.SmoothStep(0f, 1f, input.AdsAmount);
 
-            // Bob: a small figure-eight while moving on the ground, nearly gone when aiming.
-            _bobTime += dt * 12f * Mathf.Sqrt(input.MoveAmount);
-            float bobScale = input.MoveAmount * (1f - 0.85f * ads);
-            var bob = new Vector3(Mathf.Sin(_bobTime) * 0.006f, Mathf.Sin(_bobTime * 2f) * 0.004f, 0f) * bobScale;
+            // Steps: the weapon dips as each foot lands and swings a little from side to side,
+            // more at a run, much less when aiming. Two steps to each cycle of _bobTime.
+            float move = input.Airborne ? 0f : input.MoveAmount;
+            _bobTime += dt * Mathf.Lerp(7.5f, 12.5f, move) * (move > 0.02f ? 1f : 0f);
+            float stride = move * (1f - 0.85f * ads) * (1f + 0.6f * _sprintBlend);
+            float dip = Mathf.Abs(Mathf.Sin(_bobTime));
+            var bob = new Vector3(Mathf.Sin(_bobTime) * 0.009f, -dip * 0.009f + 0.0045f, 0f) * stride;
+            var bobTurn = new Vector3(dip * 1.2f, Mathf.Sin(_bobTime) * 1.1f, Mathf.Sin(_bobTime) * -1.8f) * stride;
+
+            // Breathing while standing still: a slow rise and fall, smaller when aiming.
+            _breathTime += dt * 1.6f;
+            float breath = (1f - move) * (1f - 0.7f * ads);
+            bob += new Vector3(0f, Mathf.Sin(_breathTime) * 0.0016f, 0f) * breath;
+            bobTurn += new Vector3(Mathf.Sin(_breathTime) * 0.35f, Mathf.Sin(_breathTime * 0.5f) * 0.2f, 0f) * breath;
+
+            // In the air the weapon floats up a little; landing knocks it down.
+            if (_wasAirborne && !input.Airborne) _landing = 1f;
+            _wasAirborne = input.Airborne;
+            _air = Mathf.MoveTowards(_air, input.Airborne ? 1f : 0f, dt * 5f);
+            _landing = Mathf.MoveTowards(_landing, 0f, dt * 4f);
+            float land = Mathf.Sin(_landing * Mathf.PI) * (1f - 0.6f * ads);
+            bob += new Vector3(0f, 0.008f * _air - 0.018f * land, 0f);
+            bobTurn += new Vector3(-2f * _air + 4f * land, 0f, 0f);
 
             Vector3 position = Vector3.Lerp(_layout.HipPosition, _layout.AdsPosition, ads);
+            // A gun is canted at the hip and comes level as it is raised to aim; a blade only turns a little.
             Quaternion rotation = Quaternion.Slerp(Quaternion.Euler(_layout.HipEuler), Quaternion.identity,
-                _layout.Kind == ViewModelKind.Gun || _layout.Kind == ViewModelKind.Launcher ? 1f : ads * 0.3f);
+                _layout.Kind == ViewModelKind.Gun || _layout.Kind == ViewModelKind.Launcher ? ads : ads * 0.3f);
 
             float sprint = _sprintBlend * (1f - ads);
-            position += SprintOffset * sprint;
-            rotation *= Quaternion.Euler(SprintEuler * sprint);
+            position += (_layout.Handgun ? HandgunSprintOffset : SprintOffset) * sprint;
+            rotation *= Quaternion.Euler((_layout.Handgun ? HandgunSprintEuler : SprintEuler) * sprint);
 
             position += ReloadOffset * _reloadBlend + LoweredOffset * _lowerBlend;
             rotation *= Quaternion.Euler(ReloadEuler * _reloadBlend + LoweredEuler * _lowerBlend);
@@ -175,7 +215,7 @@ namespace Recoil.Client.Weapons
             float kickScale = Mathf.Lerp(1f, 0.5f, ads);
             position += new Vector3(_sway.x, _sway.y, 0f) * (1f - 0.7f * ads) + bob;
             position += Vector3.back * (_kick * 0.06f * kickScale);
-            rotation *= Quaternion.Euler(-_kick * 3.2f * kickScale, 0f, 0f);
+            rotation *= Quaternion.Euler(-_kick * 3.2f * kickScale + bobTurn.x, bobTurn.y, bobTurn.z);
 
             // Charging: the weapon draws back and trembles harder as power builds.
             if (input.Charge > 0f)
@@ -196,6 +236,23 @@ namespace Recoil.Client.Weapons
 
             _layout.Root.localPosition = position;
             _layout.Root.localRotation = rotation;
+
+            // The magazine drops out and the new one goes in during a reload; a launcher
+            // shows no rocket once it has fired one.
+            if (_layout.Magazine != null)
+            {
+                float out01 = 0f;
+                if (input.Reloading && input.SwapsMagazine)
+                {
+                    float t = Mathf.Clamp01(input.ReloadProgress);
+                    out01 = t < 0.45f ? Mathf.SmoothStep(0f, 1f, t / 0.25f) : Mathf.SmoothStep(1f, 0f, (t - 0.45f) / 0.3f);
+                }
+                _layout.Magazine.localPosition = _magazineRest + _layout.MagazineOut * (0.16f * out01);
+                bool show = out01 < 0.95f;
+                if (_layout.Kind == ViewModelKind.Launcher && input.MagazineEmpty && !(input.Reloading && input.ReloadProgress > 0.5f)) show = false;
+                if (_layout.Magazine.gameObject.activeSelf != show) _layout.Magazine.gameObject.SetActive(show);
+            }
+            _arms?.Update();
 
             Transform anchor = Muzzle;
             anchor.SetPositionAndRotation(_layout.Muzzle.position, _layout.Muzzle.rotation);

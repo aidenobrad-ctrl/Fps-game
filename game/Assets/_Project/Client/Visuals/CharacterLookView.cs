@@ -37,15 +37,29 @@ namespace Recoil.Client.Visuals
         {
             if (SoldierView.Available)
             {
-                _soldier = new SoldierView(body.Root, castShadows: true);
+                try
+                {
+                    _soldier = new SoldierView(body.Root, castShadows: true);
+                }
+                catch (System.Exception e)
+                {
+                    // The model is only a picture: fall back to the simple shapes, and say once why.
+                    _soldier = null;
+                    ReportOnce("the soldier model could not be built", e);
+                }
             }
-            else
+            if (_soldier == null)
             {
                 foreach (UnityCharacterBody.Part part in body.Parts)
                 {
                     GameObject go = part.Transform.gameObject;
-                    go.AddComponent<MeshFilter>().sharedMesh = GreyboxKit.PrimitiveMesh(part.Round ? PrimitiveType.Sphere : PrimitiveType.Cube);
-                    _boxes.Add((go.AddComponent<MeshRenderer>(), part.Zone));
+                    // (A missing component compares equal to null but is not null to ??, so test it.)
+                    MeshFilter filter = go.GetComponent<MeshFilter>();
+                    if (filter == null) filter = go.AddComponent<MeshFilter>();
+                    filter.sharedMesh = GreyboxKit.PrimitiveMesh(part.Round ? PrimitiveType.Sphere : PrimitiveType.Cube);
+                    MeshRenderer renderer = go.GetComponent<MeshRenderer>();
+                    if (renderer == null) renderer = go.AddComponent<MeshRenderer>();
+                    _boxes.Add((renderer, part.Zone));
                 }
             }
             Apply(new CharacterLook());
@@ -67,10 +81,23 @@ namespace Recoil.Client.Visuals
 
             // Each view has its own copies, so a hit flash on one player does not light up another.
             Release();
-            _uniform = Own(ModelMaterials.Cloth(pattern.Pattern, uniform.Color, Shade(uniform.Color, gear.Color)));
-            _gear = Own(ModelMaterials.Cloth(PatternKind.Plain, gear.Color, gear.Color));
-            _skin = Keep(ModelMaterials.Lit(_skinBase));
-            if (_soldier != null) ModelMaterials.TextureSkin(_skin);
+            try
+            {
+                _uniform = Own(ModelMaterials.Cloth(pattern.Pattern, uniform.Color, Shade(uniform.Color, gear.Color)));
+                _gear = Own(ModelMaterials.Cloth(PatternKind.Plain, gear.Color, gear.Color));
+                _skin = Keep(ModelMaterials.Lit(_skinBase));
+                if (_soldier != null) ModelMaterials.TextureSkin(_skin);
+            }
+            catch (System.Exception e)
+            {
+                // Plain colours rather than nothing.
+                ReportOnce("the uniform's materials could not be made", e);
+                _uniformTint = uniform.Color;
+                _skinBase = skin.Color;
+                _uniform = Own(GreyboxMaterials.Flat(uniform.Color));
+                _gear = Own(GreyboxMaterials.Flat(gear.Color));
+                _skin = Own(GreyboxMaterials.Flat(skin.Color));
+            }
             _lips = Own(GreyboxMaterials.Flat(Lips(skin.Color)));
             // Cloth is matte, gear a little less so, skin has a soft sheen.
             ModelMaterials.Tune(_uniform, 0f, 0.14f);
@@ -151,6 +178,31 @@ namespace Recoil.Client.Visuals
         }
 
         void Wear(string name, string bone)
+        {
+            try
+            {
+                WearModel(name, bone);
+            }
+            catch (System.Exception e)
+            {
+                ReportOnce("'" + name + "' could not be put on", e);
+            }
+        }
+
+        static readonly HashSet<string> Reported = new HashSet<string>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => Reported.Clear();
+
+        /// <summary>Logs a failure to dress a soldier the first time it happens, with its cause; never again after that.</summary>
+        static void ReportOnce(string what, System.Exception e)
+        {
+            if (!Reported.Add(what)) return;
+            Debug.LogError("Recoil: " + what + "; the game carries on without it. The cause follows.");
+            Debug.LogException(e);
+        }
+
+        void WearModel(string name, string bone)
         {
             ModelMesh model = ModelLibrary.Get(GearSet, name);
             if (model == null) return;

@@ -14,11 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weapons: {fileID: 11400000, guid: af85117c177b588d60f928362e48b1c2, type: 2}
   utilities:
-  - {fileID: 11400000, guid: 7b11223ef436b8c010a6f236f868451f, type: 2}
-  - {fileID: 11400000, guid: edc0b1651e82dd70e1f880d1c10de4c0, type: 2}
-  - {fileID: 11400000, guid: 852a97347546ce5e7780be5e99c0bb37, type: 2}
-  - {fileID: 11400000, guid: ab30681abe28888d4278e4f50181af1f, type: 2}
-  - {fileID: 11400000, guid: 3b38c5c467931de36dff563b087dead5, type: 2}
+  - {fileID: 11400000, guid: 845f41b936a286968800990f88596bd1, type: 2}
+  - {fileID: 11400000, guid: 3a91f2bcfef483ad50a7401f67ba8857, type: 2}
+  - {fileID: 11400000, guid: 76ea1f969d8a3ae7d599bea68c8bb4e2, type: 2}
+  - {fileID: 11400000, guid: 7f58c44dc9aff2ad4a78f8d290446f49, type: 2}
   perkSets:
   - {fileID: 11400000, guid: b7716b83694479bb1f63f8b9b512b532, type: 2}
   - {fileID: 11400000, guid: 3b1db5a585e809888e9abdfbbacbe84f, type: 2}
@@ -32,5 +31,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 3ce7c4b0544cd42ff2f4a05c989cce57, type: 2}
   - {fileID: 11400000, guid: c15b585bd5bb7d2eb848516372c86630, type: 2}
   - {fileID: 11400000, guid: c19672bb955924d5174bac1df248a8aa, type: 2}
-  - {fileID: 11400000, guid: a0424449163db599246f9b5ee644689e, type: 2}
-  - {fileID: 11400000, guid: d6afc95f4adb7ee512b65bb31582e64b, type: 2}
+  - {fileID: 11400000, guid: fa5a1975671e9be93a302fc1248e13e5, type: 2}
+  - {fileID: 11400000, guid: ec0f24b44f803f2847f0bd54040a644f, type: 2}
