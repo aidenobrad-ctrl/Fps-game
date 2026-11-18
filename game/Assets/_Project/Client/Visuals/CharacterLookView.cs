@@ -67,10 +67,9 @@ namespace Recoil.Client.Visuals
 
             // Each view has its own copies, so a hit flash on one player does not light up another.
             Release();
-            _uniform = Own(LookMaterials.Patterned(pattern.Pattern, uniform.Color, Shade(uniform.Color, gear.Color)));
-            _gear = Own(LookMaterials.Patterned(PatternKind.Plain, gear.Color, gear.Color));
-            _skin = Own(GreyboxMaterials.Flat(_skinBase));
-            GreyboxMaterials.SetColor(_skin, _skinBase);
+            _uniform = Own(ModelMaterials.Cloth(pattern.Pattern, uniform.Color, Shade(uniform.Color, gear.Color)));
+            _gear = Own(ModelMaterials.Cloth(PatternKind.Plain, gear.Color, gear.Color));
+            _skin = Keep(ModelMaterials.Lit(_skinBase));
             if (_soldier != null) ModelMaterials.TextureSkin(_skin);
             _lips = Own(GreyboxMaterials.Flat(Lips(skin.Color)));
             // Cloth is matte, gear a little less so, skin has a soft sheen.
@@ -92,12 +91,15 @@ namespace Recoil.Client.Visuals
                 if (worn != null) Object.Destroy(worn);
             }
             _worn.Clear();
-            foreach (string model in HeadgearModels((HeadgearKind)look.Item(CosmeticSlot.Headgear).Shape)) Wear(model, "Head");
+            var headgear = (HeadgearKind)look.Item(CosmeticSlot.Headgear).Shape;
+            string hair = HairShows(headgear) ? HairModel((HairKind)look.Item(CosmeticSlot.Hair).Shape) : null;
+            if (hair != null) Wear(hair, "Head");
+            foreach (string model in HeadgearModels(headgear)) Wear(model, "Head");
             string back = BackModel((BackKind)look.Item(CosmeticSlot.Back).Shape);
             if (back != null) Wear(back, "Torso");
         }
 
-        /// <summary>The models that make up a piece of headgear. Hair shows under anything that leaves the head bare.</summary>
+        /// <summary>The models that make up a piece of headgear (the hairstyle is worn as well where <see cref="HairShows"/> says).</summary>
         public static string[] HeadgearModels(HeadgearKind kind)
         {
             switch (kind)
@@ -105,11 +107,31 @@ namespace Recoil.Client.Visuals
                 case HeadgearKind.Cap: return new[] { "Cap" };
                 case HeadgearKind.Helmet: return new[] { "Helmet" };
                 case HeadgearKind.Beanie: return new[] { "Beanie" };
-                case HeadgearKind.Headset: return new[] { "Hair", "Headset" };
+                case HeadgearKind.Headset: return new[] { "Headset" };
                 case HeadgearKind.Boonie: return new[] { "Boonie" };
                 case HeadgearKind.HelmetHeadset: return new[] { "Helmet", "HelmetHeadset" };
-                case HeadgearKind.Bandana: return new[] { "Hair", "Bandana" };
-                default: return new[] { "Hair" };
+                case HeadgearKind.Bandana: return new[] { "Bandana" };
+                default: return new string[0];
+            }
+        }
+
+        /// <summary>Whether the hairstyle shows under this headgear: with nothing on, a headset or a bandana.</summary>
+        public static bool HairShows(HeadgearKind kind) =>
+            kind == HeadgearKind.None || kind == HeadgearKind.Headset || kind == HeadgearKind.Bandana;
+
+        /// <summary>The model for a hairstyle, or null for none (shaved: the scalp's own stubble).</summary>
+        public static string HairModel(HairKind kind)
+        {
+            switch (kind)
+            {
+                case HairKind.Buzz: return "HairBuzz";
+                case HairKind.Shaved: return null;
+                case HairKind.SidePart: return "HairSidePart";
+                case HairKind.SlickBack: return "HairSlickBack";
+                case HairKind.Mohawk: return "HairMohawk";
+                case HairKind.Curly: return "HairCurly";
+                case HairKind.Bun: return "HairBun";
+                default: return "HairCrew";
             }
         }
 
@@ -135,7 +157,9 @@ namespace Recoil.Client.Visuals
             var go = new GameObject(name);
             go.transform.SetParent(_soldier.Bone(bone), false);
             go.transform.localPosition = model.Pivot - _soldier.Pivot(bone);
-            ModelLibrary.Attach(go, model, _soldier.ZoneMaterial, castShadows: true);
+            MeshRenderer renderer = ModelLibrary.Attach(go, model, _soldier.ZoneMaterial, castShadows: true);
+            // A hairstyle's strands, and any other maps the model was baked with.
+            ModelMaterials.ApplyMaps(renderer, name, model.TexelScale);
             _worn.Add(go);
         }
 
@@ -181,11 +205,13 @@ namespace Recoil.Client.Visuals
         /// <summary>Lips: the skin a shade darker and redder.</summary>
         static Color Lips(Color skin) => new Color(skin.r * 0.86f, skin.g * 0.68f, skin.b * 0.66f);
 
-        Material Own(Material shared)
+        Material Own(Material shared) => Keep(new Material(shared));
+
+        /// <summary>A material made for this view alone, destroyed with it.</summary>
+        Material Keep(Material material)
         {
-            var copy = new Material(shared);
-            _owned.Add(copy);
-            return copy;
+            _owned.Add(material);
+            return material;
         }
 
         void Release()

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
@@ -32,6 +33,8 @@ namespace Recoil.Tests
                 Assert.That(CosmeticCatalog.Find(slot, look.Get(slot)), Is.Not.Null, slot + " default '" + look.Get(slot) + "' is not in the catalog");
             Assert.That(CosmeticCatalog.Default(CosmeticSlot.WeaponSkin).Factory, Is.True, "weapons start in their own colours");
             Assert.That(CosmeticCatalog.Default(CosmeticSlot.Headgear).Shape, Is.EqualTo((byte)HeadgearKind.Helmet), "soldiers start in a helmet");
+            Assert.That(CosmeticCatalog.Default(CosmeticSlot.Hair).Shape, Is.EqualTo((byte)HairKind.Crew), "and a crew cut under it");
+            Assert.That(CosmeticCatalog.Count(CosmeticSlot.Hair), Is.EqualTo(Enum.GetValues(typeof(HairKind)).Length), "every hairstyle can be chosen");
         }
 
         [Test]
@@ -93,7 +96,7 @@ namespace Recoil.Tests
         {
             var look = new CharacterLook
             {
-                suitColor = "#3A5F1C", trimColor = "saffron", pattern = "circuit", headgear = "boonie", skin = "#6B4A33",
+                suitColor = "#3A5F1C", trimColor = "saffron", pattern = "circuit", headgear = "boonie", hair = "mohawk", skin = "#6B4A33",
                 back = "scarf", weaponSkin = "carbon",
             };
             for (int i = 0; i < LookRules.MaxWeaponSkins; i++) look.SetSkin("weapon_number_" + i.ToString("00"), i % 2 == 0 ? "tiger" : "nebula");

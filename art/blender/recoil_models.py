@@ -466,11 +466,10 @@ def build_soldier(texture_dir):
     (outfit.py). Bakes the face's skin texture into texture_dir and copies the eyes' there.
     Returns (skinned [(mesh name, objects)], first-person objects, gear objects).
     """
-    import human, outfit
+    import human, outfit, textures, hair as hairstyles
     outfit.Part, outfit.ZONES = Part, ZONES
     B = human.Built(BONE_INDEX)
-    head, eyes, lashes, hair = human.build_head(B, ZONES, texture_dir)
-    TEXTURES["skin"] = human.bake_skin(head, texture_dir)
+    head, eyes, lashes, reference_hair = human.build_head(B, ZONES, texture_dir)
     eye_image = bpy.data.images.load(os.path.join(human.DATA, "eyes", "brown_eye.png"))
     eye_image.scale(512, 512)
     eye_image.filepath_raw = TEXTURES["eye"] = os.path.join(texture_dir, "EyeAlbedo.png")
@@ -482,15 +481,37 @@ def build_soldier(texture_dir):
     head["own_uv"] = True
     eyes["own_uv"] = True
     dressed = outfit.dress(B, BONE_INDEX)
-    skinned = [("Body", [head, eyes, lashes]), ("Uniform", dressed["uniform"]), ("Kit", dressed["kit"])]
-    gear = refit_gear(head, hair, dressed["back"])
-    return skinned, dressed["first_person"], gear
+    uniform, kit = dressed["uniform"], dressed["kit"]
+    # The face's skin texture, shaded where the eyes, ears, jaw and collar enclose it.
+    reference_hair.hide_render = True
+    TEXTURES["skin"] = human.bake_skin(head, texture_dir)
+    reference_hair.hide_render = False
+
+    # The uniform and the kit each get one UV layout and their normal and shade maps; the
+    # face its normal map, and its shade in its skin texture.
+    for name, objects in (("Uniform", uniform), ("Kit", kit)):
+        textures.unwrap_together(objects)
+        for obj in objects:
+            obj.data["maps"] = name
+        TEXTURES[name] = textures.bake_maps(objects, ZONES, name, texture_dir, hide=[reference_hair])
+    TEXTURES["SkinNormal"] = textures.bake_face(head, texture_dir, hide=[reference_hair])
+    head.data["maps"] = "Skin"
+
+    first_person = outfit.first_person(dressed["body"], uniform)
+    styles = hairstyles.build_styles(head, ZONES, texture_dir)
+    for obj in styles:
+        obj.data["maps"] = obj.name
+        TEXTURES[obj.name] = (os.path.join(texture_dir, obj.name + "Normal.jpg"), None)
+    gear = styles + refit_gear(head, reference_hair, dressed["back"])
+    bpy.data.objects.remove(reference_hair)
+    skinned = [("Body", [head, eyes, lashes]), ("Uniform", uniform), ("Kit", kit)]
+    return skinned, first_person, gear
 
 
 def refit_gear(head, hair, back_z):
     """
     The headgear and back items, moved from where gear_models() makes them onto the
-    realistic head and plate carrier, and the realistic hair in place of the old one.
+    realistic head and plate carrier (measured against a short crop of hair on it).
     """
     objects = {}
     for part in gear_models():
@@ -498,7 +519,6 @@ def refit_gear(head, hair, back_z):
         objects[part.name] = obj
     old_hair = objects.pop("Hair")
     bpy.data.objects.remove(old_hair)
-    hair.name = "Hair"
 
     # The old head, in the band the hat brims sit in: half as wide as this, this far back and
     # forward, and its crown this high (with hair). The new one, measured the same way.
@@ -529,7 +549,7 @@ def refit_gear(head, hair, back_z):
             else:
                 v.co = v.co + back_shift
         obj.data.update()
-    return [hair] + list(objects.values())
+    return list(objects.values())
 
 
 # ---------------------------------------------------------------------------- posing, as the game does
@@ -1087,13 +1107,14 @@ def export(objects, path, magic=b"RCM1"):
         pivot = Vector(obj["pivot"])
         vertices, lookup = [], {}
         by_zone = {}
+        uv_layer = mesh.uv_layers.active if obj.get("own_uv") else None
         for tri in mesh.loop_triangles:
             corner = []
             for loop_index in tri.loops:
                 loop = mesh.loops[loop_index]
                 co = mesh.vertices[loop.vertex_index].co - pivot
                 n = loop.normal
-                uv = box_uv(mesh.vertices[loop.vertex_index].co, tri.normal)
+                uv = tuple(uv_layer.data[loop_index].uv) if uv_layer else box_uv(mesh.vertices[loop.vertex_index].co, tri.normal)
                 key = (loop.vertex_index, round(n.x, 3), round(n.y, 3), round(n.z, 3), round(uv[0], 4), round(uv[1], 4))
                 if key not in lookup:
                     lookup[key] = len(vertices)
@@ -1339,11 +1360,51 @@ def soldier_pieces(skinned):
     return [(obj, None, outfit.weights_of(obj)) for _, objects in skinned for obj in objects]
 
 
+def with_maps(mat, maps):
+    """A copy of a zone's material with a mesh's baked maps: its normal map, and its shade over the colour."""
+    normal, shade = TEXTURES[maps] if maps in TEXTURES else (None, None)
+    if maps == "Skin":
+        normal, shade = TEXTURES.get("SkinNormal"), None
+    if normal is None:
+        return mat
+    copy = mat.copy()
+    copy.name = mat.name + "_" + maps
+    nt = copy.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = bpy.data.images.load(normal, check_existing=True)
+    tex.image.colorspace_settings.name = 'Non-Color'
+    nmap = nt.nodes.new("ShaderNodeNormalMap")
+    nt.links.new(tex.outputs["Color"], nmap.inputs["Color"])
+    nt.links.new(nmap.outputs["Normal"], bsdf.inputs["Normal"])
+    if shade:
+        stex = nt.nodes.new("ShaderNodeTexImage")
+        stex.image = bpy.data.images.load(shade, check_existing=True)
+        mix = nt.nodes.new("ShaderNodeMix")
+        mix.data_type = 'RGBA'
+        mix.blend_type = 'MULTIPLY'
+        mix.inputs[0].default_value = 1.0
+        base = bsdf.inputs["Base Color"]
+        if base.links:
+            nt.links.new(base.links[0].from_socket, mix.inputs[6])
+        else:
+            mix.inputs[6].default_value = base.default_value
+        nt.links.new(stex.outputs["Color"], mix.inputs[7])
+        nt.links.new(mix.outputs[2], base)
+    return copy
+
+
 def dress(objects, zones):
+    """Gives objects a soldier's zone materials, with their mesh's baked maps where it has them."""
+    cache = {}
     for obj in objects:
         if len(obj.data.materials) == 0:
+            maps = obj.data.get("maps")
             for m in zones:
-                obj.data.materials.append(m)
+                key = (m.name, maps)
+                if key not in cache:
+                    cache[key] = with_maps(m, maps) if maps else m
+                obj.data.materials.append(cache[key])
 
 
 def render_backdrop(path, samples=160):
@@ -1530,13 +1591,21 @@ def main():
     rest = dict(speed=0, phase=0, pitch=0)
     shot("soldier_front.png", posed_soldier(pieces, gear, rest, headgear="Helmet", back="AssaultPack", tag="_f"), (1.3, 1.25, 2.6), (0, 0.95, 0), lens=55)
     shot("soldier_back.png", posed_soldier(pieces, gear, rest, headgear="Helmet", back="AssaultPack", tag="_b"), (-1.6, 1.4, -2.2), (0, 0.95, 0), lens=55)
-    shot("head.png", posed_soldier(pieces, gear, rest, headgear="Hair", tag="_h"), (0.3, 1.7, 0.85), (0, 1.63, 0.05), lens=60, size=(800, 800))
+    shot("head.png", posed_soldier(pieces, gear, rest, headgear="HairCrew", tag="_h"), (0.3, 1.7, 0.85), (0, 1.63, 0.05), lens=60, size=(800, 800))
+    # Every hairstyle, head and shoulders, in a row.
+    styles = ["HairCrew", "HairBuzz", None, "HairSidePart", "HairSlickBack", "HairMohawk", "HairCurly", "HairBun"]
+    for half in (0, 1):
+        row = []
+        for k, style in enumerate(styles[half * 4:half * 4 + 4]):
+            row += posed_soldier(pieces, gear, rest, origin=((k - 1.5) * 0.46, 0, 0), yaw=(-40 if k % 2 else 40) + 180 * (half and k == 3),
+                                 headgear=style, tag="_s%d%d" % (half, k))
+        shot("hairstyles_%d.png" % (half + 1), row, (0, 1.7, 2.3), (0, 1.62, 0), lens=50, size=(1800, 640))
     made = posed_soldier(pieces, gear, dict(speed=0, phase=0, pitch=5), rifle, gun_objects, origin=(-0.5, 0, 0), tag="_p1")
     made += posed_soldier(pieces, gear, dict(speed=5.6, phase=0.9, pitch=-5), rifle, gun_objects, origin=(0.6, 0, -0.4), headgear=["Cap", "Headset"], back="RadioPack", tag="_p2")
     shot("soldier_posed.png", made, (1.6, 1.45, 3.3), (0.05, 1.0, -0.2), lens=45, size=(1400, 1000))
     lineup = []
-    for i, (hg, back) in enumerate((("Hair", None), ("Helmet", None), ("Cap", "HydrationPack"), ("Beanie", "Rucksack"),
-                                     (["Hair", "Headset"], "BedrollPack"), ("Boonie", "Scarf"), (["Helmet", "HelmetHeadset"], "RadioPack"), (["Hair", "Bandana"], None))):
+    for i, (hg, back) in enumerate((("HairCrew", None), ("HairSidePart", None), ("HairSlickBack", "HydrationPack"), ("HairMohawk", "Rucksack"),
+                                     (["HairCurly", "Headset"], "BedrollPack"), ("HairBun", "Scarf"), (["Helmet", "HelmetHeadset"], "RadioPack"), (["HairBuzz", "Bandana"], None))):
         lineup += posed_soldier(pieces, gear, rest, origin=((i - 3.5) * 0.75, 0, 0), yaw=180 if i % 2 else 0, headgear=hg, back=back, tag="_l%d" % i)
     shot("lineup.png", lineup, (0, 1.5, 6.5), (0, 1.0, 0), lens=40, size=(1600, 800))
 

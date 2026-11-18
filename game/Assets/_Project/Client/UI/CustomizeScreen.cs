@@ -39,6 +39,7 @@ namespace Recoil.Client.UI
             (CosmeticSlot.TrimColor, "GEAR"),
             (CosmeticSlot.Pattern, "PATTERN"),
             (CosmeticSlot.Headgear, "HEADGEAR"),
+            (CosmeticSlot.Hair, "HAIR"),
             (CosmeticSlot.Skin, "SKIN TONE"),
             (CosmeticSlot.Back, "BACK"),
             (CosmeticSlot.WeaponSkin, "WEAPON SKINS"),
@@ -443,6 +444,7 @@ namespace Recoil.Client.UI
                 case CosmeticSlot.Pattern: return "Printed on your uniform, in a shade of its colour.";
                 case CosmeticSlot.Headgear: return "Worn on your head. Purely for looks: your head is the same size to a bullet whatever you wear.";
                 case CosmeticSlot.Skin: return "Your skin tone. Pick one, or mix your own below.";
+                case CosmeticSlot.Hair: return "Your hairstyle. A helmet, cap, beanie or boonie hat covers it; a headset or bandana does not.";
                 case CosmeticSlot.Back: return "Worn on your back.";
                 default:
                     if (picked == null)
@@ -519,6 +521,12 @@ namespace Recoil.Client.UI
                         if (item.Pattern != PatternKind.Plain)
                             swatch.style.backgroundImage = new StyleBackground(LookMaterials.Texture(item.Pattern, item.Color, item.Second));
                     }
+                    break;
+                case CosmeticSlot.Hair:
+                    // Hair: a plate the colour of hair; shaved, the colour of the skin.
+                    bool shaved = item.Shape == (byte)HairKind.Shaved;
+                    swatch.style.backgroundColor = shaved ? look.Item(CosmeticSlot.Skin).Color : new Color(0.16f, 0.12f, 0.09f);
+                    Glyph(swatch, shaved ? "SHAVED" : "");
                     break;
                 default:
                     // Headgear and back items: a plate in the gear colour, with a line marking "none".

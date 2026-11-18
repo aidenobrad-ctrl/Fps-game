@@ -78,10 +78,16 @@ namespace Recoil.Tests
         }
 
         [Test]
-        public void TheFaceAndEyeTextures_AreThere()
+        public void TheBakedTextures_AreThere()
         {
             string root = Environment.GetEnvironmentVariable("RECOIL_PROJECT") ?? "";
-            foreach (string texture in new[] { "SkinAlbedo.png", "EyeAlbedo.png" })
+            var textures = new List<string> { "SkinAlbedo.png", "SkinNormal.jpg", "EyeAlbedo.png", "UniformNormal.jpg", "UniformShade.jpg", "KitNormal.jpg", "KitShade.jpg" };
+            foreach (Recoil.Shared.Cosmetics.HairKind kind in Enum.GetValues(typeof(Recoil.Shared.Cosmetics.HairKind)))
+            {
+                string model = CharacterLookView.HairModel(kind);
+                if (model != null) textures.Add(model + "Normal.jpg");
+            }
+            foreach (string texture in textures)
             {
                 bool found = new[] { Path.Combine(root, "Assets/_Project/Resources/Models", texture), "Assets/_Project/Resources/Models/" + texture }.Any(File.Exists);
                 Assert.That(found, Is.True, texture + " is made with art/blender/recoil_models.py");
@@ -99,6 +105,16 @@ namespace Recoil.Tests
                     Assert.That(gear.ContainsKey(name), kind + " -> " + name);
                     WellFormed(gear[name]);
                 }
+            }
+            foreach (Recoil.Shared.Cosmetics.HairKind kind in Enum.GetValues(typeof(Recoil.Shared.Cosmetics.HairKind)))
+            {
+                string name = CharacterLookView.HairModel(kind);
+                if (name == null) continue;
+                Assert.That(gear.ContainsKey(name), kind + " -> " + name);
+                WellFormed(gear[name]);
+                // Fitted to the head: over the scalp, not floating above it or sunk into the face.
+                Assert.That(gear[name].Positions.Max(p => p.y), Is.InRange(1.73f, 1.82f), name);
+                Assert.That(gear[name].Positions.Min(p => p.y), Is.GreaterThan(1.5f), name);
             }
             foreach (Recoil.Shared.Cosmetics.BackKind kind in Enum.GetValues(typeof(Recoil.Shared.Cosmetics.BackKind)))
             {

@@ -479,8 +479,8 @@ def _interp(points, x):
 
 def hairline(p):
     """The height the hair starts at, by how far forward on the head a point is."""
-    return _interp([(0.2, 1.702), (0.07, 1.697), (0.045, 1.672), (0.02, 1.645), (0.0, 1.632), (-0.03, 1.612), (-0.065, 1.582), (-0.2, 1.565)], p.z) \
-        + 0.010 * smoothstep(0.02, 0.055, abs(p.x)) * smoothstep(0.05, 0.1, p.z)
+    return _interp([(0.2, 1.698), (0.07, 1.69), (0.045, 1.658), (0.02, 1.638), (0.0, 1.63), (-0.03, 1.612), (-0.065, 1.582), (-0.2, 1.565)], p.z) \
+        + 0.006 * smoothstep(0.02, 0.055, abs(p.x)) * smoothstep(0.05, 0.1, p.z)
 
 
 def face_masks(p):
@@ -674,7 +674,17 @@ def build_hair(head, zones):
     return hair
 
 
-def bake_skin(head, out_dir, size=1024):
+def _multiply(nt, colour, factor):
+    n = nt.nodes.new("ShaderNodeMix")
+    n.data_type = 'RGBA'
+    n.blend_type = 'MULTIPLY'
+    n.inputs[0].default_value = 1.0
+    nt.links.new(colour, n.inputs[6])
+    nt.links.new(factor, n.inputs[7])
+    return n.outputs[2]
+
+
+def bake_skin(head, out_dir, size=1024, shade=True):
     """
     Paints the face from its masks into a texture, through the head's UVs: brows, lips,
     stubble, a little colour in the cheeks and shadow round the eyes, short hair on the
@@ -771,12 +781,18 @@ def bake_skin(head, out_dir, size=1024):
     scalp.inputs["From Max"].default_value = 0.62
     links.new(mb.outputs[2], scalp.inputs["Value"])
     scalp = scalp.outputs["Result"]
-    col = mix(col, (0.13, 0.11, 0.10, 1.0), mul(scalp, 0.92))
-    col = mix(col, (0.035, 0.03, 0.027, 1.0), mul(mul(scalp, hairdots), 0.95))
+    # Clipped short: stubble over the scalp, which the hairstyles cover or leave showing.
+    col = mix(col, (0.2, 0.17, 0.15, 1.0), mul(scalp, 0.8))
+    col = mix(col, (0.035, 0.03, 0.027, 1.0), mul(mul(scalp, hairdots), 0.92))
     # Brows: hairs lying along the brow.
     strokes = noise(1.0, 2.0, stretch=(120.0, 1200.0, 500.0), low=0.45, high=0.6)
     col = mix(col, (0.18, 0.14, 0.12, 1.0), mul(ma.outputs[1], 0.7))
     col = mix(col, (0.05, 0.04, 0.035, 1.0), mul(ma.outputs[1], mul(strokes, 0.9)))
+    if shade:
+        # Shaded where the face is enclosed: round the eyes and nostrils, under the jaw and
+        # the collar, behind the ears.
+        import textures
+        col = _multiply(nt, col, textures.occlusion(nt, 0.05, 0.6))
     links.new(col, bsdf.inputs["Base Color"])
 
     image = bpy.data.images.new("SkinAlbedo", size, size, alpha=False)

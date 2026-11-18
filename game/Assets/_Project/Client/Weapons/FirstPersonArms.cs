@@ -30,8 +30,8 @@ namespace Recoil.Client.Weapons
             look = look ?? new CharacterLook();
             CosmeticItem uniformItem = look.Item(CosmeticSlot.SuitColor), gearItem = look.Item(CosmeticSlot.TrimColor);
             CosmeticItem pattern = look.Item(CosmeticSlot.Pattern);
-            Material uniform = LookMaterials.Patterned(pattern.Pattern, uniformItem.Color, Color.Lerp(uniformItem.Color * 0.7f, gearItem.Color, 0.25f));
-            Material gear = LookMaterials.Patterned(PatternKind.Plain, gearItem.Color, gearItem.Color);
+            Material uniform = ModelMaterials.Cloth(pattern.Pattern, uniformItem.Color, Color.Lerp(uniformItem.Color * 0.7f, gearItem.Color, 0.25f));
+            Material gear = ModelMaterials.Cloth(PatternKind.Plain, gearItem.Color, gearItem.Color);
 
             Material Zone(ModelZone zone)
             {
@@ -83,13 +83,14 @@ namespace Recoil.Client.Weapons
             foreGo.transform.SetParent(root, false);
             foreGo.transform.localPosition = elbow;
             foreGo.transform.localRotation = Quaternion.FromToRotation(rest, wrist - elbow);
-            ModelLibrary.Attach(foreGo, forearm, zone, castShadows: false);
+            // The sleeves and gloves are cut from the uniform, and share its maps.
+            ModelMaterials.ApplyMaps(ModelLibrary.Attach(foreGo, forearm, zone, castShadows: false), "Uniform", forearm.TexelScale);
 
             var handGo = new GameObject("Hand " + side);
             handGo.transform.SetParent(root, false);
             handGo.transform.localPosition = wrist;
             handGo.transform.localRotation = Quaternion.FromToRotation(Vector3.down, fingers.normalized);
-            ModelLibrary.Attach(handGo, hand, zone, castShadows: false);
+            ModelMaterials.ApplyMaps(ModelLibrary.Attach(handGo, hand, zone, castShadows: false), "Uniform", hand.TexelScale);
         }
     }
 }

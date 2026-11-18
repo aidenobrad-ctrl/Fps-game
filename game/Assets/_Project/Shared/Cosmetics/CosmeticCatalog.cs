@@ -16,6 +16,8 @@ namespace Recoil.Shared.Cosmetics
         Skin,
         Back,
         WeaponSkin,
+        /// <summary>The hairstyle, seen when nothing covers the head (or only a headset or bandana).</summary>
+        Hair,
     }
 
     public enum PatternKind : byte
@@ -43,6 +45,20 @@ namespace Recoil.Shared.Cosmetics
         Boonie,
         HelmetHeadset,
         Bandana,
+    }
+
+    public enum HairKind : byte
+    {
+        /// <summary>Short back and sides, a little longer on top.</summary>
+        Crew,
+        Buzz,
+        /// <summary>No hair at all: the scalp's stubble.</summary>
+        Shaved,
+        SidePart,
+        SlickBack,
+        Mohawk,
+        Curly,
+        Bun,
     }
 
     public enum BackKind : byte
@@ -162,6 +178,16 @@ namespace Recoil.Shared.Cosmetics
             SkinTone("deep", "Deep", new Color(0.3f, 0.19f, 0.13f));
             SkinTone("ebony", "Ebony", new Color(0.2f, 0.13f, 0.09f));
 
+            // Hairstyles, crew cut first.
+            Hair("crew", "Crew Cut", HairKind.Crew);
+            Hair("buzz", "Buzz Cut", HairKind.Buzz);
+            Hair("shaved", "Shaved", HairKind.Shaved);
+            Hair("side_part", "Side Part", HairKind.SidePart);
+            Hair("slick_back", "Slicked Back", HairKind.SlickBack);
+            Hair("mohawk", "Mohawk", HairKind.Mohawk);
+            Hair("curly", "Curly Top", HairKind.Curly);
+            Hair("bun", "Bun", HairKind.Bun);
+
             Back("none", "Nothing", BackKind.None);
             Back("assault_pack", "Assault Pack", BackKind.AssaultPack);
             Back("hydration", "Hydration Pack", BackKind.HydrationPack);
@@ -198,6 +224,9 @@ namespace Recoil.Shared.Cosmetics
 
         static void Headgear(string id, string name, HeadgearKind kind) =>
             Add(new CosmeticItem { Id = id, Name = name, Slot = CosmeticSlot.Headgear, Shape = (byte)kind, Color = Color.white });
+
+        static void Hair(string id, string name, HairKind kind) =>
+            Add(new CosmeticItem { Id = id, Name = name, Slot = CosmeticSlot.Hair, Shape = (byte)kind, Color = Color.white });
 
         static void SkinTone(string id, string name, Color tone) =>
             Add(new CosmeticItem { Id = id, Name = name, Slot = CosmeticSlot.Skin, Color = tone });
@@ -302,7 +331,7 @@ namespace Recoil.Shared.Cosmetics
 
         public static readonly CosmeticSlot[] Slots =
         {
-            CosmeticSlot.SuitColor, CosmeticSlot.TrimColor, CosmeticSlot.Pattern, CosmeticSlot.Headgear,
+            CosmeticSlot.SuitColor, CosmeticSlot.TrimColor, CosmeticSlot.Pattern, CosmeticSlot.Headgear, CosmeticSlot.Hair,
             CosmeticSlot.Skin, CosmeticSlot.Back, CosmeticSlot.WeaponSkin,
         };
     }

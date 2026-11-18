@@ -88,6 +88,40 @@ namespace Recoil.Client.Visuals
         }
 
         /// <summary>How much of the second colour a pixel of a pattern is, 0 to 1. Every pattern tiles seamlessly.</summary>
+        /// <summary>
+        /// A pattern as a detail layer (see <see cref="ModelMaterials.Cloth"/>): each colour at
+        /// half its brightness, in linear light, since the shader doubles the detail it lays on.
+        /// </summary>
+        public static Texture2D DetailTexture(PatternKind pattern, Color a, Color b)
+        {
+            string key = "detail:" + (int)pattern + ":" + ColorUtility.ToHtmlStringRGB(a) + ":" + ColorUtility.ToHtmlStringRGB(b);
+            if (Textures.TryGetValue(key, out Texture2D cached) && cached != null) return cached;
+
+            var pixels = new Color32[Size * Size];
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    Color linear = Color.Lerp(a, b, Mix(pattern, x, y)).linear * 0.5f;
+                    linear.a = 1f;
+                    pixels[y * Size + x] = linear.gamma;
+                }
+            }
+
+            bool blocky = pattern == PatternKind.Pixel || pattern == PatternKind.Circuit;
+            var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, true)
+            {
+                name = "Pattern detail " + pattern,
+                wrapMode = TextureWrapMode.Repeat,
+                filterMode = blocky ? FilterMode.Point : FilterMode.Trilinear,
+                anisoLevel = 4,
+            };
+            texture.SetPixels32(pixels);
+            texture.Apply(true, true);
+            Textures[key] = texture;
+            return texture;
+        }
+
         public static float Mix(PatternKind pattern, int x, int y)
         {
             switch (pattern)

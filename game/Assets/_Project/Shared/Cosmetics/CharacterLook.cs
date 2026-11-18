@@ -29,6 +29,7 @@ namespace Recoil.Shared.Cosmetics
         public string trimColor = "coyote";
         public string pattern = "plain";
         public string headgear = "helmet";
+        public string hair = "crew";
         public string skin = "medium";
         public string back = "none";
         /// <summary>The skin on every weapon without one of its own.</summary>
@@ -55,6 +56,7 @@ namespace Recoil.Shared.Cosmetics
                 case CosmeticSlot.TrimColor: return trimColor;
                 case CosmeticSlot.Pattern: return pattern;
                 case CosmeticSlot.Headgear: return headgear;
+                case CosmeticSlot.Hair: return hair;
                 case CosmeticSlot.Skin: return skin;
                 case CosmeticSlot.Back: return back;
                 default: return weaponSkin;
@@ -69,6 +71,7 @@ namespace Recoil.Shared.Cosmetics
                 case CosmeticSlot.TrimColor: trimColor = id; break;
                 case CosmeticSlot.Pattern: pattern = id; break;
                 case CosmeticSlot.Headgear: headgear = id; break;
+                case CosmeticSlot.Hair: hair = id; break;
                 case CosmeticSlot.Skin: skin = id; break;
                 case CosmeticSlot.Back: back = id; break;
                 default: weaponSkin = id; break;

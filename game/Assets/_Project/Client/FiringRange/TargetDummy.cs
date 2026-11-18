@@ -27,6 +27,7 @@ namespace Recoil.Client.FiringRange
         // So a row of targets is not a row of twins.
         static readonly string[] Headgear = { "none", "cap", "helmet", "beanie", "headset", "bandana" };
         static readonly string[] SkinTones = { "medium", "fair", "tan", "light", "brown", "olive", "deep", "porcelain" };
+        static readonly string[] Hairstyles = { "crew", "side_part", "buzz", "curly", "slick_back", "bun", "mohawk", "shaved", "crew" };
         static MovementConfig _shape;
         static int _made;
 
@@ -102,6 +103,7 @@ namespace Recoil.Client.FiringRange
                 pattern = "plain",
                 headgear = Headgear[_made % Headgear.Length],
                 skin = SkinTones[_made % SkinTones.Length],
+                hair = Hairstyles[_made % Hairstyles.Length],
                 back = "none",
             });
             _look.SetSide(true, friendly: false);

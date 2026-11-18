@@ -109,6 +109,8 @@ namespace Recoil.Client.Visuals
                 renderer.localBounds = new Bounds(Vector3.zero, new Vector3(2.4f, 2.8f, 2.4f));
                 renderer.shadowCastingMode = castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
                 renderer.receiveShadows = castShadows;
+                // The uniform's and the kit's baked maps: the cloth's weave and stitching, and the shade in its folds.
+                ModelMaterials.ApplyMaps(renderer, model.Name, model.TexelScale);
                 _parts.Add((renderer, model.Zones));
             }
             Refresh();

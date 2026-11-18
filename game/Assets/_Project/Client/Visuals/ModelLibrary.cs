@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Recoil.Shared.Cosmetics;
 
 namespace Recoil.Client.Visuals
 {
@@ -12,6 +13,8 @@ namespace Recoil.Client.Visuals
         public ModelZone[] Zones;
         /// <summary>Bound to the set's skeleton, in its rest pose, rather than hung on one bone.</summary>
         public bool Skinned;
+        /// <summary>Metres of surface per unit of texture coordinates: how big a pattern laid over its UVs comes out.</summary>
+        public float TexelScale;
     }
 
     /// <summary>
@@ -104,6 +107,8 @@ namespace Recoil.Client.Visuals
             mesh.uv = data.Uvs;
             mesh.subMeshCount = data.Indices.Length;
             for (int i = 0; i < data.Indices.Length; i++) mesh.SetTriangles(data.Indices[i], i, false);
+            // Tangents, for the normal maps the soldier's meshes are lit through.
+            mesh.RecalculateTangents();
             if (data.Skinned)
             {
                 // Each vertex follows one bone, or two near a joint. The bones rest at their
@@ -125,7 +130,28 @@ namespace Recoil.Client.Visuals
             }
             mesh.RecalculateBounds();
             mesh.UploadMeshData(true);
-            return new ModelMesh { Name = data.Name, Pivot = data.Pivot, Mesh = mesh, Zones = data.Zones, Skinned = data.Skinned };
+            return new ModelMesh
+            {
+                Name = data.Name, Pivot = data.Pivot, Mesh = mesh, Zones = data.Zones, Skinned = data.Skinned,
+                TexelScale = TexelScale(data),
+            };
+        }
+
+        /// <summary>The square root of the surface's area over its area in texture space.</summary>
+        static float TexelScale(ModelData data)
+        {
+            double world = 0.0, uv = 0.0;
+            foreach (int[] triangles in data.Indices)
+            {
+                for (int i = 0; i + 2 < triangles.Length; i += 3)
+                {
+                    int a = triangles[i], b = triangles[i + 1], c = triangles[i + 2];
+                    world += Vector3.Cross(data.Positions[b] - data.Positions[a], data.Positions[c] - data.Positions[a]).magnitude;
+                    Vector2 u = data.Uvs[b] - data.Uvs[a], v = data.Uvs[c] - data.Uvs[a];
+                    uv += System.Math.Abs(u.x * v.y - u.y * v.x);
+                }
+            }
+            return uv > 1e-12 ? (float)System.Math.Sqrt(world / uv) : 0f;
         }
 
         /// <summary>Hangs a model on <paramref name="parent"/>, with one material per zone from <paramref name="materials"/>.</summary>
@@ -143,26 +169,145 @@ namespace Recoil.Client.Visuals
     }
 
     /// <summary>The fixed materials models share: bare metal, dark rubber and webbing, hair, eyes, boot leather.</summary>
+    /// <summary>
+    /// The materials the soldier and their kit are drawn with. All are lit through a normal
+    /// map, which a mesh with baked maps (the uniform, the kit, the face, each hairstyle)
+    /// supplies through <see cref="ApplyMaps"/>; elsewhere the map is flat. The uniform's
+    /// pattern is a detail layer over the colour, laid at the same size on every mesh.
+    /// </summary>
     public static class ModelMaterials
     {
         static Material _metal, _dark, _hair, _eye, _iris, _boots;
-        static Texture2D _skinTexture, _eyeTexture;
+        static Texture2D _skinTexture, _eyeTexture, _skinNormal;
         static bool _texturesLooked;
+        static Material _litBase, _patternBase;
+        static bool _basesLooked;
+        static readonly Dictionary<string, Material> Cloths = new Dictionary<string, Material>();
+        static readonly Dictionary<string, (Texture2D Normal, Texture2D Shade)> Maps = new Dictionary<string, (Texture2D, Texture2D)>();
 
         /// <summary>The painted skin is a neutral grey this bright; a tone is divided by it to colour it.</summary>
         const float SkinTextureGrey = 0.75f;
+        /// <summary>How often the uniform's pattern repeats, per metre of cloth.</summary>
+        public const float PatternRepeatsPerMetre = 2f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
         {
             _metal = _dark = _hair = _eye = _iris = _boots = null;
-            _skinTexture = _eyeTexture = null;
+            _skinTexture = _eyeTexture = _skinNormal = null;
             _texturesLooked = false;
+            _litBase = _patternBase = null;
+            _basesLooked = false;
+            Cloths.Clear();
+            Maps.Clear();
         }
 
         public static Material Metal => Make(ref _metal, "Model Metal", new Color(0.42f, 0.43f, 0.45f), 0.75f, 0.58f);
         public static Material Dark => Make(ref _dark, "Model Dark", new Color(0.075f, 0.08f, 0.088f), 0f, 0.3f);
-        public static Material Hair => Make(ref _hair, "Model Hair", new Color(0.07f, 0.05f, 0.035f), 0f, 0.3f);
+        public static Material Hair => Make(ref _hair, "Model Hair", new Color(0.07f, 0.05f, 0.035f), 0f, 0.36f);
+        public static Material Iris => Make(ref _iris, "Model Iris", new Color(0.09f, 0.06f, 0.04f), 0f, 0.85f);
+        public static Material Boots => Make(ref _boots, "Model Boots", new Color(0.12f, 0.09f, 0.065f), 0f, 0.38f);
+
+        /// <summary>
+        /// A new lit material in one colour, ready for a normal map. The caller owns it. The
+        /// material assets it starts from (Resources/Materials/SoldierLit and SoldierPattern)
+        /// are what keep these shader variants in a built game.
+        /// </summary>
+        public static Material Lit(Color colour)
+        {
+            LoadBases();
+            Material material = _litBase != null ? new Material(_litBase) : new Material(GreyboxMaterials.Flat(colour));
+            GreyboxMaterials.SetColor(material, colour);
+            if (material.HasProperty("_BumpMap"))
+            {
+                material.EnableKeyword("_NORMALMAP");
+                material.SetTexture("_BumpMap", null);
+            }
+            return material;
+        }
+
+        /// <summary>
+        /// Cloth in a colour and pattern, shared: the colour plain, or the pattern (in the colour
+        /// and its shade) as a detail layer over a white base, so the shade map under it still shows.
+        /// </summary>
+        public static Material Cloth(PatternKind pattern, Color a, Color b)
+        {
+            string key = (int)pattern + ":" + ColorUtility.ToHtmlStringRGB(a) + ":" + ColorUtility.ToHtmlStringRGB(b);
+            if (Cloths.TryGetValue(key, out Material cached) && cached != null) return cached;
+            Material material;
+            if (pattern == PatternKind.Plain)
+            {
+                material = Lit(a);
+            }
+            else
+            {
+                LoadBases();
+                material = _patternBase != null ? new Material(_patternBase) : Lit(Color.white);
+                GreyboxMaterials.SetColor(material, Color.white);
+                if (material.HasProperty("_BumpMap"))
+                {
+                    material.EnableKeyword("_NORMALMAP");
+                    material.SetTexture("_BumpMap", null);
+                }
+                if (material.HasProperty("_DetailAlbedoMap"))
+                {
+                    material.EnableKeyword("_DETAIL_MULX2");
+                    material.SetTexture("_DetailAlbedoMap", LookMaterials.DetailTexture(pattern, a, b));
+                    material.SetFloat("_DetailAlbedoMapScale", 1f);
+                }
+                else if (material.HasProperty("_MainTex"))
+                {
+                    // The Built-in pipeline's fallback: the pattern as the main texture.
+                    material.SetTexture("_MainTex", LookMaterials.Texture(pattern, a, b));
+                }
+            }
+            material.name = "Cloth " + pattern + " " + key;
+            Cloths[key] = material;
+            return material;
+        }
+
+        /// <summary>
+        /// Lays a mesh's baked maps (Resources/Models/[maps]Normal and [maps]Shade, where there
+        /// are any) over a renderer, and sizes the uniform's pattern to the mesh's texture
+        /// coordinates (texelScale metres per unit; 0 leaves it as the material has it).
+        /// </summary>
+        public static void ApplyMaps(Renderer renderer, string maps, float texelScale)
+        {
+            if (renderer == null || string.IsNullOrEmpty(maps)) return;
+            (Texture2D normal, Texture2D shade) = MapsFor(maps);
+            if (normal == null && shade == null) return;
+            var block = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(block);
+            if (normal != null) block.SetTexture("_BumpMap", normal);
+            if (shade != null) block.SetTexture("_BaseMap", shade);
+            if (texelScale > 0f)
+            {
+                float repeats = PatternRepeatsPerMetre * texelScale;
+                block.SetVector("_DetailAlbedoMap_ST", new Vector4(repeats, repeats, 0f, 0f));
+            }
+            renderer.SetPropertyBlock(block);
+        }
+
+        static (Texture2D Normal, Texture2D Shade) MapsFor(string maps)
+        {
+            if (Maps.TryGetValue(maps, out (Texture2D, Texture2D) known)) return known;
+            var found = (Resources.Load<Texture2D>("Models/" + maps + "Normal"), Resources.Load<Texture2D>("Models/" + maps + "Shade"));
+            Maps[maps] = found;
+            return found;
+        }
+
+        static void LoadBases()
+        {
+            if (_basesLooked) return;
+            _basesLooked = true;
+            if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null) return;
+            _litBase = Usable(Resources.Load<Material>("Materials/SoldierLit"));
+            _patternBase = Usable(Resources.Load<Material>("Materials/SoldierPattern"));
+        }
+
+        static Material Usable(Material material) =>
+            material != null && material.shader != null && material.shader.isSupported ? material : null;
+
         /// <summary>The eyes: the eye texture (white, iris and pupil) where there is one, else plain white.</summary>
         public static Material EyeWhite
         {
@@ -175,13 +320,11 @@ namespace Recoil.Client.Visuals
                 return eye;
             }
         }
-        public static Material Iris => Make(ref _iris, "Model Iris", new Color(0.09f, 0.06f, 0.04f), 0f, 0.85f);
-        public static Material Boots => Make(ref _boots, "Model Boots", new Color(0.12f, 0.09f, 0.065f), 0f, 0.38f);
 
         /// <summary>
         /// The colour to give a skin material for a skin tone. The face's texture is painted in
-        /// neutral grey (brows, stubble, lips and the scalp's hair darker); this scales it so its
-        /// grey comes out as the tone. Without the texture, the tone itself.
+        /// neutral grey (brows, stubble, lips and the scalp darker); this scales it so its grey
+        /// comes out as the tone. Without the texture, the tone itself.
         /// </summary>
         public static Color SkinTint(Color tone)
         {
@@ -192,11 +335,16 @@ namespace Recoil.Client.Visuals
             return linear.gamma;
         }
 
-        /// <summary>Puts the painted face on a skin material (one made with <see cref="SkinTint"/>'s colour).</summary>
+        /// <summary>Puts the painted face, and its pores and lines, on a skin material (one made with <see cref="SkinTint"/>'s colour).</summary>
         public static void TextureSkin(Material skin)
         {
             LoadTextures();
             if (_skinTexture != null && skin.HasProperty("_BaseMap")) skin.SetTexture("_BaseMap", _skinTexture);
+            if (_skinNormal != null && skin.HasProperty("_BumpMap"))
+            {
+                skin.EnableKeyword("_NORMALMAP");
+                skin.SetTexture("_BumpMap", _skinNormal);
+            }
         }
 
         static void LoadTextures()
@@ -204,13 +352,15 @@ namespace Recoil.Client.Visuals
             if (_texturesLooked) return;
             _texturesLooked = true;
             _skinTexture = Resources.Load<Texture2D>("Models/SkinAlbedo");
+            _skinNormal = Resources.Load<Texture2D>("Models/SkinNormal");
             _eyeTexture = Resources.Load<Texture2D>("Models/EyeAlbedo");
         }
 
         static Material Make(ref Material cache, string name, Color colour, float metallic, float smoothness)
         {
             if (cache != null) return cache;
-            cache = new Material(GreyboxMaterials.Flat(colour)) { name = name };
+            cache = Lit(colour);
+            cache.name = name;
             Tune(cache, metallic, smoothness);
             return cache;
         }

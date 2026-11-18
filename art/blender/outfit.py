@@ -155,13 +155,17 @@ class Body:
 
 # ---------------------------------------------------------------------------- garments cut from the body
 
-def garment(body, name, field, offset, zone, smooth=0, hem=0.004, gap=0.003, fold=None, zones=None, push=True, over=(), over_gap=0.003):
+def garment(body, name, field, offset, zone, smooth=0, hem=0.004, gap=0.003, fold=None, zones=None, push=True, over=(), over_gap=0.003,
+            seams=None):
     """
     A piece of cloth over the body: the part of the surface where field(i) >= 0, clipped
     cleanly where it crosses zero, lifted by offset(i) along the normals, smoothed `smooth`
     times (the hem stays put), kept at least `gap` off the skin, given folds (fold(p) moves
     a point along the cloth's normal) and hemmed: its edges turned in by `hem`.
     zones(p) may name a different zone for the faces around a point.
+
+    For the texture bake (textures.py) every vertex also gets "hem", how far it is across
+    the cloth from an edge, and "seam", how far from a seam (seams(p), in metres).
     """
     B, P, N = body.B, body.P, body.N
     values = {}
@@ -255,6 +259,10 @@ def garment(body, name, field, offset, zone, smooth=0, hem=0.004, gap=0.003, fol
         for v, d in moves:
             v.co += d
         bm.normal_update()
+    distance_from_edges(bm)
+    seam_layer = bm.verts.layers.float.new("seam")
+    for v in bm.verts:
+        v[seam_layer] = seams(v.co) if seams is not None else 1.0
     if hem > 0:
         edges = [e for e in bm.edges if e.is_boundary]
         normals = {v: v.normal.copy() for e in edges for v in e.verts}
@@ -273,6 +281,36 @@ def garment(body, name, field, offset, zone, smooth=0, hem=0.004, gap=0.003, fol
             if z:
                 f.material_index = ZONES[z]
     return to_object(bm, name)
+
+
+def distance_from_edges(bm, limit=0.05, crease=None):
+    """
+    Gives every vertex a "hem" value: how far it is, across the surface, from the nearest
+    edge of the cloth (or, with crease set, from the nearest edge sharper than that angle).
+    """
+    import heapq
+    layer = bm.verts.layers.float.get("hem") or bm.verts.layers.float.new("hem")
+    bm.verts.index_update()
+    if crease is None:
+        start = {v for e in bm.edges if e.is_boundary for v in e.verts}
+    else:
+        start = {v for e in bm.edges if e.is_boundary or (len(e.link_faces) == 2 and e.calc_face_angle() > crease) for v in e.verts}
+    best = {v.index: 0.0 for v in start}
+    heap = [(0.0, v.index) for v in start]
+    verts = list(bm.verts)
+    while heap:
+        d, i = heapq.heappop(heap)
+        if d > best.get(i, limit) or d > limit:
+            continue
+        v = verts[i]
+        for e in v.link_edges:
+            w = e.other_vert(v)
+            nd = d + e.calc_length()
+            if nd < best.get(w.index, limit):
+                best[w.index] = nd
+                heapq.heappush(heap, (nd, w.index))
+    for v in verts:
+        v[layer] = best.get(v.index, limit)
 
 
 def to_object(bm, name, angle=50):
@@ -360,7 +398,30 @@ def shirt(body):
         back = j["elbow"] + Vector((0.012 if p.x > 0 else -0.012, 0.0, -0.038))
         return "trim" if (p - back).length < 0.042 else None
 
-    return garment(body, "Shirt", field, offset, "primary", smooth=4, hem=0.004, gap=0.004, fold=fold)
+    def seams(p):
+        j = body.of(p)
+        s = 1 if p.x > 0 else -1
+        d = 1.0
+        # Round the top of each sleeve, where it is sewn to the body.
+        if abs(p.x) > 0.12 and p.y > 1.18:
+            n = Vector((s * 1.0, 0.45, 0.0)).normalized()
+            d = min(d, abs((p - (j["shoulder"] + Vector((-s * 0.012, 0.0, 0.0)))).dot(n)))
+        # Down the inside of each sleeve.
+        if abs(p.x) > 0.17 and p.y < 1.3:
+            a, b = (j["shoulder"], j["elbow"]) if p.y > j["elbow"].y else (j["elbow"], j["wrist"])
+            t = max(0.0, min(1.0, (p - a).dot(b - a) / (b - a).length_squared))
+            r = p - (a + (b - a) * t)
+            if r.x * s < 0:
+                d = min(d, abs(r.z))
+        # Down each side of the body.
+        if 0.1 < abs(p.x) < 0.19 and p.y < 1.3:
+            d = min(d, abs(p.z - 0.012))
+        # Across the shoulders, front and back of the yoke.
+        if abs(p.x) < 0.16 and p.y > 1.36:
+            d = min(d, abs(p.y - (1.43 - 0.25 * abs(p.x))) if p.z < 0 else 1.0)
+        return d
+
+    return garment(body, "Shirt", field, offset, "primary", smooth=4, hem=0.004, gap=0.004, fold=fold, seams=seams)
 
 
 def neck_radius(p):
@@ -380,9 +441,9 @@ def collar(body, over=()):
     def offset(i):
         p = P[i]
         c = collar_height(p)
-        return 0.011 + 0.006 * smoothstep(c, c + 0.036, p.y)
+        return 0.0135 + 0.0025 * smoothstep(c, c + 0.036, p.y)
 
-    return garment(body, "Collar", field, offset, "primary", smooth=3, hem=0.004, gap=0.009, over=over, over_gap=0.003)
+    return garment(body, "Collar", field, offset, "primary", smooth=3, hem=0.004, gap=0.012, over=over, over_gap=0.003)
 
 
 def sleeve_band(body, name, low, high, off, zone, hem=0.004, over=()):
@@ -464,7 +525,28 @@ def trousers(body):
         d -= 0.0012 * math.exp(-((abs(p.x) - abs(j["knee"].x) - 0.075) / 0.004) ** 2) * smoothstep(0.2, 0.3, p.y) * (1 - smoothstep(0.9, 1.0, p.y))
         return d
 
-    return garment(body, "Trousers", field, offset, "primary", smooth=4, hem=0.005, gap=0.005, fold=fold)
+    def seams(p):
+        j = body.of(p)
+        d = 1.0
+        if p.y < 0.93:
+            # Down the outside and the inside of each leg: halfway between front and back.
+            a, b = (j["hip"], j["knee"]) if p.y > j["knee"].y else (j["knee"], j["ankle"])
+            t = max(0.0, min(1.0, (p - a).dot(b - a) / (b - a).length_squared))
+            d = min(d, abs(p.z - (a + (b - a) * t).z))
+            # The articulated knee: darts above and below it, at the front.
+            if p.z > j["knee"].z:
+                d = min(d, abs(p.y - (j["knee"].y + 0.075)), abs(p.y - (j["knee"].y - 0.07)))
+            # Stitched round the cargo pocket.
+            if abs(p.x) > 0.1:
+                d = min(d, abs(max(abs(p.y - 0.665) - 0.082, abs(p.z - 0.004) - 0.064)))
+        else:
+            # The seat, and the fly at the front.
+            d = min(d, abs(p.x) if (p.z < -0.02 or (p.z > 0.06 and p.y > 0.87)) else 1.0)
+        # The waistband.
+        d = min(d, abs(p.y - 0.99))
+        return d
+
+    return garment(body, "Trousers", field, offset, "primary", smooth=4, hem=0.005, gap=0.005, fold=fold, seams=seams)
 
 
 def pocket_flaps(body, over=()):
@@ -1078,13 +1160,16 @@ def first_person(body, uniform):
     out = []
     for side in ("L", "R"):
         j = body.side[side]
-        mine = lambda p: (p.x < 0) == (side == "L")
+        mine = lambda p, side=side: (p.x < 0) == (side == "L")
         fore = extract(sleeves, "FPForearm" + side,
                        lambda p: mine(p) and abs(p.x) > 0.15 and (p - j["elbow"]).dot(j["fore"]) > -0.035, j["elbow"])
         hand = extract(hands, "FPHand" + side, lambda p: mine(p) and abs(p.x) > 0.15, j["wrist"])
         knuckles = (j["index"] + j["little"]) / 2
         turn = (knuckles - j["wrist"]).rotation_difference(Vector((0, -1, 0))).to_matrix().to_4x4()
         hand.data.transform(Matrix.Translation(j["wrist"]) @ turn @ Matrix.Translation(-j["wrist"]))
+        for piece in (fore, hand):
+            piece["own_uv"] = True
+            piece.data["maps"] = "Uniform"
         out += [fore, hand]
     return out
 
@@ -1117,8 +1202,7 @@ def dress(B, bone_index):
     for obj in (pads, straps):
         set_weights(obj, lambda co: {bone_index["ShinL" if co.x < 0 else "ShinR"]: 1.0} if co.y < 0.53 else
                     {bone_index["ThighL" if co.x < 0 else "ThighR"]: 1.0})
-    return {"uniform": uniform, "kit": [carrier, belt, belt_kit, pads, straps], "body": body,
-            "first_person": first_person(body, uniform), "back": back_surface(body)}
+    return {"uniform": uniform, "kit": [carrier, belt, belt_kit, pads, straps], "body": body, "back": back_surface(body)}
 
 
 def back_surface(body):
