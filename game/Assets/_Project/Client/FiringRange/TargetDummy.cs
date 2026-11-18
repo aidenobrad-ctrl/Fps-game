@@ -25,7 +25,7 @@ namespace Recoil.Client.FiringRange
         const float Facing = 180f;
 
         // So a row of targets is not a row of twins.
-        static readonly string[] Headgear = { "none", "cap", "helmet", "beanie", "headset", "bandana" };
+        static readonly string[] Headgear = { "none", "helmet", "cap", "headset", "none", "helmet" };
         static readonly string[] SkinTones = { "medium", "fair", "tan", "light", "brown", "olive", "deep", "porcelain" };
         static readonly string[] Hairstyles = { "crew", "side_part", "buzz", "curly", "slick_back", "bun", "mohawk", "shaved", "crew" };
         static MovementConfig _shape;
@@ -110,9 +110,10 @@ namespace Recoil.Client.FiringRange
                 _look = new CharacterLookView(_body);
                 _look.Apply(new CharacterLook
                 {
-                    // Training orange over dark gear: nobody mistakes one for a player.
+                    // Training orange under coyote-brown gear: nobody mistakes one for a player, and
+                    // the carrier's pouches and straps still read (near-black gear is one dark slab).
                     suitColor = "#D9662B",
-                    trimColor = "#2B2E34",
+                    trimColor = "#6E5D45",
                     pattern = "plain",
                     headgear = Headgear[_made % Headgear.Length],
                     skin = SkinTones[_made % SkinTones.Length],

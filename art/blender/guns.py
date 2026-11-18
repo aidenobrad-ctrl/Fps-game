@@ -1402,15 +1402,13 @@ def rpg7(Part):
     up = grip(b, (0.19, -0.02), 0.034, 0.088, 4, "primary", half_width=0.0135)
     g.point("Foregrip", up[0], up[1])
     b.box(-0.005, 0.005, -0.024, -0.016, 0.15, 0.2, "dark", bevel=0.001)
-    # Iron sights, and the optical sight on its bracket to the left.
+    # Iron sights over the tube.
     b.box(-0.006, 0.006, 0.019, 0.04, 0.35, 0.365, "dark", bevel=0.001)
     front_post(b, 0.357, 0.04, 0.052)
     b.box(-0.009, 0.009, 0.019, 0.04, -0.03, -0.015, "dark", bevel=0.001)
     rear_notch(b, -0.022, 0.052, width=0.02, height=0.012, dots=False)
-    b.box(-0.07, -0.024, -0.006, 0.008, -0.12, -0.04, "dark", bevel=0.002)
-    b.box(-0.085, -0.045, 0.004, 0.05, -0.13, 0.02, "dark", bevel=0.004)
-    b.tube(-0.17, -0.13, 0.015, "dark", x=-0.065, y=0.027, segs=16)
-    b.tube(0.02, 0.03, 0.017, "glow", x=-0.065, y=0.027, segs=16)
+    # The bracket for the optical sight, folded down without it: iron sights only.
+    b.box(-0.05, -0.02, -0.006, 0.008, -0.12, -0.05, "dark", bevel=0.002)
     # The loaded PG-7V grenade.
     m = g.mag
     m.lathe([(0.36, 0.0), (0.36, 0.0185), (0.42, 0.0185), (0.442, 0.0425), (0.57, 0.0425), (0.575, 0.04), (0.71, 0.013),

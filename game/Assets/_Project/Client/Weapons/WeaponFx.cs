@@ -43,6 +43,10 @@ namespace Recoil.Client.Weapons
         /// <summary>The round itself: solid and bright, so it shows against a pale wall or the sky, where a glow alone washes out.</summary>
         static readonly Color BulletBody = new Color(1f, 0.9f, 0.55f);
         static readonly Vector3 BulletSize = new Vector3(0.045f, 0.045f, 0.24f);
+        /// <summary>A round is drawn full size from this far away, smaller nearer.</summary>
+        const float TracerFullSizeAt = 25f;
+        /// <summary>Nearer the camera than this, the round is not drawn at all.</summary>
+        const float TracerNearest = 1.5f;
         static readonly Color FlashColor = new Color(1f, 0.72f, 0.35f);
         static readonly Color SparkColor = new Color(1f, 0.72f, 0.38f);
         static readonly Color DustColor = new Color(0.62f, 0.6f, 0.56f, 0.55f);
@@ -297,7 +301,15 @@ namespace Recoil.Client.Weapons
         public void PlayTracer(in ShotPresentation shot)
         {
             if (!_ready || _viewModel == null || _viewModel.Muzzle == null) return;
-            PlayTracer(shot, _viewModel.Muzzle.position);
+            Vector3 muzzle = _viewModel.Muzzle.position, eye = transform.position;
+            // A shot into the floor at your feet ends nearer your eye than the muzzle is: the
+            // round would fly back past your face. Only the hit shows.
+            if ((shot.End - eye).sqrMagnitude < (muzzle - eye).sqrMagnitude + 1f)
+            {
+                if (shot.HitWorld) PlayImpact(shot.End, shot.Normal, shot.End - shot.Origin);
+                return;
+            }
+            PlayTracer(shot, muzzle);
         }
 
         /// <summary>
@@ -795,7 +807,18 @@ namespace Recoil.Client.Weapons
             Vector3 front = tracer.From + tracer.Direction * head;
             tracer.Line.SetPosition(0, tracer.From + tracer.Direction * tail);
             tracer.Line.SetPosition(1, front);
-            if (tracer.Travelled < tracer.Length) tracer.Round.position = front;
+            // Sized to be seen far off, not to fill the view up close: the round and its
+            // streak shrink as they come near the camera, and vanish inside a metre and a half.
+            float away = (front - transform.position).magnitude;
+            float size = Mathf.Clamp(away / TracerFullSizeAt, 0.08f, 1f);
+            tracer.Line.widthMultiplier = size;
+            if (tracer.Travelled < tracer.Length)
+            {
+                tracer.Round.position = front;
+                tracer.Round.localScale = BulletSize * size;
+                bool show = away > TracerNearest;
+                if (tracer.Round.gameObject.activeSelf != show) tracer.Round.gameObject.SetActive(show);
+            }
         }
 
         static Gradient SmokeFade()

@@ -462,6 +462,28 @@ def export_skinned(path, skinned, rigid):
 
 # ---------------------------------------------------------------------------- the realistic soldier
 
+def natural_iris(image):
+    """
+    MakeHuman's brown eye is a red brown that reads as bloodshot in a game's light: turn the
+    iris to a darker, browner hazel and calm the red veins in the white.
+    """
+    import colorsys
+    px = list(image.pixels)
+    for i in range(0, len(px), 4):
+        r, g, b = px[i], px[i + 1], px[i + 2]
+        h, s, v = colorsys.rgb_to_hsv(r, g, b)
+        if s < 0.12 or not (h < 0.12 or h > 0.92):
+            continue
+        if s > 0.35:
+            # The iris: towards a dark warm brown.
+            h, s, v = 0.075, s * 0.75, v * 0.8
+        else:
+            # Pink in the white: mostly out.
+            s *= 0.4
+        px[i], px[i + 1], px[i + 2] = colorsys.hsv_to_rgb(h, s, v)
+    image.pixels[:] = px
+
+
 def build_soldier(texture_dir):
     """
     The soldier: the realistic body and face (human.py) dressed in the uniform and kit
@@ -474,6 +496,7 @@ def build_soldier(texture_dir):
     head, eyes, lashes, reference_hair = human.build_head(B, ZONES, texture_dir)
     eye_image = bpy.data.images.load(os.path.join(human.DATA, "eyes", "brown_eye.png"))
     eye_image.scale(512, 512)
+    natural_iris(eye_image)
     eye_image.filepath_raw = TEXTURES["eye"] = os.path.join(texture_dir, "EyeAlbedo.png")
     eye_image.file_format = 'PNG'
     eye_image.save()
@@ -1483,6 +1506,23 @@ def preview_projectiles(objects, path):
     preview(objects, path, (0, -0.2, 1.55), (0, -0.2, 0), lens=50, size=(1400, 900), offsets=offsets)
 
 
+def fill_margins(out):
+    """
+    Fills the empty space round the baked textures' islands (fill_margins.py), so a game's
+    smaller mipmaps never bleed the black background into faces and clothes. It needs numpy,
+    which Blender's own Python may not have, so it runs in the system's Python.
+    """
+    import shutil, subprocess
+    python = shutil.which("python3") or shutil.which("python")
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fill_margins.py")
+    files = [os.path.join(out, f) for f in ("SkinAlbedo.png", "UniformShade.jpg", "KitShade.jpg") if os.path.exists(os.path.join(out, f))]
+    if not python or not files:
+        print("fill_margins: no Python with numpy found; run art/blender/fill_margins.py on the textures by hand")
+        return
+    result = subprocess.run([python, script] + files, capture_output=True, text=True)
+    print(result.stdout.strip() or result.stderr.strip())
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     out = argv[argv.index("--out") + 1]
@@ -1507,6 +1547,7 @@ def main():
             preview_projectiles(projectile_objects, os.path.join(preview_dir, "projectiles.png"))
         return
     skinned, fp_arms, gear = build_soldier(out)
+    fill_margins(out)
     export_skinned(os.path.join(out, "Soldier.bytes"), skinned, fp_arms)
     export(gear, os.path.join(out, "Gear.bytes"))
     pieces = soldier_pieces(skinned)

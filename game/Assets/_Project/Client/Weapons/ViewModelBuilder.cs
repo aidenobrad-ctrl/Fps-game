@@ -135,8 +135,11 @@ namespace Recoil.Client.Weapons
         /// right hand on the grip shows (checked in first-person renders at the default field
         /// of view).
         /// </summary>
-        static readonly Vector3 HipEye = new Vector3(0.12f, -0.05f, 0.16f);
-        static readonly Vector3 HipCant = new Vector3(4f, -4f, -10f);
+        static readonly Vector3 HipEye = new Vector3(0.12f, -0.065f, 0.22f);
+        static readonly Vector3 HipCant = new Vector3(2f, 1f, -7f);
+        /// <summary>A launcher rides further out on the right, so its tube runs along the edge of the view.</summary>
+        static readonly Vector3 HipEyeLauncher = new Vector3(0.19f, -0.12f, 0.24f);
+        static readonly Vector3 HipCantLauncher = new Vector3(2f, 2f, -4f);
         /// <summary>And for a handgun, held out in front.</summary>
         static readonly Vector3 HipEyeHandgun = new Vector3(0.1f, -0.09f, 0.04f);
         static readonly Vector3 HipCantHandgun = new Vector3(0f, -2f, -4f);
@@ -296,8 +299,9 @@ namespace Recoil.Client.Weapons
                 return;
             }
             layout.AdsPosition = -aim;
-            layout.HipPosition = (layout.Handgun ? HipEyeHandgun : HipEye) - aim;
-            layout.HipEuler = layout.Handgun ? HipCantHandgun : HipCant;
+            bool launcher = layout.Kind == ViewModelKind.Launcher;
+            layout.HipPosition = (layout.Handgun ? HipEyeHandgun : launcher ? HipEyeLauncher : HipEye) - aim;
+            layout.HipEuler = layout.Handgun ? HipCantHandgun : launcher ? HipCantLauncher : HipCant;
         }
 
         /// <summary>No weapon at all: two fists up in front, for the hands to close.</summary>

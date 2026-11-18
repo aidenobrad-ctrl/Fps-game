@@ -762,15 +762,16 @@ def bake_skin(head, out_dir, size=1024, shade=True):
     mottle = noise(60.0, 4.0, low=0.25, high=0.75)
     col = mix(base, (0.70, 0.71, 0.73, 1.0), mul(mottle, 0.5))
     col = mix(col, (0.80, 0.72, 0.70, 1.0), mul(noise(18.0, 3.0, low=0.4, high=0.7), 0.4))
-    # Warmth and shadow.
-    col = mix(col, (0.82, 0.62, 0.60, 1.0), mul(mb.outputs[1], 0.55))
-    col = mix(col, (0.62, 0.56, 0.58, 1.0), mul(mb.outputs[0], 0.7))
-    # Lips.
-    col = mix(col, (0.62, 0.38, 0.38, 1.0), mul(ma.outputs[0], 0.85))
-    # Stubble: fine dark dots.
+    # Warmth and shadow, gently: a game lights the face itself.
+    col = mix(col, (0.80, 0.64, 0.62, 1.0), mul(mb.outputs[1], 0.4))
+    col = mix(col, (0.68, 0.63, 0.64, 1.0), mul(mb.outputs[0], 0.45))
+    # Lips, a little darker and warmer than the skin round them.
+    col = mix(col, (0.66, 0.47, 0.46, 1.0), mul(ma.outputs[0], 0.7))
+    # Stubble: a faint shadow of fine dots. Seen from a few metres away, mipmapped, it
+    # averages out, so it must stay light or it reads as dirt.
     dots = noise(1500.0, kind="voronoi", low=0.35, high=0.12)
-    col = mix(col, (0.24, 0.22, 0.22, 1.0), mul(mul(ma.outputs[2], dots), 0.7))
-    col = mix(col, (0.50, 0.48, 0.48, 1.0), mul(ma.outputs[2], 0.45))
+    col = mix(col, (0.46, 0.43, 0.43, 1.0), mul(mul(ma.outputs[2], dots), 0.35))
+    col = mix(col, (0.66, 0.64, 0.64, 1.0), mul(ma.outputs[2], 0.3))
     # Scalp under a close crop.
     # Full colour well before the hair shell comes up through the skin (at about 0.72), so
     # the shell's edge is dark on dark and the hairline is this soft painted one.
@@ -792,7 +793,7 @@ def bake_skin(head, out_dir, size=1024, shade=True):
         # Shaded where the face is enclosed: round the eyes and nostrils, under the jaw and
         # the collar, behind the ears.
         import textures
-        col = _multiply(nt, col, textures.occlusion(nt, 0.05, 0.6))
+        col = _multiply(nt, col, textures.occlusion(nt, 0.04, 0.3))
     links.new(col, bsdf.inputs["Base Color"])
 
     image = bpy.data.images.new("SkinAlbedo", size, size, alpha=False)

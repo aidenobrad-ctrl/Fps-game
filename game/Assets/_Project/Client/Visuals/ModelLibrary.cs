@@ -373,6 +373,8 @@ namespace Recoil.Client.Visuals
             {
                 skin.EnableKeyword("_NORMALMAP");
                 skin.SetTexture("_BumpMap", _skinNormal);
+                // Pores and fine lines, not a rough surface: at full strength a low sun grains the face.
+                if (skin.HasProperty("_BumpScale")) skin.SetFloat("_BumpScale", 0.55f);
             }
         }
 
