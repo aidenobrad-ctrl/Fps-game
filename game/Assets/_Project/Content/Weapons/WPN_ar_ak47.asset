@@ -137,3 +137,6 @@ MonoBehaviour:
     weight: 1.15
     tail: 0.3
     volume: 0.8
+    recording: ak47
+    recordingPitch: 1
+    recordingSuppressed: 0

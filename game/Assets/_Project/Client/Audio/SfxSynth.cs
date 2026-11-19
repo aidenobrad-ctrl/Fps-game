@@ -5,9 +5,8 @@ using Recoil.Shared.Weapons;
 namespace Recoil.Client.Audio
 {
     /// <summary>
-    /// Generates the game's sound effects from noise and sine waves when they are first needed,
-    /// so the project carries no audio files and every sound is our own. Recorded clips could
-    /// replace any of them later without touching the code that plays them.
+    /// Generates sound effects from noise and sine waves when they are first needed: every
+    /// interface sound, and any effect or weapon that has no recording (see <see cref="RecordedSounds"/>).
     /// </summary>
     public static class SfxSynth
     {

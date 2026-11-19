@@ -122,3 +122,6 @@ MonoBehaviour:
     weight: 0.85
     tail: 0.16
     volume: 0.8
+    recording: ppsh
+    recordingPitch: 1.06
+    recordingSuppressed: 0

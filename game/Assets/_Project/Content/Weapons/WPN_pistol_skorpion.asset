@@ -121,3 +121,6 @@ MonoBehaviour:
     weight: 0.55
     tail: 0.13
     volume: 0.66
+    recording: bersa
+    recordingPitch: 1.05
+    recordingSuppressed: 0

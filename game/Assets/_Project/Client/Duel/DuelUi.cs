@@ -41,6 +41,12 @@ namespace Recoil.Client.Duel
     [DisallowMultipleComponent]
     public sealed class DuelUi : MonoBehaviour
     {
+        /// <summary>
+        /// Which update this copy of the game is, shown at the foot of the menu, so whoever is
+        /// playing can tell at a glance that a pull went through. Changed with each update.
+        /// </summary>
+        public const string LatestUpdate = "update of 19 Nov 2026";
+
         const string NameKey = "pb.playerName", AddressKey = "pb.lastAddress", ModeKey = "pb.mode";
         const string MapKey = "pb.host.map", SizeKey = "pb.host.size", BotsKey = "pb.host.bots", LimitKey = "pb.host.limit5.";
         const float KillFeedSeconds = 6f;
@@ -347,7 +353,7 @@ namespace Recoil.Client.Duel
             var gap = new VisualElement { pickingMode = PickingMode.Ignore };
             gap.style.flexGrow = 1;
             footer.Add(gap);
-            footer.Add(Text_("RECOIL  ·  v" + Application.version, 12, new Color(1f, 1f, 1f, 0.35f), spacing: 2));
+            footer.Add(Text_("RECOIL  ·  v" + Application.version + "  ·  " + LatestUpdate, 12, new Color(1f, 1f, 1f, 0.35f), spacing: 2));
         }
 
         void RefreshTopBar()

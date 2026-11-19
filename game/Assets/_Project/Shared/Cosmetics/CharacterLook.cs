@@ -148,6 +148,39 @@ namespace Recoil.Shared.Cosmetics
         }
 
         /// <summary>A random look, for bots and the Randomise button. The same seed gives the same look.</summary>
+        // What real soldiers wear: field colours, plain or a camouflage that reads as one.
+        static readonly string[] FieldSuits = { "olive", "ranger", "coyote", "khaki", "graphite", "onyx", "dune", "moss", "slate" };
+        static readonly string[] FieldGear = { "coyote", "ranger", "olive", "khaki", "onyx", "graphite", "dune" };
+        static readonly string[] FieldPatterns = { "plain", "plain", "plain", "splinter", "pixel", "tiger" };
+        static readonly string[] FieldHeadgear = { "helmet", "helmet", "helmet_headset", "helmet_headset", "cap", "boonie", "headset", "none", "none", "bandana", "beanie" };
+        static readonly string[] FieldHair = { "crew", "crew", "buzz", "buzz", "shaved", "side_part", "slick_back", "curly", "bun" };
+        static readonly string[] FieldBacks = { "none", "none", "none", "assault_pack", "hydration", "radio", "rucksack" };
+
+        /// <summary>
+        /// A look a real soldier might have, for bots and practice targets: a uniform in a field
+        /// colour (plain, splinter, digital or tiger stripe), gear in another, real headgear and
+        /// kit, and any face. The same seed gives the same soldier; different seeds rarely match.
+        /// </summary>
+        public static CharacterLook Field(uint seed)
+        {
+            var random = new DeterministicRandom(DeterministicRandom.Combine(seed, 0x51F1E1Du));
+            string Pick(string[] from) => from[(int)(random.NextUInt() % (uint)from.Length)];
+            var look = new CharacterLook
+            {
+                suitColor = Pick(FieldSuits),
+                pattern = Pick(FieldPatterns),
+                headgear = Pick(FieldHeadgear),
+                hair = Pick(FieldHair),
+                back = Pick(FieldBacks),
+                skin = CosmeticCatalog.At(CosmeticSlot.Skin, (int)(random.NextUInt() % (uint)CosmeticCatalog.Count(CosmeticSlot.Skin))).Id,
+            };
+            look.trimColor = Pick(FieldGear);
+            for (int tries = 0; look.trimColor == look.suitColor && tries < 8; tries++) look.trimColor = Pick(FieldGear);
+            if (look.trimColor == look.suitColor) look.trimColor = look.suitColor == "coyote" ? "ranger" : "coyote";
+            return look;
+        }
+
+        /// <summary>Anything at all from the catalog, bright colours and every pattern included: the Customize screen's dice.</summary>
         public static CharacterLook Random(uint seed)
         {
             var random = new DeterministicRandom(seed | 1u);

@@ -110,3 +110,6 @@ MonoBehaviour:
     weight: 1.5
     tail: 0.55
     volume: 1
+    recording: arisaka
+    recordingPitch: 0.92
+    recordingSuppressed: 0

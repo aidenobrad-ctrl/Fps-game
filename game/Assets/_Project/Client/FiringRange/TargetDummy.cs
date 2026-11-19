@@ -9,7 +9,8 @@ using Recoil.Shared.Simulation;
 namespace Recoil.Client.FiringRange
 {
     /// <summary>
-    /// A practice target: the same soldier a player is, in a bright training uniform, with a
+    /// A practice target: the same soldier a player is, each one dressed differently as a real
+    /// soldier would be (see <see cref="LookRules.Field"/>), with a
     /// player's hitboxes (head, body, limbs). It takes damage like a real opponent, flashes
     /// when hit, drops when its health runs out and stands back up a moment later. One that
     /// is being moved along a line walks as it goes.
@@ -25,9 +26,6 @@ namespace Recoil.Client.FiringRange
         const float Facing = 180f;
 
         // So a row of targets is not a row of twins.
-        static readonly string[] Headgear = { "none", "helmet", "cap", "headset", "none", "helmet" };
-        static readonly string[] SkinTones = { "medium", "fair", "tan", "light", "brown", "olive", "deep", "porcelain" };
-        static readonly string[] Hairstyles = { "crew", "side_part", "buzz", "curly", "slick_back", "bun", "mohawk", "shaved", "crew" };
         static MovementConfig _shape;
         static int _made;
         static bool _reportedLook;
@@ -108,18 +106,9 @@ namespace Recoil.Client.FiringRange
             try
             {
                 _look = new CharacterLookView(_body);
-                _look.Apply(new CharacterLook
-                {
-                    // Training orange under coyote-brown gear: nobody mistakes one for a player, and
-                    // the carrier's pouches and straps still read (near-black gear is one dark slab).
-                    suitColor = "#D9662B",
-                    trimColor = "#6E5D45",
-                    pattern = "plain",
-                    headgear = Headgear[_made % Headgear.Length],
-                    skin = SkinTones[_made % SkinTones.Length],
-                    hair = Hairstyles[_made % Hairstyles.Length],
-                    back = "none",
-                });
+                // Each target a different soldier, dressed as a real one would be; the red
+                // armbands mark them as the other side.
+                _look.Apply(LookRules.Field(DeterministicRandom.Combine(0x7A26E7u, (uint)_made)));
                 _look.SetSide(true, friendly: false);
             }
             catch (System.Exception e)

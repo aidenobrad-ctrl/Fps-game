@@ -101,7 +101,7 @@ game/
     │   ├── Online/           The account client, keeping loadouts and settings in step with
     │   │                     the backend, and the services that outlive a scene
     │   ├── Weapons/          First-person weapon models, tracers, projectiles, explosions
-    │   ├── Audio/            Sound playback and placeholder synthesis
+    │   ├── Audio/            Sound playback, recorded sounds and synthesis
     │   ├── Loadouts/         The loadout library and where it is saved
     │   ├── UI/               HUD, pause menu and loadout screen logic
     │   ├── Settings/         Player settings
@@ -465,9 +465,9 @@ Bots fall back to the nearest walkable spot the threat cannot see (rings of cand
 
 ## Sound
 
-Every sound is generated in code when the game starts (`SfxSynth`), so the project carries no audio files and every sound is the game's own. `SoundBank` makes and keeps the clips; its `Sfx` list is the catalogue.
+Gunshots, reloads, footsteps, body hits and explosions are real recordings under `Resources/Audio` (cut from CC0 libraries by `art/audio/build_sounds.py`; `art/audio/README.md` lists the sources). Each weapon's audio profile names its set (`recording`), its pitch (`recordingPitch`) and whether its suppressor is built in (`recordingSuppressed`). `RecordedSounds` loads a set's takes (`near1..`, `far1..`), turns them into the synthesiser's format (one channel, 44.1 kHz) and pitches, suppresses or muffles them as asked (`RecordingProcessing`, plain arrays so it is tested outside Unity). Everything else, and anything whose recording is missing or cannot be read, is generated in code (`SfxSynth`). `SoundBank` makes and keeps the clips, trying recordings first; its `Sfx` list is the catalogue.
 
-Gunshots, impacts and the sounds around them come from `GunshotSynth`, which builds each one the way the real thing is made: the muzzle blast as a Friedlander pressure pulse (its length sets how big the gun sounds), a rifle round's supersonic N-wave crack, the roar of the propellant gas, a low punch that drops in pitch, the bolt or slide cycling a moment later, and the arena answering with early echoes and a reverb tail (four damped comb filters and two all-passes). Each weapon's class and audio profile choose the recipe; a suppressor swallows the blast and leaves the action audible. There are three takes of every shot so a burst never repeats one sound, and a distant version for gunfire more than 45 m away: duller, mostly echo, with a rifle's crack arriving well before its boom. Bullets striking the level crack and scatter grit (and now and then ricochet), a confirmed hit lands with a dull smack where it struck, spent cases ring on the floor after your own shots, and reloads have the magazine sliding out and seating home. A loadout's gunshots are made when it is equipped, about 10 ms a take.
+Where a weapon has no recording, and for impacts and the sounds around them, `GunshotSynth` makes the sound, which builds each one the way the real thing is made: the muzzle blast as a Friedlander pressure pulse (its length sets how big the gun sounds), a rifle round's supersonic N-wave crack, the roar of the propellant gas, a low punch that drops in pitch, the bolt or slide cycling a moment later, and the arena answering with early echoes and a reverb tail (four damped comb filters and two all-passes). Each weapon's class and audio profile choose the recipe; a suppressor swallows the blast and leaves the action audible. There are three takes of every shot so a burst never repeats one sound, and a distant version for gunfire more than 45 m away: duller, mostly echo, with a rifle's crack arriving well before its boom. Bullets striking the level crack and scatter grit (and now and then ricochet), a confirmed hit lands with a dull smack where it struck, spent cases ring on the floor after your own shots, and reloads have the magazine sliding out and seating home. A loadout's gunshots are made when it is equipped, about 10 ms a take.
 
 | Piece | Job |
 | --- | --- |
@@ -498,7 +498,7 @@ A player's look is a `CharacterLook`: the id of the item chosen for each slot (u
 
 | Piece | Where | Job |
 | --- | --- | --- |
-| Catalog and rules | `CosmeticCatalog`, `CharacterLook`, `LookRules` (Shared) | What exists, what a legal look is, random looks for bots |
+| Catalog and rules | `CosmeticCatalog`, `CharacterLook`, `LookRules` (Shared) | What exists, what a legal look is, field looks for bots and practice targets (`LookRules.Field`: field colours and real camouflage only), anything-goes looks for the Customize dice (`LookRules.Random`) |
 | Saved look | `CosmeticsLibrary` (Client/Cosmetics) | `cosmetics.json` beside the loadouts; raises `Changed` |
 | On the wire | `NetMessages.WriteLook`/`ReadLook` | Each slot as its item's position in the catalog (one byte), then the per-weapon skins; at most about a kilobyte. Sent in the hello, in every `PlayerInfo`, and in a `Look` message when it changes |
 | Drawing a character | `SoldierView`, `CharacterLookView`, `LookMaterials` (Client/Visuals) | The Blender-made skinned soldier in the uniform, gear and skin colours; headgear and back items on the head and torso bones; patterns drawn into small textures in code |

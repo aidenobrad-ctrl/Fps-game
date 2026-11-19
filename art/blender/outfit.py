@@ -368,7 +368,11 @@ def shirt(body):
         waist = p.y - WAIST + 0.6 * S.arm[i]
         # Up to the collar line round the neck; everything further out (the tops of the
         # shoulders) is covered whatever its height.
-        neck = max(collar_height(p) - p.y, min(neck_radius(p) - 0.078, 1.52 - p.y))
+        # At the front the neckline rises onto the neck, clear of the hollow at the top of the
+        # breastbone (an edge across that hollow dipped into a notch).
+        line = collar_height(p) + 0.018 * smoothstep(0.0, 0.06, p.z)
+        # (Not the underside of the jaw, which is as far out: it showed as a strip below the chin.)
+        neck = max(line - p.y, min(neck_radius(p) - 0.078, 1.52 - p.y, 0.5 - S.head[i]))
         return min(cuff, waist, neck)
 
     def offset(i):
@@ -430,18 +434,22 @@ def neck_radius(p):
 
 
 def collar(body, over=()):
-    P, S = body.P, body
+    P, N, S = body.P, body.N, body
     radius = neck_radius
 
     def field(i):
         p = P[i]
         c = collar_height(p)
-        return min(p.y - c + 0.008, c + 0.036 - p.y, 0.088 - radius(p)) - 2 * S.arm[i]
+        # Round the neck only: not up under the jaw, where the skin faces the ground (a
+        # collar there showed as a strip of cloth below the chin).
+        down = -N[i].y * body.outward
+        return min(p.y - c + 0.008, c + 0.036 - p.y, 0.088 - radius(p), 0.3 - down) - 2 * S.arm[i]
 
     def offset(i):
         p = P[i]
         c = collar_height(p)
-        return 0.0135 + 0.0025 * smoothstep(c, c + 0.036, p.y)
+        # Close to the neck, standing a little off it at the top: further out it looked like a ruff.
+        return 0.0085 + 0.0025 * smoothstep(c, c + 0.036, p.y)
 
     return garment(body, "Collar", field, offset, "primary", smooth=3, hem=0.004, gap=0.012, over=over, over_gap=0.003)
 
@@ -1184,7 +1192,9 @@ def dress(B, bone_index):
     body = Body(B)
     torso, pelvis = bone_index["Torso"], bone_index["Pelvis"]
     top, legs, hands = shirt(body), trousers(body), gloves(body)
-    uniform = [top, collar(body, [top]), sleeve_band(body, "Cuffs", CUFF - 0.006, CUFF + 0.032, 0.0115, "primary", over=[top]),
+    # No separate collar: one standing round the neck showed as a strip, like a choker, where
+    # the jaw hides its lower edge. The shirt's own neckline sits round the neck instead.
+    uniform = [top, sleeve_band(body, "Cuffs", CUFF - 0.006, CUFF + 0.032, 0.0115, "primary", over=[top]),
                sleeve_band(body, "GloveCuffs", -0.012, CUFF - 0.002, 0.0062, "dark", hem=0.003, over=[hands]),
                armbands(body, [top]), elbow_pads(body, [top]), legs, pocket_flaps(body, [legs]), hands]
     boot = boots(body)

@@ -29,7 +29,7 @@ namespace Recoil.Shared.Weapons
         public Color DarkColor => darkColor.a > 0f ? darkColor : new Color(bodyColor.r * 0.55f, bodyColor.g * 0.55f, bodyColor.b * 0.55f, 1f);
     }
 
-    /// <summary>Parameters for the synthesised placeholder shot sound.</summary>
+    /// <summary>How a weapon sounds: its recorded shots, and the parameters of the synthesised shot used where it has none.</summary>
     [Serializable]
     public sealed class WeaponAudioProfile
     {
@@ -41,5 +41,11 @@ namespace Recoil.Shared.Weapons
         [Tooltip("How long the shot rings out, in seconds.")]
         [Range(0.05f, 0.8f)] public float tail = 0.25f;
         [Range(0f, 1f)] public float volume = 0.8f;
+        [Tooltip("The recorded shots it plays: a folder under Resources/Audio/Guns (ak47, ar15..). Empty: the synthesised shot.")]
+        public string recording = "";
+        [Tooltip("The recording's pitch for this weapon: above 1 is sharper and shorter, below 1 deeper.")]
+        [Range(0.3f, 3f)] public float recordingPitch = 1f;
+        [Tooltip("The suppressor is part of the gun (the MP5SD): its recording always plays suppressed.")]
+        public bool recordingSuppressed;
     }
 }

@@ -111,3 +111,6 @@ MonoBehaviour:
     weight: 1.35
     tail: 0.48
     volume: 0.95
+    recording: tikka
+    recordingPitch: 1
+    recordingSuppressed: 0

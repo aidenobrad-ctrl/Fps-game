@@ -128,3 +128,6 @@ MonoBehaviour:
     weight: 0.9
     tail: 0.24
     volume: 0.8
+    recording: ar15
+    recordingPitch: 1.05
+    recordingSuppressed: 0

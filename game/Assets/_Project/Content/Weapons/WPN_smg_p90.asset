@@ -124,3 +124,6 @@ MonoBehaviour:
     weight: 0.75
     tail: 0.18
     volume: 0.8
+    recording: m45
+    recordingPitch: 1.12
+    recordingSuppressed: 0

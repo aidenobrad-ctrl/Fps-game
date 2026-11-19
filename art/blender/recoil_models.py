@@ -277,8 +277,8 @@ def gear_models():
     helmet = Part("Helmet", C)
     cut_sphere(helmet, C + Vector((0, 0.028, -0.008)), 0.122, (0.94, 0.96, 1.06), "trim", C + Vector((0, 0.0, 0)), (0, 1, -0.45), thickness=0.012)
     for side in (-1, 1):
+        # The side rails. (The chin straps that hung from here stood off the cheeks like two black bars.)
         helmet.box(C + Vector((side * 0.112, 0.045, -0.01)), (0.012, 0.022, 0.1), "dark", bevel=0.004)
-        helmet.box(C + Vector((side * 0.08, -0.045, 0.035)), (0.008, 0.07, 0.012), "dark", rot=(20, 0, side * -10))
     helmet.box(C + Vector((0, 0.1, 0.11)), (0.04, 0.03, 0.015), "metal", bevel=0.005, rot=(-50, 0, 0))
     helmet.box(C + Vector((0, 0.11, -0.1)), (0.07, 0.04, 0.012), "dark", bevel=0.004, rot=(35, 0, 0))
     parts.append(helmet)

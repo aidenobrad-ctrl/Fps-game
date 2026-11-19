@@ -171,6 +171,31 @@ namespace Recoil.Tests
         }
 
         [Test]
+        public void FieldLooks_AreRealSoldiers_EachDifferent_AndRepeatForTheSameSeed()
+        {
+            string[] bright = { "saffron", "ember", "crimson", "orchid", "violet", "glacier", "teal", "cobalt", "snow" };
+            string[] costume = { "stripes", "chevrons", "honeycomb", "dots", "weave", "circuit" };
+            var looks = new HashSet<string>();
+            var suits = new HashSet<string>();
+            for (uint seed = 1; seed <= 40; seed++)
+            {
+                CharacterLook look = LookRules.Field(seed);
+                CharacterLook clean = LookRules.Sanitize(look);
+                foreach (CosmeticSlot slot in CosmeticCatalog.Slots)
+                    Assert.That(clean.Get(slot), Is.EqualTo(look.Get(slot)), "seed " + seed + ": " + slot + " is a real item");
+                Assert.That(bright, Has.No.Member(look.suitColor), "uniforms are field colours");
+                Assert.That(bright, Has.No.Member(look.trimColor), "gear is a field colour");
+                Assert.That(costume, Has.No.Member(look.pattern), "no costume patterns");
+                Assert.That(look.trimColor, Is.Not.EqualTo(look.suitColor), "gear stands out from the uniform");
+                Assert.That(LookRules.Field(seed).suitColor + LookRules.Field(seed).headgear, Is.EqualTo(look.suitColor + look.headgear), "the same seed, the same soldier");
+                looks.Add(look.suitColor + look.trimColor + look.pattern + look.headgear + look.skin + look.hair);
+                suits.Add(look.suitColor);
+            }
+            Assert.That(looks.Count, Is.GreaterThanOrEqualTo(38), "forty soldiers, nearly all different");
+            Assert.That(suits.Count, Is.GreaterThan(5), "many uniforms");
+        }
+
+        [Test]
         public void TheLook_IsSaved_AndComesBack_AndABadFileIsKeptAside()
         {
             string folder = Path.Combine(Path.GetTempPath(), "pb-look-" + System.Guid.NewGuid().ToString("N").Substring(0, 8));

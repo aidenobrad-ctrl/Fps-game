@@ -106,3 +106,6 @@ MonoBehaviour:
     weight: 1.25
     tail: 0.3
     volume: 0.9
+    recording: revolver
+    recordingPitch: 0.92
+    recordingSuppressed: 0

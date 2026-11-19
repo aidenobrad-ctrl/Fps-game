@@ -674,7 +674,7 @@ namespace Recoil.Server
                 Name = NextBotName(),
                 Ready = true,
                 Brain = new BotBrain(Settings.botSkill, _botSeed),
-                Look = LookRules.Random(_botSeed),
+                Look = LookRules.Field(_botSeed),
             };
             bot.PendingLoadout = BotLoadout(_botSeed);
             Admit(bot);

@@ -64,8 +64,9 @@ namespace Recoil.Client.Audio
     }
 
     /// <summary>
-    /// Every sound effect, made once and kept: the first time one is asked for it is
-    /// synthesised (see <see cref="SfxSynth"/>). <see cref="Prewarm"/> makes them all up front,
+    /// Every sound effect, made once and kept: the first time one is asked for it is loaded
+    /// from its recordings where it has them (see <see cref="RecordedSounds"/>: every gun, reloads,
+    /// footsteps, hits, explosions), and otherwise synthesised (see <see cref="SfxSynth"/>). <see cref="Prewarm"/> makes them all up front,
     /// behind a menu, so nothing is built in the middle of a fight.
     /// </summary>
     public static class SoundBank
@@ -107,6 +108,8 @@ namespace Recoil.Client.Audio
         {
             if (_clips == null) _clips = new AudioClip[Enum.GetValues(typeof(Sfx)).Length];
             if (sfx == Sfx.Footstep) return Footstep();
+            AudioClip[] recorded = RecordedSounds.Effect(sfx);
+            if (recorded.Length > 0) return RecordedSounds.Pick(sfx, recorded);
             AudioClip clip = _clips[(int)sfx];
             if (clip == null) _clips[(int)sfx] = clip = Make(sfx);
             return clip;
@@ -115,6 +118,8 @@ namespace Recoil.Client.Audio
         /// <summary>One of several footsteps, never the same one twice running.</summary>
         public static AudioClip Footstep()
         {
+            AudioClip[] recorded = RecordedSounds.Effect(Sfx.Footstep);
+            if (recorded.Length > 0) return RecordedSounds.Pick(Sfx.Footstep, recorded);
             if (_steps == null)
             {
                 _steps = new AudioClip[FootstepVariants];
@@ -137,7 +142,8 @@ namespace Recoil.Client.Audio
             string key = build.Weapon.weaponId + (suppressed ? "|s" : "") + (distant ? "|far" : "") + "|" + take;
             if (!Shots.TryGetValue(key, out AudioClip clip))
             {
-                clip = SfxSynth.Shot(build.Weapon, suppressed, take, distant, key);
+                clip = RecordedSounds.Shot(build.Weapon.audio, suppressed, take, distant, key)
+                       ?? SfxSynth.Shot(build.Weapon, suppressed, take, distant, key);
                 Shots[key] = clip;
             }
             return clip;

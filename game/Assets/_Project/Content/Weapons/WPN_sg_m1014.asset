@@ -111,3 +111,6 @@ MonoBehaviour:
     weight: 1.4
     tail: 0.34
     volume: 0.9
+    recording: nova
+    recordingPitch: 1.03
+    recordingSuppressed: 0
