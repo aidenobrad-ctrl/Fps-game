@@ -4,7 +4,7 @@ A fast, competitive multiplayer FPS for PC, built in Unity 6.
 
 Eleven phases are built so far: **movement and a firing range**, **the weapon system with 34 real weapons and 21 attachments**, **loadouts**, **online play** on a server that owns the match, **accounts** on a backend of their own, **every game mode, bots and matchmaking**, **character customization with weapon skins**, **progression, challenges and ranked**, **sound, effects, settings and performance**, **friends, parties, chat, reports and ranked seasons**, and **three more maps, private-match rules and smarter bots**. Accounts are switched back on; see [Accounts](#accounts). The plan for everything after is in [docs/ROADMAP.md](docs/ROADMAP.md), and how the code is organised is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-> **Developed without a Unity Editor.** The code is written and checked outside the engine: the C# is compiled against Unity's reference assemblies and checked against the Unity 6000.6, URP 17.6 and Input System 1.20 sources, and the simulation, the weapon data and the netcode are tested there, including whole matches between a real server and real clients on a simulated bad connection, every game mode, bots playing full matches, and the game's account and matchmaking code against the real backend. It is then opened and played in Unity 6000.6.9f1, and what that turns up is fixed from the Console's messages. If something looks wrong, [Troubleshooting](#troubleshooting) says what to check and what to send.
+> **Developed without a Unity Editor.** The code is written and checked outside the engine: the C# is compiled against Unity's reference assemblies and checked against the Unity 6000.3, URP 17.3 and Input System 1.20 sources, and the simulation, the weapon data and the netcode are tested there, including whole matches between a real server and real clients on a simulated bad connection, every game mode, bots playing full matches, and the game's account and matchmaking code against the real backend. It is then opened and played in Unity 6000.3.29f1 LTS, and what that turns up is fixed from the Console's messages. If something looks wrong, [Troubleshooting](#troubleshooting) says what to check and what to send.
 
 ## Get the game
 
@@ -40,7 +40,7 @@ The bottom line of the main menu names the update you have, so you can see that 
 
 ## Open and play
 
-1. Install **Unity 6000.6.9f1** through Unity Hub. The project is set up for that version: URP 17.6, Input System 1.20. A different Unity 6 version may work, but expect errors from older or newer packages.
+1. Install **Unity 6000.3.29f1 LTS** through Unity Hub. The project is set up for that version: URP 17.3, Input System 1.20, Test Framework 1.6. A different Unity 6 version may work, but expect errors from older or newer packages.
 2. In Unity Hub choose **Add ▸ Add project from disk** and pick the `game` folder inside your copy of this repository (for example `fps-game\game`).
 3. Let the first import finish. The firing range scene opens by itself. If it does not, use **Recoil ▸ Open Firing Range** in the menu bar.
 4. Press **Play** and click inside the Game view to capture the mouse.
@@ -376,7 +376,7 @@ The backend has its own tests; see [backend/README.md](backend/README.md#tests).
 
 **My loadout's weapons changed.** The arcade weapons were replaced by real ones. A saved loadout that names one that is gone gets the first weapon for that slot instead; pick what you want on the loadout screen. Weapon skins you chose for a removed weapon are dropped the same way.
 
-**Hundreds of red errors, many inside `Packages/`, right after opening.** The project and your Unity version disagree about package versions. It is set up for Unity 6000.6.9f1 (see `game/Packages/manifest.json`). Open it with that version; if you already opened it with another one, close Unity, delete the `game/Library` folder and open it again with 6000.6.9f1.
+**Hundreds of red errors, many inside `Packages/`, right after opening.** The project and your Unity version disagree about package versions. It is set up for Unity 6000.3.29f1 LTS (see `game/Packages/manifest.json`). Open it with that version; if you already opened it with another one (an earlier copy was set up for 6000.6.9f1), close Unity, delete the `game/Library` folder and `game/Packages/packages-lock.json`, and open it again with 6000.3.29f1.
 
 **Everything is pink, or the scene looks flat and unlit.** The render pipeline did not get assigned. Run **Recoil ▸ Run Project Doctor** and read the Console. If it reports that the URP asset could not be loaded, create one with **Assets ▸ Create ▸ Rendering ▸ URP Asset (with Universal Renderer)** and assign it under **Project Settings ▸ Graphics**. The game is built to run without it too, on the Built-in pipeline.
 
