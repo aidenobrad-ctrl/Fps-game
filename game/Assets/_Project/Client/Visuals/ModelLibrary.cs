@@ -345,7 +345,7 @@ namespace Recoil.Client.Visuals
                 if (_eye != null) return _eye;
                 LoadTextures();
                 Material eye = Make(ref _eye, "Model Eye", _eyeTexture != null ? Color.white : new Color(0.86f, 0.85f, 0.81f), 0f, 0.75f);
-                if (_eyeTexture != null && eye.HasProperty("_BaseMap")) eye.SetTexture("_BaseMap", _eyeTexture);
+                if (_eyeTexture != null) SetPicture(eye, _eyeTexture);
                 return eye;
             }
         }
@@ -368,7 +368,7 @@ namespace Recoil.Client.Visuals
         public static void TextureSkin(Material skin)
         {
             LoadTextures();
-            if (_skinTexture != null && skin.HasProperty("_BaseMap")) skin.SetTexture("_BaseMap", _skinTexture);
+            if (_skinTexture != null) SetPicture(skin, _skinTexture);
             if (_skinNormal != null && skin.HasProperty("_BumpMap"))
             {
                 skin.EnableKeyword("_NORMALMAP");
@@ -378,6 +378,17 @@ namespace Recoil.Client.Visuals
             }
         }
 
+        /// <summary>
+        /// A material's main picture, whichever pipeline its shader is from: URP's _BaseMap, or the
+        /// Built-in pipeline's _MainTex (without this, a project left on the Built-in pipeline drew
+        /// every face plain: no brows, lips or irises).
+        /// </summary>
+        static void SetPicture(Material material, Texture texture)
+        {
+            if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
+            if (material.HasProperty("_MainTex")) material.SetTexture("_MainTex", texture);
+        }
+
         static void LoadTextures()
         {
             if (_texturesLooked) return;
@@ -385,6 +396,9 @@ namespace Recoil.Client.Visuals
             _skinTexture = Resources.Load<Texture2D>("Models/SkinAlbedo");
             _skinNormal = NormalMap("Models/SkinNormal");
             _eyeTexture = Resources.Load<Texture2D>("Models/EyeAlbedo");
+            if (_skinTexture == null || _eyeTexture == null)
+                Debug.LogWarning("Recoil: Resources/Models/SkinAlbedo.png or EyeAlbedo.png could not be loaded, so faces are drawn plain. " +
+                                 "Use Assets > Reimport All, or pull the project again.");
         }
 
         static Material Make(ref Material cache, string name, Color colour, float metallic, float smoothness)

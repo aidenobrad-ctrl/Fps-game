@@ -150,7 +150,8 @@ namespace Recoil.Shared.Cosmetics
         /// <summary>A random look, for bots and the Randomise button. The same seed gives the same look.</summary>
         // What real soldiers wear: field colours, plain or a camouflage that reads as one.
         static readonly string[] FieldSuits = { "olive", "ranger", "coyote", "khaki", "graphite", "onyx", "dune", "moss", "slate" };
-        static readonly string[] FieldGear = { "coyote", "ranger", "olive", "khaki", "onyx", "graphite", "dune" };
+        // Gear in a colour its pouches and straps read in: black or charcoal kit showed as one dark slab.
+        static readonly string[] FieldGear = { "coyote", "ranger", "olive", "khaki", "dune", "coyote" };
         static readonly string[] FieldPatterns = { "plain", "plain", "plain", "splinter", "pixel", "tiger" };
         static readonly string[] FieldHeadgear = { "helmet", "helmet", "helmet_headset", "helmet_headset", "cap", "boonie", "headset", "none", "none", "bandana", "beanie" };
         static readonly string[] FieldHair = { "crew", "crew", "buzz", "buzz", "shaved", "side_part", "slick_back", "curly", "bun" };

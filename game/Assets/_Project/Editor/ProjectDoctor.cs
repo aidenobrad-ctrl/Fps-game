@@ -152,6 +152,8 @@ namespace Recoil.EditorTools
             }
 
             GraphicsSettings.defaultRenderPipeline = pipeline;
+            // Saved straight away, so the setting survives a crash or a forced quit.
+            AssetDatabase.SaveAssets();
             report.Add("assigned the URP asset as the default render pipeline.");
         }
 

@@ -36,6 +36,37 @@ namespace Recoil.Client.Visuals
             _windowApplied = false;
         }
 
+        const string PipelineAssetPath = "Assets/_Project/Rendering/PB_URP_Asset.asset";
+        static bool _pipelineReported;
+
+        /// <summary>
+        /// The game is drawn with the Universal Render Pipeline: its materials, the soldiers' painted
+        /// faces, the post-processing and the quality presets all depend on it. Before the first
+        /// scene loads, this makes sure it is on. In the Editor, a project that lost the setting
+        /// (opened in another Unity version, or the Project Doctor did not get to run) gets the
+        /// game's URP asset put back in Project Settings > Graphics; anywhere else it says what to do.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void EnsurePipeline()
+        {
+            if (GraphicsSettings.currentRenderPipeline != null || Application.isBatchMode) return;
+#if UNITY_EDITOR
+            var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(PipelineAssetPath);
+            if (asset != null)
+            {
+                GraphicsSettings.defaultRenderPipeline = asset;
+                Debug.LogWarning("Recoil: no render pipeline was set, so the game was being drawn with Unity's Built-in pipeline " +
+                                 "(plain faces, no post-processing). The game's URP asset is now set in Project Settings > Graphics.");
+                if (GraphicsSettings.currentRenderPipeline != null) return;
+            }
+#endif
+            if (_pipelineReported) return;
+            _pipelineReported = true;
+            Debug.LogError("Recoil: the Universal Render Pipeline is not active, so faces, materials and effects will look wrong. " +
+                           "Stop Play mode and set Edit > Project Settings > Graphics > Default Render Pipeline to " + PipelineAssetPath +
+                           ", or run Recoil > Run Project Doctor.");
+        }
+
         /// <summary>Call once settings are loaded. Safe to call again.</summary>
         public static void Initialize()
         {

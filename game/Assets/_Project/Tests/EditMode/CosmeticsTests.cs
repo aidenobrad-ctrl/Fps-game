@@ -185,6 +185,7 @@ namespace Recoil.Tests
                     Assert.That(clean.Get(slot), Is.EqualTo(look.Get(slot)), "seed " + seed + ": " + slot + " is a real item");
                 Assert.That(bright, Has.No.Member(look.suitColor), "uniforms are field colours");
                 Assert.That(bright, Has.No.Member(look.trimColor), "gear is a field colour");
+                Assert.That(new[] { "onyx", "graphite" }, Has.No.Member(look.trimColor), "gear is never a dark slab");
                 Assert.That(costume, Has.No.Member(look.pattern), "no costume patterns");
                 Assert.That(look.trimColor, Is.Not.EqualTo(look.suitColor), "gear stands out from the uniform");
                 Assert.That(LookRules.Field(seed).suitColor + LookRules.Field(seed).headgear, Is.EqualTo(look.suitColor + look.headgear), "the same seed, the same soldier");
