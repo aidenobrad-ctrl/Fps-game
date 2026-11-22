@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: ar_m4a1
   displayName: M4A1
-  description: '5.56x45mm NATO carbine. 800 rounds a minute from a 30-round magazine: three hits to the body up close, four at range, and one to the head.'
+  description: '5.56x45mm NATO carbine. 800 rounds a minute from a 30-round magazine: five hits to the body up close, or two to the head.'
   weaponClass: 0
   slot: 0
   unlockLevel: 1

@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: melee_tomahawk
   displayName: Tomahawk
-  description: 'A steel war hatchet. Slow to swing, and one hit kills.'
+  description: 'A steel war hatchet: the heaviest blow of any blade. Two hits kill.'
   weaponClass: 9
   slot: 2
   unlockLevel: 20
   stats:
     fireMode: 1
-    roundsPerMinute: 55
+    roundsPerMinute: 68
     burstCount: 3
     burstCooldown: 0.2
     chargeTime: 0.6

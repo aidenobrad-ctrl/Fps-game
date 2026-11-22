@@ -30,7 +30,7 @@ MonoBehaviour:
     pierceTargets: 1
     pierceDamageKept: 0.7
     damage: 60
-    headMultiplier: 3
+    headMultiplier: 2
     limbMultiplier: 0.75
     falloffStart: 70
     falloffEnd: 140

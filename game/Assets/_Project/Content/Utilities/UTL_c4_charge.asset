@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   utilityId: c4_charge
   displayName: C4 Charge
-  description: 'Half a kilogram of plastic explosive that sticks to the first thing it hits and goes off two seconds later. 150 at the centre.'
+  description: 'Half a kilogram of plastic explosive that sticks to the first thing it hits and goes off two seconds later. 140 at the centre.'
   unlockLevel: 4
   charges: 1
   throwTime: 0.35
@@ -32,7 +32,7 @@ MonoBehaviour:
     pellets: 1
     pierceTargets: 0
     pierceDamageKept: 0.75
-    damage: 150
+    damage: 140
     headMultiplier: 1
     limbMultiplier: 1
     falloffStart: 1000

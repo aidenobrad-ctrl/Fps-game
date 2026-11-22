@@ -16,8 +16,10 @@ namespace Recoil.Client.FiringRange
         public static void Apply(bool createSunLight)
         {
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.62f, 0.7f, 0.82f);
-            RenderSettings.ambientEquatorColor = new Color(0.46f, 0.48f, 0.52f);
+            // Softer fill from the sky than before, so the sun models faces, folds and corners
+            // instead of everything reading flat; ambient occlusion (the URP renderer) darkens the creases.
+            RenderSettings.ambientSkyColor = new Color(0.5f, 0.57f, 0.68f);
+            RenderSettings.ambientEquatorColor = new Color(0.4f, 0.41f, 0.44f);
             RenderSettings.ambientGroundColor = Ground;
 
             RenderSettings.fog = true;
@@ -30,10 +32,11 @@ namespace Recoil.Client.FiringRange
 
             var sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.color = new Color(1f, 0.96f, 0.88f);
-            sun.intensity = 1.15f;
+            // A warm, strong sun a little lower in the sky: longer, clearer shadows.
+            sun.color = new Color(1f, 0.94f, 0.84f);
+            sun.intensity = 1.6f;
             sun.shadows = LightShadows.Soft;
-            sun.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
+            sun.transform.rotation = Quaternion.Euler(40f, -35f, 0f);
             RenderSettings.sun = sun;
         }
 

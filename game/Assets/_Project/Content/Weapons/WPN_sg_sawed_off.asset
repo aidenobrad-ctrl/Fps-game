@@ -29,8 +29,8 @@ MonoBehaviour:
     pellets: 9
     pierceTargets: 0
     pierceDamageKept: 0.75
-    damage: 15
-    headMultiplier: 2
+    damage: 10
+    headMultiplier: 1.5
     limbMultiplier: 0.8
     falloffStart: 4
     falloffEnd: 12

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: ar_ak47
   displayName: AK-47
-  description: '7.62x39mm. Hits harder than any 5.56 rifle, three to the body or one to the head up close, but kicks up and to the side at 600 rounds a minute.'
+  description: '7.62x39mm. Hits harder than any 5.56 rifle, four to the body or two to the head up close, but kicks up and to the side at 600 rounds a minute.'
   weaponClass: 0
   slot: 0
   unlockLevel: 6

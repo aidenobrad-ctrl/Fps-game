@@ -189,7 +189,9 @@ namespace Recoil.Client.Visuals
 
         static Mesh _mesh;
         readonly Quad[] _quads;
-        readonly MaterialPropertyBlock _block = new MaterialPropertyBlock();
+        // Made on first use: Unity 6.3 refuses to make one while a component is being constructed
+        // (a field initializer), which left every muzzle flash failing.
+        MaterialPropertyBlock _block;
         int _next;
 
         public FxQuads(Transform parent, string name, Material material, int count)
@@ -265,6 +267,7 @@ namespace Recoil.Client.Visuals
 
         void SetColor(MeshRenderer renderer, Color color)
         {
+            _block ??= new MaterialPropertyBlock();
             _block.SetColor(EffectResources.ColorProperty, color);
             renderer.SetPropertyBlock(_block);
         }

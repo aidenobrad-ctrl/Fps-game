@@ -61,7 +61,7 @@ namespace Recoil.Client.FiringRange
         BodyPose IShapeTarget.Pose => new BodyPose { Position = transform.position, Yaw = transform.eulerAngles.y + Facing, EyeHeight = _standEyeHeight };
         float IShapeTarget.StandEyeHeight => _standEyeHeight;
 
-        public static TargetDummy Create(Transform parent, string name, Vector3 position, float maxHealth = 100f)
+        public static TargetDummy Create(Transform parent, string name, Vector3 position, float maxHealth = HealthRules.Standard)
         {
             var go = new GameObject(name) { layer = GameLayers.Character };
             go.transform.SetParent(parent, false);

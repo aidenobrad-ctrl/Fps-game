@@ -10,6 +10,23 @@ namespace Recoil.Shared.Weapons
     public static class WeaponValidator
     {
         /// <summary>Problems with one weapon. Empty when it is fine.</summary>
+        /// <summary>What one bullet or pellet deals up close on a part of the body, rounded as dealt.</summary>
+        public static float OneHit(WeaponStats stats, Recoil.Shared.Combat.HitZone zone) =>
+            DamageCalculator.Standardize(DamageCalculator.Compute(stats, 0f, zone));
+
+        /// <summary>The most one trigger pull can deal to one target: every pellet on its worst part, or the full blast.</summary>
+        public static float OneShot(WeaponStats stats, bool bodyOnly)
+        {
+            if (stats.explosionRadius > 0f) return DamageCalculator.Standardize(stats.damage);
+            float worst = OneHit(stats, Recoil.Shared.Combat.HitZone.Body);
+            if (!bodyOnly)
+            {
+                worst = System.Math.Max(worst, OneHit(stats, Recoil.Shared.Combat.HitZone.Head));
+                worst = System.Math.Max(worst, OneHit(stats, Recoil.Shared.Combat.HitZone.Limb));
+            }
+            return worst * System.Math.Max(1, stats.pellets);
+        }
+
         public static List<string> Validate(WeaponDefinition weapon)
         {
             var problems = new List<string>();
@@ -30,6 +47,21 @@ namespace Recoil.Shared.Weapons
             if (s.damage <= 0f) Problem("damage must be above 0.");
             if (s.pellets < 1) Problem("pellets must be at least 1.");
             if (s.falloffEnd < s.falloffStart) Problem("falloffEnd is nearer than falloffStart.");
+
+            // Only a sniper rifle kills from full health with one shot, and only with a hit to the head,
+            // which deals exactly the standard health at any range. Nothing else reaches it in one trigger pull.
+            float standard = Recoil.Shared.Combat.HealthRules.Standard;
+            if (weapon.weaponClass == WeaponClass.Sniper)
+            {
+                if (OneHit(s, Recoil.Shared.Combat.HitZone.Head) != standard)
+                    Problem("a sniper rifle's hit to the head must deal exactly " + standard + " (it deals " + OneHit(s, Recoil.Shared.Combat.HitZone.Head) + ").");
+                if (DamageCalculator.FalloffMultiplier(s, s.maxRange) < 1f) Problem("a sniper rifle must not lose damage with range, or a far head shot would not kill.");
+                if (OneShot(s, bodyOnly: true) >= standard) Problem("a sniper rifle may kill in one shot only to the head.");
+            }
+            else if (OneShot(s, bodyOnly: false) >= standard)
+            {
+                Problem("one shot can deal " + OneShot(s, bodyOnly: false) + ", enough to kill from full health (" + standard + "); only a sniper's head shot may.");
+            }
             if (s.fireMode == FireMode.Burst && s.burstCount < 2) Problem("a burst weapon needs burstCount of 2 or more.");
             if (s.fireMode == FireMode.Charge && s.chargeTime <= 0f) Problem("a charge weapon needs a chargeTime.");
 

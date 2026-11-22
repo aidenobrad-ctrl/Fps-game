@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: sr_l115a3
   displayName: L115A3
-  description: '.338 Lapua Magnum bolt action, made for shots past a kilometre. 125 a hit: the head or body kills, and the round carries on into whoever is behind. Five-round magazine.'
+  description: '.338 Lapua Magnum bolt action, made for shots past a kilometre. 125 a hit, 150 to the head: a head shot kills at any range, and the round carries on into whoever is behind. Five-round magazine.'
   weaponClass: 4
   slot: 0
   unlockLevel: 16
@@ -30,10 +30,10 @@ MonoBehaviour:
     pierceTargets: 1
     pierceDamageKept: 0.8
     damage: 125
-    headMultiplier: 2
+    headMultiplier: 1.2
     limbMultiplier: 0.75
-    falloffStart: 300
-    falloffEnd: 600
+    falloffStart: 1000
+    falloffEnd: 1000
     minDamageMultiplier: 0.9
     maxRange: 1200
     projectileSpeed: 60

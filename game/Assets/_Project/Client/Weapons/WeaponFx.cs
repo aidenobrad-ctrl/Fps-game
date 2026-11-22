@@ -98,7 +98,9 @@ namespace Recoil.Client.Weapons
         readonly Tracer[] _tracers = new Tracer[TracerCount];
         readonly ProjectileVisual[] _projectiles = new ProjectileVisual[ProjectileCount];
         readonly WorldFlash[] _worldFlashes = new WorldFlash[WorldFlashCount];
-        readonly MaterialPropertyBlock _block = new MaterialPropertyBlock();
+        // Made on first use: Unity 6.3 refuses to make one while a component is being constructed
+        // (a field initializer), which left every muzzle flash failing.
+        MaterialPropertyBlock _block;
         int _nextTracer, _nextWorldFlash;
 
         WeaponViewModel _viewModel;
@@ -765,6 +767,7 @@ namespace Recoil.Client.Weapons
 
         void Tint(Renderer renderer, Color color)
         {
+            _block ??= new MaterialPropertyBlock();
             _block.SetColor(EffectResources.ColorProperty, color);
             renderer.SetPropertyBlock(_block);
         }

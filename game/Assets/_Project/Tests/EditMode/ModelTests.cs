@@ -34,6 +34,35 @@ namespace Recoil.Tests
             Assert.That(model.Zones.Distinct().Count(), Is.EqualTo(model.Zones.Length), model.Name + ": one submesh per zone");
         }
 
+        /// <summary>
+        /// Unity draws a triangle only when its corners run clockwise seen from the front (for corners
+        /// a, b, c, Cross(b - a, c - a) points out of the face). Loaded, every model must face the way its
+        /// normals do; otherwise it is drawn inside out (hollow faces, helmets seen into).
+        /// </summary>
+        [Test]
+        public void EveryModel_FacesOutward_AsUnityDrawsIt()
+        {
+            foreach (string set in new[] { SoldierView.Set, "Gear", "Guns", "Projectiles", "GunParts" })
+            {
+                foreach (ModelData model in Load(set))
+                {
+                    int outward = 0, inward = 0;
+                    foreach (int[] triangles in model.Indices)
+                    {
+                        for (int i = 0; i + 2 < triangles.Length; i += 3)
+                        {
+                            Vector3 a = model.Positions[triangles[i]], b = model.Positions[triangles[i + 1]], c = model.Positions[triangles[i + 2]];
+                            Vector3 normal = model.Normals[triangles[i]] + model.Normals[triangles[i + 1]] + model.Normals[triangles[i + 2]];
+                            float facing = Vector3.Dot(Vector3.Cross(b - a, c - a), normal);
+                            if (facing > 0f) outward++;
+                            else if (facing < 0f) inward++;
+                        }
+                    }
+                    Assert.That(outward, Is.GreaterThan(19 * inward), set + "/" + model.Name + ": " + outward + " triangles face out, " + inward + " in");
+                }
+            }
+        }
+
         [Test]
         public void TheSoldier_IsSkinnedBodyUniformAndKit_OnASkeletonOfEveryBone()
         {

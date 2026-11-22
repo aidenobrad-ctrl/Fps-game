@@ -117,6 +117,18 @@ namespace Recoil.Client.Audio
 
         static float[] Samples(AudioClip clip)
         {
+            // Only a clip decompressed on load hands its samples over; asking any other kind makes
+            // Unity log an error per clip. The project's import rule (RecordedSoundImport) sets it.
+            if (clip.loadType != AudioClipLoadType.DecompressOnLoad)
+            {
+                if (!_warned)
+                {
+                    _warned = true;
+                    Debug.LogWarning("Recoil: the recorded sounds are imported compressed (" + clip.name + ": " + clip.loadType +
+                                     "), so the synthesised sounds play instead. Right-click Assets/_Project/Resources/Audio and choose Reimport.");
+                }
+                return null;
+            }
             try
             {
                 if (clip.loadState != AudioDataLoadState.Loaded) clip.LoadAudioData();

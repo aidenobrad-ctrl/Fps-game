@@ -10,7 +10,7 @@ namespace Recoil.Shared.Weapons
     /// </summary>
     public struct WeaponRatings
     {
-        const float TargetHealth = 100f;
+        const float TargetHealth = Recoil.Shared.Combat.HealthRules.Standard;
 
         public float Damage;
         public float FireRate;

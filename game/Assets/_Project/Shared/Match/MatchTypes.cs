@@ -55,7 +55,7 @@ namespace Recoil.Shared.Match
         [Min(0f)] public float countdownSeconds = 3f;
         [Min(0f)] public float roundEndSeconds = 4f;
         [Min(0f)] public float matchEndSeconds = 8f;
-        [Min(1f)] public float maxHealth = 100f;
+        [Min(1f)] public float maxHealth = Recoil.Shared.Combat.HealthRules.Standard;
 
         /// <summary>Zone modes: seconds for one player to take a zone. More players take it faster.</summary>
         [Min(0.5f)] public float captureSeconds = 5f;
@@ -288,7 +288,7 @@ namespace Recoil.Shared.Match
     public sealed class PlayerVitals : IDamageable
     {
         public readonly int PlayerId;
-        public float Max = 100f;
+        public float Max = Recoil.Shared.Combat.HealthRules.Standard;
         public float Current { get; private set; }
         /// <summary>Set between rounds and during the countdown.</summary>
         public bool Invulnerable;

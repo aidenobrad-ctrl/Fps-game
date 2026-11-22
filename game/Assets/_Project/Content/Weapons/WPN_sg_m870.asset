@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: sg_m870
   displayName: Remington 870
-  description: '12-gauge pump action, nine pellets of 00 buckshot a shell. One shell kills inside eight metres; seven in the tube, loaded one at a time.'
+  description: '12-gauge pump action, nine pellets of 00 buckshot a shell. Two shells kill inside eight metres; seven in the tube, loaded one at a time.'
   weaponClass: 3
   slot: 0
   unlockLevel: 3
@@ -29,8 +29,8 @@ MonoBehaviour:
     pellets: 9
     pierceTargets: 0
     pierceDamageKept: 0.75
-    damage: 15
-    headMultiplier: 2
+    damage: 10
+    headMultiplier: 1.5
     limbMultiplier: 0.8
     falloffStart: 8
     falloffEnd: 22

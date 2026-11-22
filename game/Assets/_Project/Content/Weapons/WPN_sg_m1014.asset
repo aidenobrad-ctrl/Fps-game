@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: sg_m1014
   displayName: M1014
-  description: 'Benelli''s 12-gauge semi-automatic: as fast as you can pull, every shell a kill up close, but it spreads a little wider than the pump. Seven in the tube, loaded one at a time.'
+  description: 'Benelli''s 12-gauge semi-automatic: as fast as you can pull, two shells a kill up close, but it spreads a little wider than the pump. Seven in the tube, loaded one at a time.'
   weaponClass: 3
   slot: 0
   unlockLevel: 13
@@ -29,8 +29,8 @@ MonoBehaviour:
     pellets: 9
     pierceTargets: 0
     pierceDamageKept: 0.75
-    damage: 15
-    headMultiplier: 2
+    damage: 10
+    headMultiplier: 1.5
     limbMultiplier: 0.8
     falloffStart: 7
     falloffEnd: 20

@@ -288,7 +288,7 @@ Loadouts are saved on your computer. In a match the server checks the loadout yo
 
 The range has three areas. You spawn at the firing line facing downrange.
 
-- **Centre: shooting lanes.** Targets at 10, 20, 35, 50 and 75 m, two of them moving, and a tight group of three off to the right for explosives and piercing shots. Each target has head, body and limb hitboxes, 100 health, and stands back up after it drops. The panel at the top right tracks accuracy, headshot rate and the time your last kill took.
+- **Centre: shooting lanes.** Targets at 10, 20, 35, 50 and 75 m, two of them moving, and a tight group of three off to the right for explosives and piercing shots. Each target has head, body and limb hitboxes, 150 health, and stands back up after it drops. The panel at the top right tracks accuracy, headshot rate and the time your last kill took.
 - **West: movement course.** Crates to mantle (0.9 m, 1.5 m, then a 2.6 m platform that needs a jump first), a ramp to slide down, a tunnel too low to walk through, and two jump gaps, the second of which needs a sprint.
 - **East: the perch.** A raised platform reached by stairs, for long shots.
 
@@ -302,26 +302,26 @@ Things worth a look among the weapons:
 
 - **Damage numbers** show what each hit did. Body hits are small and white, head hits big and gold, and the hit that finishes a target is red. A shotgun blast shows one total. Every number is a multiple of five.
 - The **Remington 870**, **M1014**, **M24** and **M32** load a round at a time; fire mid-reload to cut it short. Magazine weapons drop the old magazine and seat a new one; the **RPG-7** shows no grenade until it is loaded again.
-- The rifles kill with one shot to the head up close; the **M24**, **L115A3** and **M107** with one to the body, and their rounds (and the **P90**'s, the **PKM**'s and the 7.62mm rifles') carry on into a second target.
+- Only a sniper rifle kills with one shot: the **M24**, **L115A3** and **M107** deal exactly 150 to the head at any range. Everything else takes at least two hits; a rifle needs two to the head. Sniper rounds (and the **P90**'s, the **PKM**'s and the 7.62mm rifles') carry on into a second target.
 - The **M24**, **L115A3**, **M107** and **SVD Dragunov** have full-screen scopes. Fit another optic on the loadout screen to swap one for it.
 - Fit a **Suppressor** and the shot goes quiet and loses its muzzle flash; the **MP5SD** is built quiet.
 - Fit an optic and the iron sights fold away under it; fit an extended magazine and it is longer, a drum and it is a drum; fit a foregrip and your left hand moves to it.
 
 ## Weapons
 
-Every weapon is a real one, with its real calibre, rate of fire, magazine and handling, and damage that follows the cartridge. Every target has 100 health. Damage below is to the body up close, then to the head; arms and legs take three quarters.
+Every weapon is a real one, with its real calibre, rate of fire, magazine and handling, and damage that follows the cartridge. Everyone has 150 health: players, bots and the range's targets. A sniper rifle's head shot deals exactly 150, the only one-shot kill; no other weapon, grenade or blade reaches 150 in one shot (the content check refuses one that does). Damage below is to the body up close, then to the head; arms and legs take three quarters.
 
 | Class | Weapons |
 | --- | --- |
 | Assault rifles | M4A1 (5.56mm, 35 / 105, 800 rpm, 30 rounds), AK-47 (7.62x39mm, 40 / 120, 600 rpm, 30), M16A4 (5.56mm, 35 / 105, three-round bursts, 30), FAMAS F1 (5.56mm bullpup, 35 / 105, 1,000 rpm, 25) |
 | Submachine guns | MP5 (9mm, 25 / 50, 800 rpm, 30), MP5SD (suppressed 9mm, 25 / 50, 700 rpm, 30), UMP45 (.45 ACP, 35 / 70, 600 rpm, 25), P90 (5.7mm, 25 / 50, 900 rpm, 50, goes through), MAC-10 (.45 ACP, 35 / 70, 1,090 rpm, 30) |
-| Shotguns | Remington 870 (pump, 9 pellets x 15, 7 shells), M1014 (semi-automatic, 9 x 15, 7), AA-12 (automatic, 9 x 10, 8), Double-Barrel (9 x 15, 2), Sawed-Off (9 x 15, 2, a secondary) |
+| Shotguns | Remington 870 (pump, 9 pellets x 10 / 15, 7 shells), M1014 (semi-automatic, 9 x 10 / 15, 7), AA-12 (automatic, 9 x 10 / 15, 8), Double-Barrel (9 x 10 / 15, 2), Sawed-Off (9 x 10 / 15, 2, a secondary) |
 | Light machine guns | M249 (5.56mm, 35 / 105, 800 rpm, 100-round belt), PKM (7.62x54mmR, 45 / 135, 650 rpm, 100) |
-| Battle and marksman rifles | M14 EBR (7.62x51mm, 60 / 180, semi-automatic, 20), SVD Dragunov (7.62x54mmR, 65 / 195, semi-automatic, 10, 4x scope), Mk 17 SCAR-H (7.62x51mm, 45 / 135, 600 rpm, 20) |
-| Sniper rifles | M24 (7.62x51mm, 100 / 200, bolt action, 5), L115A3 (.338 Lapua, 125 / 250, bolt action, 5), M107 (.50 BMG, 150 everywhere, semi-automatic, 10) |
+| Battle and marksman rifles | M14 EBR (7.62x51mm, 60 / 120, semi-automatic, 20), SVD Dragunov (7.62x54mmR, 65 / 130, semi-automatic, 10, 4x scope), Mk 17 SCAR-H (7.62x51mm, 45 / 135, 600 rpm, 20) |
+| Sniper rifles | M24 (7.62x51mm, 100 / 150, bolt action, 5), L115A3 (.338 Lapua, 125 / 150, bolt action, 5), M107 (.50 BMG, 125 / 150, semi-automatic, 10); no drop-off with range |
 | Pistols | M17 (9mm, 25 / 50, 17), M1911A1 (.45 ACP, 35 / 70, 7), .357 Revolver (55 / 110, 6, speedloader), Beretta 93R (9mm, 25 / 50, three-round bursts, 20), Skorpion vz. 61 (.32 ACP, 20 / 40, 850 rpm, 20) |
-| Launchers | RPG-7 (150 blast, one grenade), M32 MGL (40mm, 110 blast, six rounds) |
-| Melee | Combat Knife (55), Machete (70), E-Tool (80, longest reach), Tomahawk (100, slowest), Fists (35) |
+| Launchers | RPG-7 (140 blast, one grenade), M32 MGL (40mm, 110 blast, six rounds) |
+| Melee | Combat Knife (75), Machete (75), E-Tool (80, longest reach), Tomahawk (100), Fists (40); every blade kills in two |
 
 Each weapon is modelled whole in Blender at its real size, from code (`art/blender/guns.py`): receivers, rails, handguards, sights, bolts and furniture, wood where the real one has wood. A model carries named points for where it is held, where the eye goes to aim, where its rail, muzzle and magazine are, so the hands (`art/blender/hands.py`) close round its grip and handguard and the attachments go where they would on the real thing. Weapon skins cover a weapon's main finish in their pattern and its grips and controls in their darker colour, at the same scale on every weapon; bare steel stays steel.
 
@@ -368,7 +368,7 @@ The backend has its own tests; see [backend/README.md](backend/README.md#tests).
 
 **Shots do not seem to register.** Press **F3**. The line that appears says what your last bullet did: `hit body at 10.2 m for 25`, `stopped by 'Wall North'`, or `met nothing`, and under it `fault:` if an effect, a sound or the HUD threw an error (the game carries on without it, and the Console has the details as a yellow line starting `Recoil:`). On the firing range the Console also has a `Recoil self-check:` line from the moment the scene started, saying whether a test bullet reached the nearest target. Those lines are what to send with a report.
 
-**Nothing seems to have changed after an update.** The bottom line of the main menu names the update you have, for example `RECOIL · v0.1.0 · update of 22 Nov 2026`. If it shows an older one, or none, the pull did not go through: run `git stash` and `git pull` again in the folder and read what `git pull` prints. If it names the latest update and something still looks old, use **Assets ▸ Refresh** (Ctrl+R) in Unity, or close and reopen the project, so it imports the new files.
+**Nothing seems to have changed after an update.** The bottom line of the main menu names the update you have, for example `RECOIL · v0.1.0 · update of 22 Nov 2026 (b)`. If it shows an older one, or none, the pull did not go through: run `git stash` and `git pull` again in the folder and read what `git pull` prints. If it names the latest update and something still looks old, use **Assets ▸ Refresh** (Ctrl+R) in Unity, or close and reopen the project, so it imports the new files.
 
 **Faces are plain (no eyebrows, white eyes), everything looks flat and edges are jagged.** Unity is drawing the game with its Built-in pipeline instead of URP. Pressing Play now switches URP back on by itself and says so in the Console; if it cannot, set **Edit ▸ Project Settings ▸ Graphics ▸ Default Render Pipeline** to `Assets/_Project/Rendering/PB_URP_Asset`, or use **Recoil ▸ Run Project Doctor**, then press Play again.
 

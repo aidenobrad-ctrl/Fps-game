@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: sr_m107
   displayName: M107
-  description: '.50 BMG semi-automatic anti-materiel rifle. One hit anywhere kills, through two targets at once; ten rounds, 13 kilograms to carry, and a kick to match.'
+  description: '.50 BMG semi-automatic anti-materiel rifle. 125 a hit and 150 to the head, which kills at any range; through two targets at once; ten rounds, 13 kilograms to carry, and a kick to match.'
   weaponClass: 4
   slot: 0
   unlockLevel: 28
@@ -29,11 +29,11 @@ MonoBehaviour:
     pellets: 1
     pierceTargets: 2
     pierceDamageKept: 0.85
-    damage: 150
-    headMultiplier: 1.5
+    damage: 125
+    headMultiplier: 1.2
     limbMultiplier: 1
-    falloffStart: 400
-    falloffEnd: 800
+    falloffStart: 1000
+    falloffEnd: 1000
     minDamageMultiplier: 0.9
     maxRange: 1500
     projectileSpeed: 60

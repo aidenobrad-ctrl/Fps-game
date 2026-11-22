@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: pistol_357
   displayName: .357 Revolver
-  description: 'A six-shot .357 Magnum revolver, reloaded all at once with a speedloader. Two to the body, one to the head.'
+  description: 'A six-shot .357 Magnum revolver, reloaded all at once with a speedloader. Three to the body, two to the head.'
   weaponClass: 6
   slot: 1
   unlockLevel: 11

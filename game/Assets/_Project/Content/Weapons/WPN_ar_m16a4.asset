@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: ar_m16a4
   displayName: M16A4
-  description: '5.56x45mm rifle with a 20-inch barrel, firing three-round bursts. One whole burst on target kills, and it holds its damage further than any carbine.'
+  description: '5.56x45mm rifle with a 20-inch barrel, firing three-round bursts. Two bursts kill, or one with a round to the head, and it holds its damage further than any carbine.'
   weaponClass: 0
   slot: 0
   unlockLevel: 12

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: smg_mac10
   displayName: MAC-10
-  description: '.45 ACP machine pistol firing over 1,000 rounds a minute. Three hits kill at arm''s length, but it is wild to hold and loses its bite past 15 metres.'
+  description: '.45 ACP machine pistol firing over 1,000 rounds a minute. Five hits kill at arm''s length, but it is wild to hold and loses its bite past 15 metres.'
   weaponClass: 1
   slot: 0
   unlockLevel: 30

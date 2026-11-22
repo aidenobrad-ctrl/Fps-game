@@ -31,6 +31,8 @@ namespace Recoil.Shared.Loadouts
                 if (utility.projectile == null) { problems.Add(name + ": has no projectile stats."); continue; }
                 if (utility.projectile.ballistics != BallisticsType.Projectile) problems.Add(name + ": projectile.ballistics must be Projectile.");
                 if (utility.projectile.damage <= 0f) problems.Add(name + ": projectile.damage must be above 0.");
+                if (WeaponValidator.OneShot(utility.projectile, bodyOnly: false) >= Recoil.Shared.Combat.HealthRules.Standard)
+                    problems.Add(name + ": deals " + utility.projectile.damage + ", enough to kill from full health; only a sniper's head shot may.");
                 if (utility.projectile.fuseTime > utility.projectile.projectileLifetime) problems.Add(name + ": fuseTime is longer than projectileLifetime.");
                 if (utility.projectile.fuseTime > 0f && utility.projectile.explosionRadius <= 0f) problems.Add(name + ": has a fuse but no explosionRadius.");
             }

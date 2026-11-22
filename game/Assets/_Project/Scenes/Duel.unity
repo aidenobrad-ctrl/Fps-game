@@ -121,7 +121,7 @@ MonoBehaviour:
       countdownSeconds: 3
       roundEndSeconds: 4
       matchEndSeconds: 8
-      maxHealth: 100
+      maxHealth: 150
       captureSeconds: 5
       hardpointSeconds: 60
       fillWithBots: 0

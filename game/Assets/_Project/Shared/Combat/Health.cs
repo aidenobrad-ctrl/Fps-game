@@ -7,7 +7,7 @@ namespace Recoil.Shared.Combat
     [DisallowMultipleComponent]
     public sealed class Health : MonoBehaviour, IDamageable
     {
-        [Min(1f)] public float maxHealth = 100f;
+        [Min(1f)] public float maxHealth = HealthRules.Standard;
 
         public float Current { get; private set; }
         public bool IsAlive => Current > 0f;

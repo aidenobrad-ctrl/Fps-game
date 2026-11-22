@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: pistol_93r
   displayName: Beretta 93R
-  description: 'A 9mm machine pistol firing three-round bursts at 1,100 rounds a minute, held two-handed by its fold-down grip. Twenty rounds; one burst and a shot more kill.'
+  description: 'A 9mm machine pistol firing three-round bursts at 1,100 rounds a minute, held two-handed by its fold-down grip. Twenty rounds; two bursts kill.'
   weaponClass: 6
   slot: 1
   unlockLevel: 19

@@ -179,22 +179,22 @@ namespace Recoil.Tests
         [Test]
         public void TimeToKill_CountsTheGapsBetweenShots()
         {
-            // 26 damage needs four body shots: three gaps at 720 rpm.
-            var stats = new WeaponStats { damage = 26f, roundsPerMinute = 720f };
+            // 38 damage needs four body shots against 150 health: three gaps at 720 rpm.
+            var stats = new WeaponStats { damage = 38f, roundsPerMinute = 720f };
             WeaponRatings ratings = WeaponRatings.From(stats);
 
             Assert.That(ratings.ShotsToKill, Is.EqualTo(4));
             Assert.That(ratings.TimeToKill, Is.EqualTo(0.25f).Within(0.001f));
-            Assert.That(ratings.DamagePerSecond, Is.EqualTo(312f).Within(0.5f));
+            Assert.That(ratings.DamagePerSecond, Is.EqualTo(456f).Within(0.5f));
         }
 
         [Test]
         public void AShotgun_AddsUpItsPellets()
         {
-            var stats = new WeaponStats { damage = 14f, pellets = 8, roundsPerMinute = 70f };
+            var stats = new WeaponStats { damage = 20f, pellets = 8, roundsPerMinute = 70f };
             WeaponRatings ratings = WeaponRatings.From(stats);
 
-            Assert.That(ratings.DamagePerShot, Is.EqualTo(112f));
+            Assert.That(ratings.DamagePerShot, Is.EqualTo(160f));
             Assert.That(ratings.ShotsToKill, Is.EqualTo(1));
             Assert.That(ratings.TimeToKill, Is.EqualTo(0f));
         }
@@ -204,7 +204,7 @@ namespace Recoil.Tests
         {
             var stats = new WeaponStats
             {
-                fireMode = FireMode.Burst, damage = 30f, roundsPerMinute = 900f, burstCount = 3, burstCooldown = 0.2f,
+                fireMode = FireMode.Burst, damage = 45f, roundsPerMinute = 900f, burstCount = 3, burstCooldown = 0.2f,
             };
             WeaponRatings ratings = WeaponRatings.From(stats);
 

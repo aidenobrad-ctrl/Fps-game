@@ -45,7 +45,7 @@ namespace Recoil.Client.Duel
         /// Which update this copy of the game is, shown at the foot of the menu, so whoever is
         /// playing can tell at a glance that a pull went through. Changed with each update.
         /// </summary>
-        public const string LatestUpdate = "update of 22 Nov 2026";
+        public const string LatestUpdate = "update of 22 Nov 2026 (b)";
 
         const string NameKey = "pb.playerName", AddressKey = "pb.lastAddress", ModeKey = "pb.mode";
         const string MapKey = "pb.host.map", SizeKey = "pb.host.size", BotsKey = "pb.host.bots", LimitKey = "pb.host.limit5.";
@@ -750,7 +750,7 @@ namespace Recoil.Client.Duel
             _timeField = Dropdown(_hostOptions, "Time limit", new List<string>(), 0);
             var healthNames = new List<string>();
             foreach (int health in HealthChoices) healthNames.Add(health + " health");
-            _healthField = Dropdown(_hostOptions, "Health", healthNames, Mathf.Max(0, Array.IndexOf(HealthChoices, PlayerPrefs.GetInt(HealthKey, 100))));
+            _healthField = Dropdown(_hostOptions, "Health", healthNames, Mathf.Max(0, Array.IndexOf(HealthChoices, PlayerPrefs.GetInt(HealthKey, (int)Recoil.Shared.Combat.HealthRules.Standard))));
             var respawnNames = new List<string>();
             foreach (float delay in RespawnChoices) respawnNames.Add(delay <= 0f ? "Straight away" : delay + " seconds");
             _respawnField = Dropdown(_hostOptions, "Respawn after", respawnNames, 0);
@@ -1231,7 +1231,7 @@ namespace Recoil.Client.Duel
             health.style.borderLeftColor = Good;
             Round(health, 6);
             Label healthTitle = Text_("HEALTH", 12, Dim, bold: true, spacing: 3);
-            _healthText = Text_("100", 30, Text, bold: true);
+            _healthText = Text_(Recoil.Shared.Combat.HealthRules.Standard.ToString("0"), 30, Text, bold: true);
             var bar = new VisualElement();
             bar.pickingMode = PickingMode.Ignore;
             bar.style.width = 240;

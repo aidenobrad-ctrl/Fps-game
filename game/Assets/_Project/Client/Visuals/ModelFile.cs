@@ -168,6 +168,11 @@ namespace Recoil.Client.Visuals
                         indices[i] = reader.ReadUInt16();
                         if (indices[i] >= vertices) throw new InvalidDataException(model.Name + ": an index points past the vertices.");
                     }
+                    // The files keep Blender's winding (counter-clockwise round a face's outward
+                    // normal). Unity draws a triangle only when its corners go clockwise, so each one is
+                    // turned round here; drawn as stored, every model showed its inside: hollow faces,
+                    // helmets seen into, hands that looked cut open.
+                    for (int i = 0; i + 2 < indexCount; i += 3) (indices[i + 1], indices[i + 2]) = (indices[i + 2], indices[i + 1]);
                     model.Indices[s] = indices;
                 }
                 if (points)
