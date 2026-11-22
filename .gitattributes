@@ -1,3 +1,15 @@
-# Model data and images must reach Unity byte for byte, whatever the line-ending settings.
+# Model data, images and sounds must reach Unity byte for byte, whatever the line-ending settings.
 *.bytes binary
 *.png binary
+*.jpg binary
+*.jpeg binary
+*.ogg binary
+*.wav binary
+*.flac binary
+*.mp3 binary
+*.7z binary
+*.zip binary
+*.blend binary
+
+# Windows scripts need Windows line endings.
+*.bat text eol=crlf

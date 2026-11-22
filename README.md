@@ -2,9 +2,41 @@
 
 A fast, competitive multiplayer FPS for PC, built in Unity 6.
 
-Eleven phases are built so far: **movement and a firing range**, **the weapon system with 40 weapons and 21 attachments**, **loadouts**, **online play** on a server that owns the match, **accounts** on a backend of their own, **every game mode, bots and matchmaking**, **character customization with weapon skins**, **progression, challenges and ranked**, **sound, effects, settings and performance**, **friends, parties, chat, reports and ranked seasons**, and **three more maps, private-match rules and smarter bots**. Accounts are switched back on; see [Accounts](#accounts). The plan for everything after is in [docs/ROADMAP.md](docs/ROADMAP.md), and how the code is organised is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Eleven phases are built so far: **movement and a firing range**, **the weapon system with 34 real weapons and 21 attachments**, **loadouts**, **online play** on a server that owns the match, **accounts** on a backend of their own, **every game mode, bots and matchmaking**, **character customization with weapon skins**, **progression, challenges and ranked**, **sound, effects, settings and performance**, **friends, parties, chat, reports and ranked seasons**, and **three more maps, private-match rules and smarter bots**. Accounts are switched back on; see [Accounts](#accounts). The plan for everything after is in [docs/ROADMAP.md](docs/ROADMAP.md), and how the code is organised is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 > **Developed without a Unity Editor.** The code is written and checked outside the engine: the C# is compiled against Unity's reference assemblies and checked against the Unity 6000.6, URP 17.6 and Input System 1.20 sources, and the simulation, the weapon data and the netcode are tested there, including whole matches between a real server and real clients on a simulated bad connection, every game mode, bots playing full matches, and the game's account and matchmaking code against the real backend. It is then opened and played in Unity 6000.6.9f1, and what that turns up is fixed from the Console's messages. If something looks wrong, [Troubleshooting](#troubleshooting) says what to check and what to send.
+
+## Get the game
+
+On Windows, open **Command Prompt** or **PowerShell** (either works with these commands).
+
+1. Install Git, once per PC:
+
+   ```
+   winget install --id Git.Git -e --source winget
+   ```
+
+   (or download it from https://git-scm.com/download/win and install it with the default options). Then close the window and open a new one, so it finds Git.
+2. Copy the game onto your Desktop, only the `game` folder and a few small files (the art sources and the backend stay on GitHub):
+
+   ```
+   cd Desktop
+   git clone --filter=blob:none --sparse https://github.com/aidenobrad-ctrl/fps-game.git recoil
+   cd recoil
+   git sparse-checkout set game
+   ```
+
+   If `cd Desktop` says the folder does not exist, your Desktop is in OneDrive: use `cd OneDrive\Desktop`. For the whole repository instead, leave out `--filter=blob:none --sparse` and the last line.
+3. Open it in Unity: see [Open and play](#open-and-play). The project is the `recoil\game` folder.
+
+**Getting each update:** close Unity (or stop Play mode) and double-click **`update.bat`** in the `recoil` folder. It runs `git stash` (setting aside files Unity re-saved on its own) and `git pull`, and says whether it worked. The same by hand, in the `recoil` folder:
+
+```
+git stash
+git pull
+```
+
+The bottom line of the main menu names the update you have, so you can see that a pull went through.
 
 ## Open and play
 
