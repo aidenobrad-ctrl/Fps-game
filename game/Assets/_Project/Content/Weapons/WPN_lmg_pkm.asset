@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: lmg_pkm
   displayName: PKM
-  description: '7.62x54mmR general-purpose machine gun. A 100-round belt of full-power rifle rounds at 650 a minute: three to the body anywhere on the map, through cover and into whoever is behind.'
+  description: '7.62x54mmR general-purpose machine gun. A 100-round belt of full-power rifle rounds at 650 a minute: four to the body anywhere on the map, through cover and into whoever is behind.'
   weaponClass: 2
   slot: 0
   unlockLevel: 24

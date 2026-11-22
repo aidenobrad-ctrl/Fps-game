@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: melee_fists
   displayName: Fists
-  description: 'Nothing in your hands, so nothing slows you down. Quick jabs of 40.'
+  description: 'Nothing in your hands, so nothing slows you down. Quick jabs of 40: four to put someone down.'
   weaponClass: 9
   slot: 2
   unlockLevel: 1

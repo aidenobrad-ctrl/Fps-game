@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: pistol_m1911
   displayName: M1911A1
-  description: 'The classic .45 ACP pistol. Seven heavy rounds: three to the body, two to the head.'
+  description: 'The classic .45 ACP pistol. Seven heavy rounds: five to the body, three to the head.'
   weaponClass: 6
   slot: 1
   unlockLevel: 6

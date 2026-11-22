@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: smg_mp5
   displayName: MP5
-  description: '9x19mm submachine gun. Accurate and easy to control at 800 rounds a minute: four to the body up close, five past 20 metres.'
+  description: '9x19mm submachine gun. Accurate and easy to control at 800 rounds a minute: six to the body up close, three to the head.'
   weaponClass: 1
   slot: 0
   unlockLevel: 1

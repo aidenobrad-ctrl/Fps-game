@@ -14,9 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   presetId: recon
   displayName: Recon
-  description: 'Quiet weapons for getting behind them: an MP5SD and a suppressed M17.'
-  primary: {fileID: 11400000, guid: 5745a279d68680676286dc9762e10ba3, type: 2}
+  description: 'Quiet weapons for getting behind them: a suppressed MP5 and a suppressed M17.'
+  primary: {fileID: 11400000, guid: 843546bd6ce459475c7a7e2e10718627, type: 2}
   primaryAttachments:
+  - {fileID: 11400000, guid: 28fbf477d29c8f2049314b19f5d907fa, type: 2}
   - {fileID: 11400000, guid: f95313d2c50561b865952851718eecf8, type: 2}
   secondary: {fileID: 11400000, guid: 6fcf1c4a31b0385a91f503f3b4f784e6, type: 2}
   secondaryAttachments:

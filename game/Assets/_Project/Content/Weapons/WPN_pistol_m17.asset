@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: pistol_m17
   displayName: M17
-  description: 'SIG Sauer''s 9x19mm service pistol. Seventeen rounds, quick to draw and accurate: four to the body, two to the head.'
+  description: 'SIG Sauer''s 9x19mm service pistol. Seventeen rounds, quick to draw and accurate: six to the body, three to the head.'
   weaponClass: 6
   slot: 1
   unlockLevel: 1

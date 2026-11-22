@@ -62,6 +62,23 @@ namespace Recoil.Tests
         }
 
         [Test]
+        public void EveryLoadoutSlot_HasTenWeapons_NotCountingFists()
+        {
+            var counts = new Dictionary<WeaponSlotType, int>();
+            foreach (WeaponDefinition weapon in LoadCatalog().weapons.weapons)
+            {
+                if (weapon.weaponId == BodyShapes.FistsId) continue;
+                counts.TryGetValue(weapon.slot, out int count);
+                counts[weapon.slot] = count + 1;
+            }
+            foreach (WeaponSlotType slot in new[] { WeaponSlotType.Primary, WeaponSlotType.Secondary, WeaponSlotType.Melee })
+            {
+                counts.TryGetValue(slot, out int count);
+                Assert.That(count, Is.EqualTo(10), slot.ToString());
+            }
+        }
+
+        [Test]
         public void EveryPreset_ResolvesExactlyAsAuthored()
         {
             LoadoutCatalog catalog = LoadCatalog();

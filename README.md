@@ -2,7 +2,7 @@
 
 A fast, competitive multiplayer FPS for PC, built in Unity 6.
 
-Eleven phases are built so far: **movement and a firing range**, **the weapon system with 34 real weapons and 21 attachments**, **loadouts**, **online play** on a server that owns the match, **accounts** on a backend of their own, **every game mode, bots and matchmaking**, **character customization with weapon skins**, **progression, challenges and ranked**, **sound, effects, settings and performance**, **friends, parties, chat, reports and ranked seasons**, and **three more maps, private-match rules and smarter bots**. Accounts are switched back on; see [Accounts](#accounts). The plan for everything after is in [docs/ROADMAP.md](docs/ROADMAP.md), and how the code is organised is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Eleven phases are built so far: **movement and a firing range**, **the weapon system with 30 real weapons (ten for each loadout slot) and 21 attachments**, **loadouts**, **online play** on a server that owns the match, **accounts** on a backend of their own, **every game mode, bots and matchmaking**, **character customization with weapon skins**, **progression, challenges and ranked**, **sound, effects, settings and performance**, **friends, parties, chat, reports and ranked seasons**, and **three more maps, private-match rules and smarter bots**. Accounts are switched back on; see [Accounts](#accounts). The plan for everything after is in [docs/ROADMAP.md](docs/ROADMAP.md), and how the code is organised is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 > **Developed without a Unity Editor.** The code is written and checked outside the engine: the C# is compiled against Unity's reference assemblies and checked against the Unity 6000.3, URP 17.3 and Input System 1.20 sources, and the simulation, the weapon data and the netcode are tested there, including whole matches between a real server and real clients on a simulated bad connection, every game mode, bots playing full matches, and the game's account and matchmaking code against the real backend. It is then opened and played in Unity 6000.3.29f1 LTS, and what that turns up is fixed from the Console's messages. If something looks wrong, [Troubleshooting](#troubleshooting) says what to check and what to send.
 
@@ -227,7 +227,7 @@ Every player is a realistic soldier modelled in Blender (the scripts that build 
 - **Skin tone**: nine to pick from.
 - **Back**: Assault Pack, Hydration Pack, Radio Pack, Rucksack, Pack and Bedroll, or a Scarf.
 - **Mix your own colour**: under the uniform, gear and skin-tone lists, three sliders (hue, saturation, brightness) make any colour at all, and you wear it as you mix it.
-- **Weapon skins**: twelve (Carbon, Arctic, Woodland, Sandstorm, Tiger, Gilded, Mirror, Neon Grid, Magma, Nebula, Bubblegum, Redline) plus the factory finish. Pick **Every weapon** to skin them all, or a single weapon to give it a skin of its own. You see your skins on your own weapon in first person; others see them in your hands.
+- **Weapon skins**: twelve (Carbon, Arctic, Woodland, Sandstorm, Tiger, Gilded, Mirror, Neon Grid, Magma, Nebula, Bubblegum, Redline) plus the factory finish. Pick **Every weapon** to skin them all, or a single weapon to give it a skin of its own (up to 40 weapons can have their own; give a 41st one and the weapon you chose for longest ago goes back to the skin for every weapon). You see your skins on your own weapon in first person; others see them in your hands.
 
 The preview in the middle shows the result and turns by itself; drag it to turn it yourself. **Randomize** rolls a new outfit (keeping your weapon skins), and **Reset to default** starts over. Choices are saved as you make them, in `cosmetics.json` beside your loadouts.
 
@@ -301,31 +301,34 @@ Utility and perks:
 Things worth a look among the weapons:
 
 - **Damage numbers** show what each hit did. Body hits are small and white, head hits big and gold, and the hit that finishes a target is red. A shotgun blast shows one total. Every number is a multiple of five.
-- The **Remington 870**, **M1014**, **M24** and **M32** load a round at a time; fire mid-reload to cut it short. Magazine weapons drop the old magazine and seat a new one; the **RPG-7** shows no grenade until it is loaded again.
-- Only a sniper rifle kills with one shot: the **M24**, **L115A3** and **M107** deal exactly 150 to the head at any range. Everything else takes at least two hits; a rifle needs two to the head. Sniper rounds (and the **P90**'s, the **PKM**'s and the 7.62mm rifles') carry on into a second target.
-- The **M24**, **L115A3**, **M107** and **SVD Dragunov** have full-screen scopes. Fit another optic on the loadout screen to swap one for it.
-- Fit a **Suppressor** and the shot goes quiet and loses its muzzle flash; the **MP5SD** is built quiet.
+- The **Remington 870**, **M24** and **M32** load a round at a time; fire mid-reload to cut it short. Magazine weapons drop the old magazine and seat a new one; the **RPG-7** shows no grenade until it is loaded again.
+- Only a sniper rifle kills with one shot: the **M24** and **M107** deal exactly 150 to the head at any range. Everything else takes at least two hits; a rifle needs two to the head. Sniper rounds (and the **P90**'s, the **PKM**'s and the **SVD**'s) carry on into a second target.
+- The **M24**, **M107** and **SVD Dragunov** have full-screen scopes. Fit another optic on the loadout screen to swap one for it.
+- Fit a **Suppressor** and the shot goes quiet and loses its muzzle flash.
 - Fit an optic and the iron sights fold away under it; fit an extended magazine and it is longer, a drum and it is a drum; fit a foregrip and your left hand moves to it.
 
 ## Weapons
 
 Every weapon is a real one, with its real calibre, rate of fire, magazine and handling, and damage that follows the cartridge. Everyone has 150 health: players, bots and the range's targets. A sniper rifle's head shot deals exactly 150, the only one-shot kill; no other weapon, grenade or blade reaches 150 in one shot (the content check refuses one that does). Damage below is to the body up close, then to the head; arms and legs take three quarters.
 
-| Class | Weapons |
-| --- | --- |
-| Assault rifles | M4A1 (5.56mm, 35 / 105, 800 rpm, 30 rounds), AK-47 (7.62x39mm, 40 / 120, 600 rpm, 30), M16A4 (5.56mm, 35 / 105, three-round bursts, 30), FAMAS F1 (5.56mm bullpup, 35 / 105, 1,000 rpm, 25) |
-| Submachine guns | MP5 (9mm, 25 / 50, 800 rpm, 30), MP5SD (suppressed 9mm, 25 / 50, 700 rpm, 30), UMP45 (.45 ACP, 35 / 70, 600 rpm, 25), P90 (5.7mm, 25 / 50, 900 rpm, 50, goes through), MAC-10 (.45 ACP, 35 / 70, 1,090 rpm, 30) |
-| Shotguns | Remington 870 (pump, 9 pellets x 10 / 15, 7 shells), M1014 (semi-automatic, 9 x 10 / 15, 7), AA-12 (automatic, 9 x 10 / 15, 8), Double-Barrel (9 x 10 / 15, 2), Sawed-Off (9 x 10 / 15, 2, a secondary) |
-| Light machine guns | M249 (5.56mm, 35 / 105, 800 rpm, 100-round belt), PKM (7.62x54mmR, 45 / 135, 650 rpm, 100) |
-| Battle and marksman rifles | M14 EBR (7.62x51mm, 60 / 120, semi-automatic, 20), SVD Dragunov (7.62x54mmR, 65 / 130, semi-automatic, 10, 4x scope), Mk 17 SCAR-H (7.62x51mm, 45 / 135, 600 rpm, 20) |
-| Sniper rifles | M24 (7.62x51mm, 100 / 150, bolt action, 5), L115A3 (.338 Lapua, 125 / 150, bolt action, 5), M107 (.50 BMG, 125 / 150, semi-automatic, 10); no drop-off with range |
-| Pistols | M17 (9mm, 25 / 50, 17), M1911A1 (.45 ACP, 35 / 70, 7), .357 Revolver (55 / 110, 6, speedloader), Beretta 93R (9mm, 25 / 50, three-round bursts, 20), Skorpion vz. 61 (.32 ACP, 20 / 40, 850 rpm, 20) |
-| Launchers | RPG-7 (140 blast, one grenade), M32 MGL (40mm, 110 blast, six rounds) |
-| Melee | Combat Knife (75), Machete (75), E-Tool (80, longest reach), Tomahawk (100), Fists (40); every blade kills in two |
+Each loadout slot has ten weapons to choose from, and Fists on top.
 
-Each weapon is modelled whole in Blender at its real size, from code (`art/blender/guns.py`): receivers, rails, handguards, sights, bolts and furniture, wood where the real one has wood. A model carries named points for where it is held, where the eye goes to aim, where its rail, muzzle and magazine are, so the hands (`art/blender/hands.py`) close round its grip and handguard and the attachments go where they would on the real thing. Weapon skins cover a weapon's main finish in their pattern and its grips and controls in their darker colour, at the same scale on every weapon; bare steel stays steel.
+| Slot | Class | Weapons |
+| --- | --- | --- |
+| Primary | Assault rifles | M4A1 (5.56mm, 35 / 105, 800 rpm, 30 rounds), AK-47 (7.62x39mm, 40 / 120, 600 rpm, 30) |
+| Primary | Submachine guns | MP5 (9mm, 25 / 50, 800 rpm, 30), P90 (5.7mm, 25 / 50, 900 rpm, 50, goes through) |
+| Primary | Shotguns | Remington 870 (pump, 9 pellets x 10 / 15, 7 shells), AA-12 (automatic, 9 x 10 / 15, 8) |
+| Primary | Light machine gun | PKM (7.62x54mmR, 45 / 135, 650 rpm, 100-round belt) |
+| Primary | Marksman rifle | SVD Dragunov (7.62x54mmR, 65 / 130, semi-automatic, 10, 4x scope) |
+| Primary | Sniper rifles | M24 (7.62x51mm, 100 / 150, bolt action, 5), M107 (.50 BMG, 125 / 150, semi-automatic, 10); no drop-off with range |
+| Secondary | Pistols | M17 (9mm, 25 / 50, 17), M1911A1 (.45 ACP, 35 / 70, 7), .357 Revolver (55 / 110, 6, speedloader), Beretta 93R (9mm, 25 / 50, three-round bursts, 20), Skorpion vz. 61 (.32 ACP, 20 / 40, 850 rpm, 20), Desert Eagle (.50 AE, 65 / 130, 7) |
+| Secondary | Shotgun | Sawed-Off (9 x 10 / 15, 2) |
+| Secondary | Launchers | RPG-7 (140 blast, one grenade), M32 MGL (40mm, 110 blast, six rounds), M202 FLASH (four 66mm rockets, 100 blast each) |
+| Melee | Blades and tools | Combat Knife (75), Karambit (60, the quickest, three cuts), Trench Knife (75), Bowie Knife (75), Machete (75), Kukri (80), E-Tool (80, long reach), Tomahawk (100), Katana (90, long reach), Sledgehammer (120, slowest of all); and Fists (40) |
 
-The RPG-7's grenade, 40mm grenades and the thrown items fly as their own models (in `Resources/Models/Projectiles.bytes`): rockets roll and trail smoke, grenades tumble.
+Each weapon is modelled whole in Blender at its real size, from code (`art/blender/guns.py`, and `guns_more.py` for the newest few): receivers, rails, handguards, sights, bolts and furniture, wood where the real one has wood. A model carries named points for where it is held, where the eye goes to aim, where its rail, muzzle and magazine are, so the hands (`art/blender/hands.py`) close round its grip and handguard and the attachments go where they would on the real thing. Weapon skins cover a weapon's main finish in their pattern and its grips and controls in their darker colour, at the same scale on every weapon; bare steel stays steel.
+
+Rockets, 40mm grenades and the thrown items fly as their own models (in `Resources/Models/Projectiles.bytes`): rockets roll and trail smoke, grenades tumble.
 
 Damage drops off with range for most guns (an M4A1 hit is 25 beyond about 80 m). Explosions deal less the further from the centre. Whatever reduces it, what lands is always a multiple of five.
 
@@ -376,7 +379,7 @@ The backend has its own tests; see [backend/README.md](backend/README.md#tests).
 
 **Red errors while playing.** The first errors of each session, each written once with where it came from, are kept in `Logs/Recoil-errors.txt` in the `game` folder (in a built game, `Recoil-errors.txt` in its save folder), and a note in the bottom corner of the screen gives the first one and the file's path. That file is the thing to send: the first error in it is usually the cause of all the others. Parts that fail to build (a soldier, the weapon effects, the arms) are left out and the game carries on without them.
 
-**My loadout's weapons changed.** The arcade weapons were replaced by real ones. A saved loadout that names one that is gone gets the first weapon for that slot instead; pick what you want on the loadout screen. Weapon skins you chose for a removed weapon are dropped the same way.
+**My loadout's weapons changed.** The roster was cut to ten weapons a slot (the M16A4, FAMAS, MP5SD, UMP45, MAC-10, M1014, Double-Barrel, M249, M14 EBR, Mk 17 and L115A3 are gone), and before that the arcade weapons were replaced by real ones. A saved loadout that names one that is gone gets the first weapon for that slot instead; pick what you want on the loadout screen. Weapon skins you chose for a removed weapon are dropped the same way.
 
 **Hundreds of red errors, many inside `Packages/`, right after opening.** The project and your Unity version disagree about package versions. It is set up for Unity 6000.3.29f1 LTS (see `game/Packages/manifest.json`). Open it with that version; if you already opened it with another one (an earlier copy was set up for 6000.6.9f1), close Unity, delete the `game/Library` folder and `game/Packages/packages-lock.json`, and open it again with 6000.3.29f1.
 

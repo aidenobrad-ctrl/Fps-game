@@ -16,7 +16,7 @@ Everything here is CC0 (public domain), so no credit is required. It is credited
 
 | Used for | Source | Author | Licence |
 |---|---|---|---|
-| Every gunshot (18 sets: AR-15, AK-47, Carl Gustav M45, PPSh, four shotguns, Mosin-Nagant, Springfield 1917, Arisaka, Tikka T3, Savage 10, 1911, Walther PPQ, S&W 642, Bersa) | [The Free Firearm Sound Library](https://opengameart.org/content/the-free-firearm-sound-library) ("Prepared SFX Library.7z") | The Free Firearm Sound Library team (freefirearmsfx.com), posted by bart | CC0 |
+| Every gunshot (12 sets: AR-15, AK-47, Carl Gustav M45, three shotguns, Mosin-Nagant, Tikka T3, 1911, Walther PPQ, S&W 642, Bersa) | [The Free Firearm Sound Library](https://opengameart.org/content/the-free-firearm-sound-library) ("Prepared SFX Library.7z") | The Free Firearm Sound Library team (freefirearmsfx.com), posted by bart | CC0 |
 | Reload start and end (handgun) | [Handgun Reload Sound Effect](https://opengameart.org/content/handgun-reload-sound-effect) (`reload.wav`) | zer0_sol | CC0 |
 | Reload end, round in | [Gun Reload Sound Effects](https://opengameart.org/content/gun-reload-sound-effects) (`clipload1.wav`, `clipload2.wav`, `singlebullet1.wav`) | BMacZero | CC0 |
 | Reload start | [Gun reload sounds](https://opengameart.org/content/gun-reload-sounds) (`gunreload1.wav`) | SpringySpringo | CC0 |
@@ -26,9 +26,9 @@ Everything here is CC0 (public domain), so no credit is required. It is credited
 | Explosions | [Chunky Explosion](https://opengameart.org/content/chunky-explosion) (`Chunky Explosion.mp3`), [explosions](https://opengameart.org/content/explosions-4) (`explosion3.ogg`) | Joth; EZduzziteh | CC0 |
 
 Which game weapon fires which recording, and at what pitch, is in `RECORDINGS` in the roster,
-for example: M4A1 and M16A4 fire the AR-15, the AK-47 fires the AK-47, the PKM and SVD fire the
-Mosin-Nagant (the same 7.62x54R cartridge), the M1911A1 fires the 1911, and the M17 fires the
-Walther PPQ (9 mm). The MP5SD fires the M45 through its built-in suppressor.
+for example: the M4A1 fires the AR-15, the AK-47 fires the AK-47, the PKM and SVD fire the
+Mosin-Nagant (the same 7.62x54R cartridge), the M1911A1 fires the 1911, the M17 fires the
+Walther PPQ (9 mm), and the Desert Eagle fires the S&W 642, pitched down.
 
 Pixabay's sound effects were the first choice, but its site turns away scripted downloads.
 

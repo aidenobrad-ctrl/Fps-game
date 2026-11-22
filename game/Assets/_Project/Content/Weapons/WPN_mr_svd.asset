@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: mr_svd
   displayName: SVD Dragunov
-  description: '7.62x54mmR marksman rifle with its 4x PSO-1 scope. Ten rounds, semi-automatic: two to the body or one to the head at any range.'
+  description: '7.62x54mmR marksman rifle with its 4x PSO-1 scope. Ten rounds, semi-automatic: three to the body or two to the head at any range.'
   weaponClass: 5
   slot: 0
   unlockLevel: 17

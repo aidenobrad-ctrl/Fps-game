@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   presetId: demolition
   displayName: Demolition
-  description: 'A belt of 5.56, a rocket, and an extra grenade.'
-  primary: {fileID: 11400000, guid: be7dafe7fd8e5a3a700690d866bc22e9, type: 2}
+  description: 'A belt of 7.62, a rocket, and an extra grenade.'
+  primary: {fileID: 11400000, guid: 1d23012094d5d9c0e9faf57a62d17376, type: 2}
   primaryAttachments:
-  - {fileID: 11400000, guid: f0ccfc29c240b707a378dce542d86b1c, type: 2}
+  - {fileID: 11400000, guid: e861d531faf35e04dfd877b9ed2cad4a, type: 2}
   secondary: {fileID: 11400000, guid: 5f874231b8a3fb0b748b6238d72e5266, type: 2}
   secondaryAttachments: []
   melee: {fileID: 11400000, guid: e7a331c50b20c566955bf4b462141e37, type: 2}

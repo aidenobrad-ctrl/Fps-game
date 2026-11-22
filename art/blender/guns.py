@@ -32,6 +32,9 @@ direction:
   Butt      the back of the stock, against the shoulder.
 
 The hands themselves (hands.py) are made to close round these points.
+
+Most weapons are here; the ones added to fill each loadout slot to ten are in guns_more.py,
+built from the same shapes and parts, and all_weapons() returns them all.
 """
 import math
 import bmesh
@@ -541,41 +544,6 @@ def ak47(Part):
     return g
 
 
-def famas(Part):
-    g = Gun(Part, "ar_famas")
-    b = g.body
-    # A bullpup: the action and magazine behind the grip, the cheek on the receiver.
-    b.prism([(-0.33, 0.016), (-0.33, -0.082), (-0.31, -0.09), (-0.22, -0.05), (-0.09, -0.042), (0.12, -0.04), (0.12, 0.018)],
-            -0.0215, 0.0215, "primary", bevel=0.005, segs=2)
-    b.box(-0.022, 0.022, -0.09, 0.018, -0.338, -0.329, "dark", bevel=0.003)
-    b.box(-0.02, 0.02, -0.033, 0.016, 0.12, 0.255, "primary", bevel=0.006, segs=2)
-    for z in (0.15, 0.18, 0.21):
-        b.box(-0.0205, 0.0205, -0.015, -0.007, z, z + 0.018, "dark", bevel=0.0)
-    for sx in (-1, 1):
-        b.rod((sx * 0.021, -0.016, 0.0), (sx * 0.021, -0.016, 0.24), 0.0038, "dark", segs=8)
-    b.tube(0.255, 0.405, 0.0088, "metal", segs=16)
-    b.tube(0.395, 0.428, 0.0112, "dark", segs=16)
-    # The long carry handle over everything, with the sights inside it.
-    b.prism([(-0.28, 0.018), (-0.28, 0.074), (0.205, 0.074), (0.205, 0.018), (0.185, 0.018), (0.185, 0.06), (-0.26, 0.06),
-             (-0.26, 0.018)], -0.0075, 0.0075, "primary", bevel=0.0025)
-    b.box(-0.006, 0.006, 0.026, 0.06, 0.03, 0.08, "dark", bevel=0.001)
-    rear_aperture(b, -0.25, 0.049, base=0.04)
-    front_post(b, 0.18, 0.034, 0.049, ears=1)
-    picatinny(b, -0.2, 0.15, 0.074, "dark", half_width=0.0075, height=0.006)
-    trigger_guard(b, -0.03, 0.034, -0.04, -0.066)
-    trigger(b, 0.0, -0.04)
-    g.point("Grip", *grip(b, (-0.026, -0.04), 0.042, 0.092, 16, "primary"))
-    straight_mag(g.mag, -0.098, -0.158, -0.03, 0.135, 0.0118, "primary")
-    g.point("Muzzle", (0, 0, 0.428))
-    g.point("Eye", (0, 0.049, -0.33))
-    g.point("Rail", (0, 0.08, -0.06))
-    g.point("Under", (0, -0.033, 0.2))
-    g.point("Side", (0.02, -0.008, 0.19))
-    g.point("Support", (0, -0.033, 0.19), (0, 1, 0))
-    g.point("Mag", (0, -0.044, -0.128), (0, 1, 0))
-    g.point("Butt", (0, -0.035, -0.338))
-    return g
-
 
 # ---------------------------------------------------------------------------- submachine guns
 
@@ -645,40 +613,6 @@ def mp5(Part, gid, suppressed=False):
     return g
 
 
-def ump45(Part):
-    g = Gun(Part, "smg_ump45")
-    b = g.body
-    b.prism([(-0.13, 0.024), (0.19, 0.024), (0.203, 0.012), (0.203, -0.03), (0.13, -0.034), (0.11, -0.04), (-0.13, -0.04)],
-            -0.0215, 0.0215, "primary", bevel=0.004, segs=2)
-    picatinny(b, -0.115, 0.12, 0.024, "primary")
-    picatinny(b, 0.135, 0.195, -0.032, "primary", face="bottom")
-    b.box(0.0213, 0.0222, -0.006, 0.012, -0.04, 0.03, "dark", bevel=0.0006)
-    b.rod((-0.0215, 0.012, 0.13), (-0.036, 0.012, 0.13), 0.0035, "dark", segs=8)
-    b.tube(0.203, 0.228, 0.0095, "metal", segs=16)
-    b.tube(0.226, 0.243, 0.0112, "dark", segs=16)
-    b.box(-0.008, 0.008, 0.024, 0.035, 0.168, 0.186, "dark", bevel=0.001)
-    b.ring((0, 0.047, 0.177), (0, 0, 1), 0.0085, 0.0065, 0.014, "dark", 16)
-    front_post(b, 0.177, 0.034, 0.047)
-    trigger_guard(b, -0.026, 0.045, -0.04, -0.07, half_width=0.006)
-    trigger(b, 0.0, -0.04)
-    g.point("Grip", *grip(b, (-0.026, -0.04), 0.043, 0.09, 17, "primary", grooves=3))
-    rear_aperture(g.irons, -0.1, 0.047, base=0.0335)
-    s = g.stock
-    s.prism([(-0.13, 0.022), (-0.37, 0.022), (-0.37, 0.012), (-0.13, 0.01)], -0.009, 0.009, "dark", bevel=0.002)
-    s.prism([(-0.13, -0.03), (-0.355, -0.06), (-0.355, -0.072), (-0.13, -0.044)], -0.009, 0.009, "dark", bevel=0.002)
-    s.prism([(-0.36, 0.025), (-0.392, 0.026), (-0.392, -0.076), (-0.36, -0.074)], -0.02, 0.02, "dark", bevel=0.003)
-    straight_mag(g.mag, 0.108, 0.064, -0.03, 0.165, 0.0135, "primary", tilt=-5)
-    g.point("Muzzle", (0, 0, 0.243))
-    g.point("Eye", (0, 0.047, -0.2))
-    g.point("Rail", (0, 0.0335, -0.03))
-    g.point("Under", (0, -0.0415, 0.165))
-    g.point("Side", (0.0215, -0.006, 0.16))
-    g.point("Support", (0, -0.0415, 0.16), (0, 1, 0))
-    g.point("Mag", (0, -0.04, 0.086), (0, 1, 0))
-    g.point("Butt", (0, -0.025, -0.392))
-    return g
-
-
 def p90(Part):
     g = Gun(Part, "smg_p90")
     b = g.body
@@ -717,83 +651,8 @@ def p90(Part):
     return g
 
 
-def mac10(Part):
-    g = Gun(Part, "smg_mac10")
-    b = g.body
-    b.box(-0.0245, 0.0245, -0.05, 0.016, -0.125, 0.15, "primary", bevel=0.003)
-    b.box(-0.0035, 0.0035, 0.0155, 0.0168, -0.085, 0.12, "dark", bevel=0.0)
-    b.rod((0, 0.016, 0.07), (0, 0.03, 0.07), 0.0045, "dark", segs=10)
-    b.ball((0, 0.031, 0.07), 0.0062, "dark")
-    b.tube(0.15, 0.172, 0.0088, "metal", segs=16)
-    b.tube(0.17, 0.19, 0.0105, "dark", segs=16)
-    rear_aperture(b, -0.108, 0.027, base=0.016, width=0.02)
-    front_post(b, 0.135, 0.016, 0.027, ears=1)
-    for sx in (-1, 1):
-        b.rod((sx * 0.026, -0.042, -0.13), (sx * 0.026, -0.042, 0.1), 0.003, "metal", segs=8)
-    b.box(-0.03, 0.03, -0.062, -0.02, -0.138, -0.128, "dark", bevel=0.002)
-    # A strap under the front for the support hand.
-    b.box(-0.011, 0.011, -0.062, -0.05, 0.05, 0.14, "dark", bevel=0.003)
-    b.box(-0.011, 0.011, -0.062, -0.049, 0.135, 0.145, "dark", bevel=0.002)
-    trigger_guard(b, -0.026, 0.036, -0.05, -0.074)
-    trigger(b, 0.0, -0.05)
-    g.point("Grip", *grip(b, (-0.026, -0.05), 0.041, 0.1, 6, "primary"))
-    straight_mag(g.mag, -0.031, -0.066, -0.06, 0.2, 0.0108, "dark", tilt=6)
-    g.point("Muzzle", (0, 0, 0.19))
-    g.point("Eye", (0, 0.027, -0.3))
-    g.point("Rail", (0, 0.016, -0.03))
-    g.point("Under", (0, -0.05, 0.09))
-    g.point("Side", (0.0245, -0.02, 0.09))
-    g.point("Support", (0, -0.062, 0.095), (0, 1, 0))
-    g.point("Mag", (0, -0.152, -0.06), (0, math.cos(math.radians(6)), math.sin(math.radians(6))))
-    g.point("Butt", (0, -0.03, -0.138))
-    return g
-
 
 # ---------------------------------------------------------------------------- machine guns
-
-def m249(Part):
-    g = Gun(Part, "lmg_m249")
-    b = g.body
-    b.box(-0.029, 0.029, -0.046, 0.034, -0.14, 0.172, "primary", bevel=0.004)
-    b.box(-0.027, 0.027, 0.034, 0.05, -0.065, 0.135, "primary", bevel=0.004)
-    picatinny(b, -0.055, 0.125, 0.05, "primary")
-    b.box(0.029, 0.031, -0.008, 0.016, -0.06, 0.05, "dark", bevel=0.0006)
-    b.rod((0.029, 0.004, 0.09), (0.046, 0.004, 0.09), 0.004, "dark", segs=8)
-    # Feed tray and a belt running in from the left.
-    b.box(-0.042, -0.029, 0.006, 0.026, 0.02, 0.06, "dark", bevel=0.002)
-    b.box(-0.0295, 0.0295, -0.046, 0.002, 0.172, 0.33, "primary", bevel=0.005)
-    picatinny(b, 0.18, 0.32, -0.046, "primary", face="bottom")
-    b.tube(0.172, 0.555, 0.0118, "metal", segs=18)
-    b.box(-0.016, 0.016, 0.012, 0.024, 0.2, 0.42, "dark", bevel=0.003)
-    b.box(-0.015, 0.015, -0.04, 0.0, 0.33, 0.37, "dark", bevel=0.002)
-    for sx in (-1, 1):
-        b.rod((sx * 0.012, -0.03, 0.35), (sx * 0.012, -0.03, 0.55), 0.0045, "dark", segs=8)
-    b.box(-0.052, -0.04, -0.004, 0.02, 0.26, 0.36, "dark", bevel=0.004)
-    b.box(-0.045, -0.029, 0.004, 0.012, 0.29, 0.33, "dark", bevel=0.001)
-    b.box(-0.0065, 0.0065, 0.0, 0.05, 0.522, 0.538, "dark", bevel=0.0015)
-    front_post(b, 0.53, 0.05, 0.07)
-    flash_hider(b, 0.555, 0.0138, 0.05)
-    trigger_guard(b, -0.028, 0.035, -0.046, -0.072)
-    trigger(b, 0.0, -0.046)
-    g.point("Grip", *grip(b, (-0.026, -0.046), 0.045, 0.095, 18, "dark", grooves=3))
-    s = g.stock
-    s.prism([(-0.14, 0.03), (-0.43, 0.03), (-0.44, 0.026), (-0.44, -0.088), (-0.42, -0.094), (-0.25, -0.06), (-0.14, -0.046)],
-            -0.021, 0.021, "primary", bevel=0.004, segs=2)
-    s.box(-0.022, 0.022, -0.095, 0.032, -0.452, -0.44, "dark", bevel=0.003)
-    rear_aperture(g.irons, -0.09, 0.07, base=0.0595)
-    m = g.mag
-    m.box(-0.07, 0.0, -0.17, -0.045, 0.02, 0.15, "dark", bevel=0.012, segs=3)
-    m.box(-0.071, 0.001, -0.06, -0.045, 0.03, 0.14, "dark", bevel=0.004)
-    g.point("Muzzle", (0, 0, 0.605))
-    g.point("Eye", (0, 0.07, -0.25))
-    g.point("Rail", (0, 0.0595, 0.02))
-    g.point("Under", (0, -0.0555, 0.255))
-    g.point("Side", (0.0295, -0.02, 0.25))
-    g.point("Support", (0, -0.0555, 0.24), (0, 1, 0))
-    g.point("Mag", (-0.035, -0.046, 0.085), (0, 1, 0))
-    g.point("Butt", (0, -0.03, -0.452))
-    return g
-
 
 def pkm(Part):
     g = Gun(Part, "lmg_pkm")
@@ -877,39 +736,6 @@ def m870(Part):
     g.point("Support", (0, -0.052, 0.25), (0, 1, 0))
     g.point("Mag", (0, -0.03, 0.36), (0, 0, -1))
     g.point("Butt", (0, -0.055, -0.408))
-    return g
-
-
-def m1014(Part):
-    g = Gun(Part, "sg_m1014")
-    b = g.body
-    b.prism([(-0.082, 0.013), (0.14, 0.013), (0.152, 0.0), (0.152, -0.055), (0.03, -0.058), (-0.04, -0.05), (-0.082, -0.034)],
-            -0.018, 0.018, "primary", bevel=0.003)
-    picatinny(b, -0.075, 0.135, 0.013, "dark")
-    b.box(0.0178, 0.0188, -0.02, 0.006, 0.0, 0.07, "metal", bevel=0.0006)
-    b.rod((0.018, -0.006, 0.06), (0.035, -0.006, 0.06), 0.0045, "metal", segs=8)
-    b.box(-0.022, 0.022, -0.054, -0.004, 0.152, 0.33, "primary", bevel=0.007, segs=2)
-    b.tube(0.152, 0.6, 0.0105, "metal", segs=18)
-    b.tube(0.33, 0.56, 0.0118, "dark", y=-0.03, segs=16)
-    b.box(-0.008, 0.008, -0.03, 0.0, 0.5, 0.515, "dark", bevel=0.002)
-    b.box(-0.0075, 0.0075, 0.006, 0.024, 0.57, 0.59, "dark", bevel=0.001)
-    front_post(b, 0.58, 0.024, 0.0375, ears=1)
-    trigger_guard(b, -0.03, 0.03, -0.05, -0.074)
-    trigger(b, 0.0, -0.05)
-    g.point("Grip", *grip(b, (-0.026, -0.05), 0.045, 0.095, 20, "dark", grooves=3))
-    s = g.stock
-    s.prism([(-0.082, 0.009), (-0.395, 0.0), (-0.395, -0.104), (-0.375, -0.11), (-0.22, -0.062), (-0.082, -0.046)],
-            -0.019, 0.019, "primary", bevel=0.004, segs=2)
-    s.box(-0.0195, 0.0195, -0.111, 0.002, -0.41, -0.394, "dark", bevel=0.004)
-    rear_aperture(g.irons, -0.05, 0.0375, base=0.0225)
-    g.point("Muzzle", (0, 0, 0.6))
-    g.point("Eye", (0, 0.0375, -0.19))
-    g.point("Rail", (0, 0.0225, 0.03))
-    g.point("Under", (0, -0.054, 0.25))
-    g.point("Side", (0.022, -0.028, 0.25))
-    g.point("Support", (0, -0.054, 0.25), (0, 1, 0))
-    g.point("Mag", (0, -0.03, 0.4), (0, 0, -1))
-    g.point("Butt", (0, -0.05, -0.41))
     return g
 
 
@@ -1023,40 +849,6 @@ def m24(Part):
     return g
 
 
-def l115a3(Part):
-    g = Gun(Part, "sr_l115a3")
-    b = g.body
-    b.prism([(-0.04, -0.008), (0.4, -0.01), (0.406, -0.026), (0.4, -0.06), (-0.04, -0.062)], -0.024, 0.024, "primary", bevel=0.005, segs=2)
-    b.box(-0.024, 0.024, -0.062, 0.002, -0.11, -0.03, "primary", bevel=0.004)
-    # The thumbhole stock: a top bar to the butt, the butt, and a lower bar under the hand.
-    b.prism([(-0.11, 0.004), (-0.44, 0.02), (-0.44, -0.002), (-0.11, -0.022)], -0.018, 0.018, "primary", bevel=0.004)
-    b.prism([(-0.375, 0.024), (-0.446, 0.026), (-0.446, -0.13), (-0.4, -0.134), (-0.375, -0.1)], -0.021, 0.021, "primary", bevel=0.005)
-    b.prism([(-0.11, -0.122), (-0.38, -0.116), (-0.38, -0.1), (-0.11, -0.104)], -0.016, 0.016, "primary", bevel=0.004)
-    b.box(-0.018, 0.018, 0.02, 0.038, -0.38, -0.2, "dark", bevel=0.004)
-    b.box(-0.022, 0.022, -0.135, 0.028, -0.458, -0.446, "dark", bevel=0.004)
-    g.point("Grip", *grip(b, (-0.03, -0.062), 0.046, 0.09, 10, "primary", half_width=0.0165))
-    b.tube(-0.11, 0.06, 0.0172, "dark", segs=20)
-    picatinny(b, -0.1, 0.055, 0.0172, "dark")
-    bolt_handle(b, -0.075, length=0.038)
-    b.tube(0.06, 0.72, 0.0132, "metal", r2=0.011, segs=20)
-    muzzle_brake(b, 0.72, 0.0152, 0.06, ports=3)
-    for sx in (-1, 1):
-        b.rod((sx * 0.012, -0.055, 0.38), (sx * 0.014, -0.06, 0.6), 0.005, "dark", segs=8)
-    trigger(b, 0.0, -0.062)
-    trigger_guard(b, -0.03, 0.03, -0.062, -0.084)
-    scope(g.irons, -0.145, 0.245, 0.058, tube_r=0.017, objective_r=0.033, eye_r=0.022, rings=(-0.05, 0.045), rail_y=0.0267)
-    straight_mag(g.mag, 0.062, 0.012, -0.044, 0.088, 0.0142, "dark")
-    g.point("Muzzle", (0, 0, 0.78))
-    g.point("Eye", (0, 0.058, -0.23))
-    g.point("Rail", (0, 0.0267, -0.02))
-    g.point("Under", (0, -0.062, 0.3))
-    g.point("Side", (0.024, -0.03, 0.3))
-    g.point("Support", (0, -0.062, 0.26), (0, 1, 0))
-    g.point("Mag", (0, -0.062, 0.037), (0, 1, 0))
-    g.point("Butt", (0, -0.055, -0.458))
-    return g
-
-
 def m107(Part):
     g = Gun(Part, "sr_m107")
     b = g.body
@@ -1101,46 +893,6 @@ def m107(Part):
 
 
 # ---------------------------------------------------------------------------- battle and marksman rifles
-
-def m14ebr(Part):
-    g = Gun(Part, "mr_m14ebr")
-    b = g.body
-    b.box(-0.026, 0.026, -0.046, 0.016, -0.125, 0.13, "primary", bevel=0.004)
-    b.box(-0.0165, 0.0165, 0.0, 0.03, -0.12, 0.12, "dark", bevel=0.003)
-    b.box(0.0165, 0.03, -0.004, 0.006, 0.04, 0.12, "metal", bevel=0.001)
-    b.box(0.028, 0.034, -0.006, 0.01, 0.112, 0.124, "metal", bevel=0.001)
-    picatinny(b, -0.118, 0.118, 0.03, "primary")
-    b.box(-0.026, 0.026, -0.03, 0.028, 0.13, 0.36, "primary", bevel=0.005, segs=2)
-    picatinny(b, 0.135, 0.355, 0.028, "primary")
-    picatinny(b, 0.135, 0.355, -0.03, "primary", face="bottom")
-    picatinny(b, 0.15, 0.35, 0.0, "primary", face="right", x=0.026)
-    picatinny(b, 0.15, 0.35, 0.0, "primary", face="left", x=-0.026)
-    b.tube(0.13, 0.53, 0.0115, "metal", segs=18)
-    flash_hider(b, 0.53, 0.0132, 0.05)
-    trigger_guard(b, -0.03, 0.035, -0.046, -0.07)
-    trigger(b, 0.0, -0.046)
-    g.point("Grip", *grip(b, (-0.026, -0.046), 0.044, 0.095, 20, "dark", grooves=3))
-    s = g.stock
-    s.tube(-0.125, -0.3, 0.0148, "dark", y=-0.004, segs=18)
-    s.prism([(-0.215, 0.03), (-0.335, 0.034), (-0.342, 0.03), (-0.342, -0.08), (-0.326, -0.085), (-0.26, -0.046), (-0.215, -0.02)],
-            -0.022, 0.022, "primary", bevel=0.004, segs=2)
-    s.box(-0.0225, 0.0225, -0.086, 0.035, -0.352, -0.341, "dark", bevel=0.003)
-    i = g.irons
-    i.box(-0.011, 0.011, 0.0395, 0.055, -0.11, -0.092, "dark", bevel=0.001)
-    rear_aperture(i, -0.1, 0.07, base=0.053)
-    i.box(-0.009, 0.009, 0.0375, 0.054, 0.33, 0.348, "dark", bevel=0.001)
-    front_post(i, 0.339, 0.052, 0.07, ears=1)
-    straight_mag(g.mag, 0.112, 0.042, -0.036, 0.12, 0.0135, "primary", tilt=-3)
-    g.point("Muzzle", (0, 0, 0.58))
-    g.point("Eye", (0, 0.07, -0.18))
-    g.point("Rail", (0, 0.0395, -0.03))
-    g.point("Under", (0, -0.0395, 0.26))
-    g.point("Side", (0.0355, 0, 0.26))
-    g.point("Support", (0, -0.0395, 0.25), (0, 1, 0))
-    g.point("Mag", (0, -0.046, 0.077), (0, 1, 0))
-    g.point("Butt", (0, -0.025, -0.352))
-    return g
-
 
 def svd(Part):
     g = Gun(Part, "mr_svd")
@@ -1189,44 +941,6 @@ def svd(Part):
     g.point("Butt", (0, -0.062, -0.438))
     return g
 
-
-def mk17(Part):
-    g = Gun(Part, "mr_mk17")
-    b = g.body
-    b.box(-0.022, 0.022, -0.012, 0.028, -0.13, 0.3, "primary", bevel=0.004)
-    picatinny(b, -0.125, 0.295, 0.028, "primary")
-    picatinny(b, 0.13, 0.29, -0.012, "primary", face="bottom")
-    picatinny(b, 0.14, 0.28, 0.008, "primary", face="right", x=0.022)
-    picatinny(b, 0.14, 0.28, 0.008, "primary", face="left", x=-0.022)
-    b.rod((-0.022, 0.012, 0.12), (-0.04, 0.012, 0.118), 0.004, "dark", segs=8)
-    b.box(0.0218, 0.0228, -0.004, 0.012, -0.05, 0.02, "dark", bevel=0.0006)
-    b.prism([(0.122, -0.012), (0.122, -0.062), (0.036, -0.066), (0.034, -0.052), (-0.03, -0.052), (-0.13, -0.045), (-0.13, -0.012)],
-            -0.02, 0.02, "dark", bevel=0.002)
-    b.tube(0.3, 0.46, 0.0105, "metal", segs=18)
-    flash_hider(b, 0.46, 0.0128, 0.045)
-    trigger_guard(b, -0.028, 0.034, -0.052, -0.076)
-    trigger(b, 0.0, -0.052)
-    g.point("Grip", *grip(b, (-0.026, -0.052), 0.044, 0.095, 20, "dark", grooves=3))
-    s = g.stock
-    s.prism([(-0.13, 0.022), (-0.38, 0.03), (-0.386, 0.026), (-0.386, -0.084), (-0.37, -0.088), (-0.25, -0.05), (-0.13, -0.04)],
-            -0.02, 0.02, "primary", bevel=0.004, segs=2)
-    s.box(-0.016, 0.016, 0.03, 0.041, -0.36, -0.22, "dark", bevel=0.003)
-    s.box(-0.0205, 0.0205, -0.089, 0.031, -0.396, -0.385, "dark", bevel=0.003)
-    i = g.irons
-    i.box(-0.011, 0.011, 0.0375, 0.053, -0.11, -0.092, "dark", bevel=0.001)
-    rear_aperture(i, -0.1, 0.07, base=0.051)
-    i.box(-0.009, 0.009, 0.0375, 0.052, 0.262, 0.28, "dark", bevel=0.001)
-    front_post(i, 0.271, 0.05, 0.07, ears=1)
-    straight_mag(g.mag, 0.112, 0.042, -0.036, 0.12, 0.0135, "dark", tilt=-4)
-    g.point("Muzzle", (0, 0, 0.505))
-    g.point("Eye", (0, 0.07, -0.2))
-    g.point("Rail", (0, 0.0375, -0.01))
-    g.point("Under", (0, -0.0215, 0.22))
-    g.point("Side", (0.0315, 0.008, 0.21))
-    g.point("Support", (0, -0.0215, 0.21), (0, 1, 0))
-    g.point("Mag", (0, -0.062, 0.077), (0, 1, 0))
-    g.point("Butt", (0, -0.025, -0.396))
-    return g
 
 
 # ---------------------------------------------------------------------------- pistols
@@ -1535,31 +1249,25 @@ def etool(Part):
     return g
 
 
+def more_weapons(Part):
+    import guns_more
+    return guns_more.more_weapons(Part)
+
+
 def all_weapons(Part):
     """Every weapon with a model, by its id."""
     return [
         ar15(Part, "ar_m4a1", 0.405, 0.255, -0.345),
         ak47(Part),
-        ar15(Part, "ar_m16a4", 0.548, 0.38, -0.406, fixed_stock=True, carry_handle=True),
-        famas(Part),
         mp5(Part, "smg_mp5"),
-        mp5(Part, "smg_mp5sd", suppressed=True),
-        ump45(Part),
         p90(Part),
-        mac10(Part),
-        m249(Part),
         pkm(Part),
         m870(Part),
-        m1014(Part),
         aa12(Part),
-        double_barrel(Part, "sg_double_barrel", 0.6),
         double_barrel(Part, "sg_sawed_off", 0.3, sawn=True),
         m24(Part),
-        l115a3(Part),
         m107(Part),
-        m14ebr(Part),
         svd(Part),
-        mk17(Part),
         m17(Part),
         m1911(Part),
         revolver(Part),
@@ -1571,7 +1279,7 @@ def all_weapons(Part):
         machete(Part),
         tomahawk(Part),
         etool(Part),
-    ]
+    ] + more_weapons(Part)
 
 
 # ---------------------------------------------------------------------------- what they fire

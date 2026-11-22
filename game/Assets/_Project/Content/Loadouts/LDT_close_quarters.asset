@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   presetId: close_quarters
   displayName: Close Quarters
-  description: 'A semi-automatic shotgun and a sawed-off for the tightest rooms.'
-  primary: {fileID: 11400000, guid: 57d727f32d4d7546d369472680dad00f, type: 2}
+  description: 'An automatic shotgun and a sawed-off for the tightest rooms.'
+  primary: {fileID: 11400000, guid: 8a109be34b573eb839ca66d37853555e, type: 2}
   primaryAttachments:
   - {fileID: 11400000, guid: e31b4cf7f4f9e8daeb0b6ff9924e6ee0, type: 2}
   secondary: {fileID: 11400000, guid: 34fcb13c41f9e7efceab768d39ffa824, type: 2}

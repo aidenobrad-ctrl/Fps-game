@@ -132,8 +132,8 @@ namespace Recoil.Shared.Match
     {
         public static readonly string[] Weapons =
         {
-            "ar_m4a1", "ar_ak47", "smg_mp5", "sg_m870", "mr_m14ebr", "lmg_m249", "smg_ump45",
-            "ar_famas", "sg_m1014", "pistol_357", "sg_sawed_off", "pistol_m1911", "melee_field_knife",
+            "ar_m4a1", "ar_ak47", "smg_mp5", "sg_m870", "mr_svd", "lmg_pkm", "smg_p90",
+            "sg_aa12", "pistol_deagle", "pistol_357", "sg_sawed_off", "pistol_m1911", "melee_field_knife",
         };
 
         /// <summary>Carried alongside every step; a kill with it sends the victim down a step.</summary>

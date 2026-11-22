@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   presetId: marksman
   displayName: Marksman
-  description: 'An M14 EBR with a 3x optic, to hold a long lane and make each shot count.'
-  primary: {fileID: 11400000, guid: ee5e28fb208b2b7683cf06330a092e68, type: 2}
+  description: 'An SVD Dragunov with a compensator, to hold a long lane and make each shot count.'
+  primary: {fileID: 11400000, guid: d8faa21d800387dbee456cd76f49e5e2, type: 2}
   primaryAttachments:
-  - {fileID: 11400000, guid: 9bbb22842c1e974ed9f3cde99ab748e6, type: 2}
-  - {fileID: 11400000, guid: 000f0b30cfdd566799826e38e4bc2216, type: 2}
+  - {fileID: 11400000, guid: cbe55f16203f6178b40a28f137b9c638, type: 2}
+  - {fileID: 11400000, guid: cac71da591c30ba7b76f5be7c7364e9d, type: 2}
   secondary: {fileID: 11400000, guid: 4181cf36b039dad4c3718737f206d584, type: 2}
   secondaryAttachments:
   - {fileID: 11400000, guid: f95313d2c50561b865952851718eecf8, type: 2}

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: smg_p90
   displayName: P90
-  description: '5.7x28mm bullpup with a 50-round magazine along its top and a built-in ring sight. Light recoil, four to the body, and the small, fast rounds go on through into a second target.'
+  description: '5.7x28mm bullpup with a 50-round magazine along its top and a built-in ring sight. Light recoil, six to the body, and the small, fast rounds go on through into a second target.'
   weaponClass: 1
   slot: 0
   unlockLevel: 22

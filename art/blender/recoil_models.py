@@ -1391,7 +1391,7 @@ def render_backdrop(path, samples=160):
         return (dict(points=objects[0]["points"], objects=objects), {})
     rifle = real(lambda P: guns.ar15(P, "ar_m4a1", 0.405, 0.255, -0.345))
     marksman = real(guns.ak47)
-    lmg = real(guns.m249)
+    lmg = real(guns.pkm)
     blue = (0.15, 0.35, 0.8, 1)
     figures = [
         (rifle, dict(speed=0, phase=0, pitch=4), (1.15, 0, 0.95), -38, "Helmet", "AssaultPack",

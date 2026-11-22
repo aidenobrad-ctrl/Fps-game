@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponId: pistol_skorpion
   displayName: Skorpion vz. 61
-  description: 'Czech .32 ACP machine pistol, 850 rounds a minute from a 20-round magazine. Light rounds and light recoil: five to the body, at short range.'
+  description: 'Czech .32 ACP machine pistol, 850 rounds a minute from a 20-round magazine. Light rounds and light recoil: eight to the body, at short range.'
   weaponClass: 6
   slot: 1
   unlockLevel: 25
