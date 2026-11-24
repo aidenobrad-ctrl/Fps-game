@@ -3,6 +3,11 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using Recoil.Api.Endpoints;
 using Recoil.Shared.Net;
@@ -48,9 +53,9 @@ public class MatchmakingTests
         public string Ticket = "";
     }
 
-    async Task<Guest> GuestAsync(string name)
+    async Task<Guest> GuestAsync(string name, HttpClient? client = null)
     {
-        HttpClient http = _api.CreateClient();
+        HttpClient http = client ?? _api.CreateClient();
         HttpResponseMessage response = await http.PostAsync("/v1/matchmaking/guest", new { name });
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
         JsonElement body = await response.JsonAsync();
@@ -323,6 +328,55 @@ public class MatchmakingTests
         Assert.That(claims.AccountId, Is.EqualTo(player.Id));
         Assert.That(claims.Name, Is.EqualTo(player.Username));
         beating.Cancel();
+    }
+
+    /// <summary>Makes every request seem to come from the backend's own machine, as on a host's PC.</summary>
+    sealed class FromThisMachine : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((context, rest) =>
+            {
+                context.Connection.RemoteIpAddress = IPAddress.Loopback;
+                return rest(context);
+            });
+            next(app);
+        };
+    }
+
+    [Test]
+    public async Task OnAHostsOwnPC_PlayersThereGetTheServersLocalAddress_AndFriendsItsPublicOne()
+    {
+        using var api = new ApiFixture(new Dictionary<string, string>
+        {
+            ["Matchmaking:FleetKey"] = FleetKey,
+            ["Matchmaking:FillAfterSeconds"] = "2",
+            ["Matchmaking:HeartbeatSeconds"] = "1",
+            ["Matchmaking:IntervalMilliseconds"] = "100",
+            ["Matchmaking:LocalAddressesForLocalPlayers"] = "true",
+        });
+        // The host's PC: the backend, a dedicated server and the host's own game all on one machine.
+        using WebApplicationFactory<Program> host = api.WithWebHostBuilder(b =>
+            b.ConfigureTestServices(services => services.AddSingleton<IStartupFilter>(new FromThisMachine())));
+
+        uint version = NewVersion();
+        HttpClient fleet = host.CreateClient();
+        fleet.DefaultRequestHeaders.Add(MatchmakingEndpoints.FleetKeyHeader, FleetKey);
+        HttpResponseMessage registered = await fleet.PostAsync("/v1/fleet/servers", new { address = "203.0.113.5", port = 7811, version });
+        Assert.That(registered.StatusCode, Is.EqualTo(HttpStatusCode.OK), await registered.Content.ReadAsStringAsync());
+        using CancellationTokenSource beating = KeepBeating(fleet, (await registered.JsonAsync()).GetProperty("id").GetString()!);
+
+        Guest me = await GuestAsync("Host", host.CreateClient());
+        Guest friend = await GuestAsync("Friend", api.CreateClient());
+        await QueueAsync(me, "duel", version);
+        await QueueAsync(friend, "duel", version);
+        JsonElement mine = await WaitAsync(me, 4), theirs = await WaitAsync(friend, 4);
+        beating.Cancel();
+
+        Assert.That(mine.GetProperty("status").GetString(), Is.EqualTo("matched"));
+        Assert.That(mine.GetProperty("address").GetString(), Is.EqualTo("127.0.0.1:7811"), "the host connects without going out through the router");
+        Assert.That(theirs.GetProperty("address").GetString(), Is.EqualTo("203.0.113.5:7811"), "a friend connects to the public address");
+        Assert.That(theirs.GetProperty("matchId").GetString(), Is.EqualTo(mine.GetProperty("matchId").GetString()));
     }
 }
 

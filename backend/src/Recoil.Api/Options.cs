@@ -129,4 +129,12 @@ public sealed class MatchmakingOptions
     public int GuestPassHours { get; set; } = 12;
     /// <summary>How often the matchmaker looks at the queues.</summary>
     public int IntervalMilliseconds { get; set; } = 1000;
+    /// <summary>
+    /// For a backend run on someone's own PC for their friends (host-for-friends.ps1): a game
+    /// server that registered from this same machine is given to players on this machine as
+    /// 127.0.0.1 rather than its public address, which many home routers will not loop back
+    /// to. Leave off anywhere a proxy stands in front of the backend, where every request
+    /// would seem to come from this machine.
+    /// </summary>
+    public bool LocalAddressesForLocalPlayers { get; set; }
 }

@@ -3,6 +3,7 @@ Cuts the game's recorded sounds out of free sound libraries and writes them, rea
 Unity, under game/Assets/_Project/Resources/Audio.
 
     python3 art/audio/build_sounds.py --firearms "<Prepared SFX Library>" --foley <dir> --out game/Assets/_Project/Resources/Audio
+    (add --only hits to rebuild just the sounds of a shot landing)
 
 --firearms is the unpacked "The Free Firearm Sound Library" (CC0); --foley is a folder
 holding the other downloads named in art/audio/README.md (all CC0). Needs numpy, scipy,
@@ -48,6 +49,39 @@ FOLEY = {
                     ("Fantozzi-StoneR1.flac", 0, None), ("Fantozzi-StoneR2.flac", 0, None), ("Fantozzi-StoneR3.flac", 0, None)],
     "BodyHit":     [("qubodupImpactMeat01.flac", 0, None), ("qubodupImpactMeat02.flac", 0, None)],
     "Explosion":   [("Chunky Explosion.mp3", 0.0, 4.0), ("explosion3.ogg", 0.0, None)],
+}
+
+
+# What you hear when your shot lands: each sound's takes, each take its layers, as (file, pitch,
+# gain in dB, delay in ms, seconds kept). "@tick" is a crisp synthesised click on the moment of
+# impact and "@thump" a short low thud, so a hit reads clearly over gunfire. Every recording is
+# from the CC0 packs listed in README.md: Independent.nu's hits and punches, qubodup's impacts,
+# StarNinjas' metal dings.
+HITS = {
+    # A body hit: a punch's thud and a tick on top.
+    "Hit": [
+        [("hit29.mp3.flac", 1.15, 0, 0, 0.16), ("@tick", 1.0, -7, 0, 0.03)],
+        [("hit23.mp3.flac", 1.15, 0, 0, 0.16), ("@tick", 1.08, -7, 0, 0.03)],
+        [("hit31.mp3.flac", 1.2, 0, 0, 0.16), ("@tick", 0.94, -7, 0, 0.03)],
+        [("hit22.mp3.flac", 1.15, 0, 0, 0.16), ("@tick", 1.04, -7, 0, 0.03)],
+    ],
+    # A head shot: a sharper crack and a bright metal tink, as off a helmet.
+    "Headshot": [
+        [("hit28.mp3.flac", 1.3, -2, 0, 0.14), ("ding.4.ogg", 1.45, -3, 0, 0.22), ("@tick", 1.25, -5, 0, 0.03)],
+        [("hit10.mp3.flac", 1.3, -2, 0, 0.14), ("ding.3.ogg", 1.6, -3, 0, 0.22), ("@tick", 1.3, -5, 0, 0.03)],
+        [("hit11.mp3.flac", 1.3, -2, 0, 0.14), ("ding.4.ogg", 1.55, -3, 0, 0.22), ("@tick", 1.2, -5, 0, 0.03)],
+    ],
+    # A kill: a heavy, wet impact with a deep thud under it.
+    "Kill": [
+        [("qubodupImpactMeat02.flac", 0.85, 0, 0, 0.18), ("hit17.mp3.flac", 0.9, -3, 0, 0.25), ("@thump", 1.0, -4, 0, 0.16)],
+        [("qubodupImpactMeat02.flac", 0.8, 0, 0, 0.18), ("hit22.mp3.flac", 0.85, -3, 0, 0.25), ("@thump", 0.9, -4, 0, 0.16)],
+        [("qubodupImpactMeat02.flac", 0.9, 0, 0, 0.18), ("hit31.mp3.flac", 0.9, -3, 0, 0.25), ("@thump", 1.1, -4, 0, 0.16)],
+    ],
+    # A kill with a head shot: the heavy impact and a ringing ding.
+    "KillHeadshot": [
+        [("qubodupImpactMeat02.flac", 0.85, -1, 0, 0.18), ("ding.3.ogg", 1.2, -3, 0, 0.6), ("@thump", 1.0, -5, 0, 0.16)],
+        [("qubodupImpactMeat02.flac", 0.8, -1, 0, 0.18), ("ding.4.ogg", 1.1, -3, 0, 0.45), ("@thump", 0.9, -5, 0, 0.16)],
+    ],
 }
 
 
@@ -186,12 +220,73 @@ def build_foley(foley, out):
         print("%-12s %d" % (sfx, len(parts)))
 
 
+def tick(pitch):
+    """A few milliseconds of bright click: noise above 2.5 kHz and a 3.4 kHz ring, gone at once."""
+    n = int(0.03 * RATE)
+    t = np.arange(n) / RATE
+    noise = sosfilt(butter(2, 2500, "highpass", fs=RATE, output="sos"), np.random.default_rng(7).standard_normal(n))
+    ring = np.sin(2 * np.pi * 3400 * pitch * t)
+    return (0.6 * noise * np.exp(-t / 0.0012) + ring * np.exp(-t / 0.004)) * 0.8
+
+
+def thump(pitch):
+    """A short, low thud: a falling 85 Hz tone."""
+    n = int(0.16 * RATE)
+    t = np.arange(n) / RATE
+    freq = 85 * pitch * (1 + 0.6 * np.exp(-t / 0.02))
+    return np.sin(2 * np.pi * np.cumsum(freq) / RATE) * np.exp(-t / 0.045)
+
+
+def layer(foley, name, pitch, seconds):
+    """One layer: from the moment it starts, pitched (faster and higher above 1), cut to length and faded out."""
+    if name == "@tick":
+        clip = tick(pitch)
+    elif name == "@thump":
+        clip = thump(pitch)
+    else:
+        clip = read(find(foley, name))
+        # From the impact itself (the first sample at a third of the peak), not any lead-in before it.
+        above = np.nonzero(np.abs(clip) > 0.33 * np.abs(clip).max())[0]
+        clip = clip[max(0, above[0] - RATE // 1000):] if len(above) else clip
+        if abs(pitch - 1) > 1e-3:
+            up, down = int(round(1000 / pitch)), 1000
+            g = np.gcd(up, down)
+            clip = resample_poly(clip, up // g, down // g)
+        clip = clip / max(np.abs(clip).max(), 1e-9)
+    clip = clip[:int(seconds * RATE)]
+    tail = len(clip) // 2
+    clip = clip.copy()
+    clip[-tail:] *= np.cos(np.linspace(0, np.pi / 2, tail)) ** 2
+    return clip
+
+
+def build_hits(foley, out):
+    root = os.path.join(out, "Sfx")
+    folder(root)
+    for sfx, takes in HITS.items():
+        for i, layers in enumerate(takes):
+            parts = []
+            for name, pitch, gain, delay, seconds in layers:
+                clip = layer(foley, name, pitch, seconds) * 10 ** (gain / 20)
+                parts.append(np.concatenate([np.zeros(int(delay / 1000 * RATE)), clip]))
+            mix = np.zeros(max(len(p) for p in parts))
+            for p in parts:
+                mix[:len(p)] += p
+            write(shape(mix, 0.7), os.path.join(root, "%s%d.ogg" % (sfx, i + 1)))
+        print("%-12s %d" % (sfx, len(takes)))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--firearms", required=True)
+    ap.add_argument("--firearms", help="the unpacked Free Firearm Sound Library; without it the guns are left as they are")
     ap.add_argument("--foley", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--only", choices=["guns", "foley", "hits"], help="build just one part")
     a = ap.parse_args()
     folder(a.out)
-    build_guns(a.firearms, a.out)
-    build_foley(a.foley, a.out)
+    if a.firearms and a.only in (None, "guns"):
+        build_guns(a.firearms, a.out)
+    if a.only in (None, "foley"):
+        build_foley(a.foley, a.out)
+    if a.only in (None, "hits"):
+        build_hits(a.foley, a.out)

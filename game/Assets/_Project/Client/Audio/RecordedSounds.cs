@@ -8,7 +8,8 @@ namespace Recoil.Client.Audio
     /// <summary>
     /// Real recordings, kept under Resources/Audio: each gun's shots in Guns/&lt;set&gt;
     /// (near1, near2.. up close, far1, far2.. from a distance) and some effects in Sfx
-    /// (Footstep1.., ReloadStart1.., Explosion1.. and so on). art/audio/build_sounds.py cuts
+    /// (Footstep1.., ReloadStart1.., Explosion1.., and Hit1.., Headshot1.., Kill1.. for a shot of
+    /// yours landing). art/audio/build_sounds.py cuts
     /// them from free (CC0) libraries; art/audio/README.md says which.
     ///
     /// Every clip is turned into the synthesiser's own format here (one channel, its sample
@@ -31,6 +32,11 @@ namespace Recoil.Client.Audio
             { Sfx.DryFire, 0.5f },
             { Sfx.BodyHit, 0.7f },
             { Sfx.Explosion, 1f },
+            // A shot of yours landing: a punchy thud and a tick, a helmet's tink for the head, a heavy impact for a kill.
+            { Sfx.Hit, 0.7f },
+            { Sfx.Headshot, 0.8f },
+            { Sfx.Kill, 0.85f },
+            { Sfx.KillHeadshot, 0.8f },
         };
 
         static readonly Dictionary<string, float[][]> Takes = new Dictionary<string, float[][]>();

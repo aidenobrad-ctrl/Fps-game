@@ -45,7 +45,7 @@ namespace Recoil.Client.Duel
         /// Which update this copy of the game is, shown at the foot of the menu, so whoever is
         /// playing can tell at a glance that a pull went through. Changed with each update.
         /// </summary>
-        public const string LatestUpdate = "update of 24 Nov 2026: your own body, build.bat";
+        public const string LatestUpdate = "update of 24 Nov 2026 (b): arms, hit sounds, hosting";
 
         const string NameKey = "pb.playerName", AddressKey = "pb.lastAddress", ModeKey = "pb.mode";
         const string MapKey = "pb.host.map", SizeKey = "pb.host.size", BotsKey = "pb.host.bots", LimitKey = "pb.host.limit5.";

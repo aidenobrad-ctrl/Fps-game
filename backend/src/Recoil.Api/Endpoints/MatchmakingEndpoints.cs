@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
@@ -106,7 +107,7 @@ public static class MatchmakingEndpoints
 
         MatchTicket ticket = await matchmaking.EnqueueAsync(caller, playlist, request.Version, rating, members);
         if (party != null && party.Members.Count > 1) await social.SetSearchAsync(party.Id, ticket.Id, playlist.Id);
-        return Results.Created("/v1/matchmaking/tickets/" + ticket.Id, await StatusOf(ticket, matchmaking, clock));
+        return Results.Created("/v1/matchmaking/tickets/" + ticket.Id, await StatusOf(ticket, matchmaking, clock, http));
     }
 
     static async Task<IResult> Check(string id, HttpContext http, GuestPasses guests, AppDbContext db, MatchmakingService matchmaking,
@@ -115,7 +116,7 @@ public static class MatchmakingEndpoints
         Caller? caller = await WhoAsync(http, guests, db);
         if (caller == null) return Api.Unauthorized();
         MatchTicket? ticket = await matchmaking.CheckAsync(id, caller.Key);
-        return ticket != null ? Results.Ok(await StatusOf(ticket, matchmaking, clock)) : NoTicket();
+        return ticket != null ? Results.Ok(await StatusOf(ticket, matchmaking, clock, http)) : NoTicket();
     }
 
     static async Task<IResult> Cancel(string id, HttpContext http, GuestPasses guests, AppDbContext db, MatchmakingService matchmaking,
@@ -131,11 +132,25 @@ public static class MatchmakingEndpoints
 
     static IResult NoTicket() => Api.Error(StatusCodes.Status404NotFound, "no_ticket", "That search is not running any more. Find a match again.");
 
-    static async Task<TicketStatus> StatusOf(MatchTicket ticket, MatchmakingService matchmaking, TimeProvider clock) => new(
+    static async Task<TicketStatus> StatusOf(MatchTicket ticket, MatchmakingService matchmaking, TimeProvider clock, HttpContext http) => new(
         ticket.Id, ticket.Status, ticket.Playlist,
         (int)Math.Max(0, (clock.GetUtcNow().ToUnixTimeMilliseconds() - ticket.CreatedMs) / 1000),
         ticket.Status == MatchTicket.Searching ? await matchmaking.SearchingAsync(ticket.Playlist) : 0,
-        ticket.Address, ticket.JoinTicket, ticket.MatchId);
+        AddressFor(ticket, http), ticket.JoinTicket, ticket.MatchId);
+
+    /// <summary>
+    /// The server's address as this player should use it: its local one for a player on the
+    /// backend's own machine, where the backend is set to (see <see cref="MatchmakingOptions.LocalAddressesForLocalPlayers"/>).
+    /// </summary>
+    static string AddressFor(MatchTicket ticket, HttpContext http)
+    {
+        if (ticket.LocalAddress.Length == 0) return ticket.Address;
+        bool local = http.RequestServices.GetRequiredService<IOptions<MatchmakingOptions>>().Value.LocalAddressesForLocalPlayers;
+        return local && FromThisMachine(http) ? ticket.LocalAddress : ticket.Address;
+    }
+
+    /// <summary>The request came from the backend's own machine.</summary>
+    public static bool FromThisMachine(HttpContext http) => http.Connection.RemoteIpAddress is { } ip && IPAddress.IsLoopback(ip);
 
     /// <summary>
     /// Who is calling: a signed-in account (an access token), or a guest (a guest pass).
@@ -168,7 +183,7 @@ public static class MatchmakingEndpoints
         return match ? await next(context) : Api.Error(StatusCodes.Status403Forbidden, "bad_fleet_key", "That is not this fleet's key.");
     }
 
-    static async Task<IResult> Register(RegisterServerRequest? request, MatchmakingService matchmaking, IOptions<MatchmakingOptions> options)
+    static async Task<IResult> Register(RegisterServerRequest? request, HttpContext http, MatchmakingService matchmaking, IOptions<MatchmakingOptions> options)
     {
         string address = (request?.Address ?? "").Trim();
         var errors = new List<FieldError>();
@@ -177,7 +192,8 @@ public static class MatchmakingEndpoints
         if (request == null || request.Version == 0) errors.Add(new FieldError("version", "Send the game's network version."));
         if (errors.Count > 0) return Api.Invalid(errors);
 
-        FleetServer server = await matchmaking.RegisterAsync(address, request!.Port, request.Version);
+        FleetServer server = await matchmaking.RegisterAsync(address, request!.Port, request.Version,
+            sameMachine: options.Value.LocalAddressesForLocalPlayers && FromThisMachine(http));
         return Results.Ok(new RegisterServerResponse(server.Id, options.Value.HeartbeatSeconds));
     }
 

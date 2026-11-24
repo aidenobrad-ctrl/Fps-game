@@ -1,6 +1,7 @@
 # Recorded sounds
 
-The game's gunshots, reloads, footsteps, body hits and explosions are real recordings, cut
+The game's gunshots, reloads, footsteps, body hits, explosions and the sounds of your shots
+landing (hit, head shot, kill) are real recordings, cut
 by `build_sounds.py` into `game/Assets/_Project/Resources/Audio`:
 
 - `Guns/<set>/near1..3.ogg`: single shots up close, from the moment the shot goes off.
@@ -23,6 +24,9 @@ Everything here is CC0 (public domain), so no credit is required. It is credited
 | Dry fire click | [equipment clicks III](https://opengameart.org/content/equipment-clicks-iii) (`equipment_clicks3.wav`) | LFA | CC0 |
 | Footsteps | [Fantozzi's Footsteps (Grass/Sand & Stone)](https://opengameart.org/content/fantozzis-footsteps-grasssand-stone) (`Fantozzi-Stone*.flac`) | Fantozzi, sliced by qubodup | CC0 |
 | Body hits | [Impact](https://opengameart.org/content/impact) (`qubodupImpactMeat01/02.flac`) | qubodup | CC0 |
+| Your shots landing: the thuds | [37 hits/punches](https://opengameart.org/content/37-hitspunches) (`hit10`, `hit11`, `hit17`, `hit22`, `hit23`, `hit28`, `hit29`, `hit31.mp3.flac`) | Independent.nu, posted by qubodup | CC0 |
+| Your shots landing: kills | [Impact](https://opengameart.org/content/impact) (`qubodupImpactMeat02.flac`) | qubodup | CC0 |
+| Your shots landing: the head-shot tink | [4 metal dings/rings](https://opengameart.org/content/4-metal-dingsrings) (`ding.3.ogg`, `ding.4.ogg`) | StarNinjas | CC0 |
 | Explosions | [Chunky Explosion](https://opengameart.org/content/chunky-explosion) (`Chunky Explosion.mp3`), [explosions](https://opengameart.org/content/explosions-4) (`explosion3.ogg`) | Joth; EZduzziteh | CC0 |
 
 Which game weapon fires which recording, and at what pitch, is in `RECORDINGS` in the roster,
@@ -43,6 +47,11 @@ Pixabay's sound effects were the first choice, but its site turns away scripted 
    ```
 
    It needs numpy, scipy, soundfile and ffmpeg built with libvorbis.
+
+To rebuild only the sounds of a shot landing (no firearm library needed), add `--only hits` and
+leave out `--firearms`. Each is layered from the recordings above (a punch's thud, the metal
+tink, the heavy impact) with a synthesised tick or low thump on top; the recipe is `HITS` in
+the script.
 
 The script finds each shot by its rise and cuts it before the next one (echoes are skipped).
 Close takes are compressed gently, so the boom and ring-out sit under the crack as in a game

@@ -92,6 +92,12 @@ namespace Recoil.Tests
             }
             foreach (string clip in Directory.GetFiles(Path.Combine(project, "Assets/_Project/Resources/Audio"), "*.ogg", SearchOption.AllDirectories))
                 Assert.That(File.Exists(clip + ".meta"), clip + " has its .meta");
+            // The sounds of a shot landing, each with more than one take so a burst of hits never repeats one.
+            foreach (string effect in new[] { "Hit", "Headshot", "Kill", "KillHeadshot" })
+            {
+                Assert.That(File.Exists(Path.Combine(project, "Assets/_Project/Resources/Audio/Sfx", effect + "1.ogg")), effect + "1");
+                Assert.That(File.Exists(Path.Combine(project, "Assets/_Project/Resources/Audio/Sfx", effect + "2.ogg")), effect + "2");
+            }
         }
     }
 }

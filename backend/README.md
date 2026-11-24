@@ -128,6 +128,7 @@ development, set at least these. The API refuses to start without the first.
 | `Database__MigrateOnStartup` | `true` to bring the schema up to date on start. Otherwise run the migrations yourself |
 | `Matchmaking__FleetKey` | Secret dedicated game servers show to join the fleet. 32 characters or more. Empty means no servers, so nobody gets matched |
 | `Matchmaking__FillAfterSeconds` | How long a queue waits to fill before starting with whoever is there, bots taking the other places. Default 20 |
+| `Matchmaking__LocalAddressesForLocalPlayers` | `true` for a backend on someone's own PC (`host-for-friends.ps1` sets it): a game server that registered from this machine is given to players on this machine as `127.0.0.1`, since many home routers will not loop back to their own public address. Leave it off behind a proxy |
 
 Make a secret with `openssl rand -base64 48`.
 

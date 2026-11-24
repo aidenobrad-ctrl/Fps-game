@@ -17,7 +17,8 @@ namespace Recoil.Api.Matchmaking;
 /// </summary>
 public sealed record MatchTicket(
     string Id, string Player, string Name, string Playlist, uint Version, long CreatedMs, long SeenMs,
-    string Status, string Address, string JoinTicket, string MatchId, int Rating = Ranks.StartRating, string Members = "")
+    string Status, string Address, string JoinTicket, string MatchId, int Rating = Ranks.StartRating, string Members = "",
+    string LocalAddress = "")
 {
     public const string Searching = "searching", Matched = "matched", Cancelled = "cancelled", Expired = "expired";
 
@@ -36,10 +37,13 @@ public sealed record MatchTicket(
 /// <summary>A match the matchmaker set up: which server it went to, and what that server was told.</summary>
 public sealed record StoredMatch(string ServerId, MatchAssignment Assignment);
 
-/// <summary>A game server offering itself for matches, as it last described itself.</summary>
+/// <summary>
+/// A game server offering itself for matches, as it last described itself. <see cref="SameMachine"/>:
+/// it registered from the backend's own machine.
+/// </summary>
 public sealed record FleetServer(
     string Id, string Address, int Port, uint Version, string State, string ReportedMatch, int Players,
-    string AssignedMatch, string AssignedPlaylist)
+    string AssignedMatch, string AssignedPlaylist, bool SameMachine = false)
 {
     /// <summary>Free for a new match: nobody on it, and whatever it was last given is finished (or never arrived).</summary>
     public bool Free => State == "idle" && (AssignedMatch.Length == 0 || ReportedMatch == AssignedMatch);
@@ -167,14 +171,15 @@ public sealed class MatchmakingService(
 
     // ------------------------------------------------------------------ game servers
 
-    public async Task<FleetServer> RegisterAsync(string address, int port, uint version)
+    /// <param name="sameMachine">The server is on the backend's own machine (it registered from there).</param>
+    public async Task<FleetServer> RegisterAsync(string address, int port, uint version, bool sameMachine = false)
     {
         string id = Guid.NewGuid().ToString("N")[..12];
         IDatabase db = Db;
         await db.HashSetAsync(ServerKey(id),
         [
             new("address", address), new("port", port), new("version", (long)version), new("state", "idle"), new("match", ""),
-            new("players", 0), new("assigned", ""), new("assignedPlaylist", ""),
+            new("players", 0), new("assigned", ""), new("assignedPlaylist", ""), new("local", sameMachine ? 1 : 0),
         ]);
         await db.KeyExpireAsync(ServerKey(id), ServerLife);
         await db.SetAddAsync(ServersKey, id);
@@ -394,6 +399,7 @@ public sealed class MatchmakingService(
         if (!await claim.ExecuteAsync()) return false;
 
         string address = server.Address + ":" + server.Port.ToString(CultureInfo.InvariantCulture);
+        string localAddress = server.SameMachine ? "127.0.0.1:" + server.Port.ToString(CultureInfo.InvariantCulture) : "";
         int matched = 0;
         foreach (MatchTicket ticket in players)
         {
@@ -401,7 +407,7 @@ public sealed class MatchmakingService(
             take.AddCondition(Condition.HashEqual(TicketKey(ticket.Id), "status", MatchTicket.Searching));
             var fields = new List<HashEntry>
             {
-                new("status", MatchTicket.Matched), new("address", address), new("match", matchId),
+                new("status", MatchTicket.Matched), new("address", address), new("local", localAddress), new("match", matchId),
                 new("join", JoinTicket(ticket.Player, ticket.Name, matchId, playlist.Ranked)),
             };
             // Each of a party gets a join ticket of their own.
@@ -451,6 +457,7 @@ public sealed class MatchmakingService(
         new("player", t.Player), new("name", t.Name), new("playlist", t.Playlist), new("version", (long)t.Version),
         new("created", t.CreatedMs), new("seen", t.SeenMs), new("status", t.Status), new("address", t.Address),
         new("join", t.JoinTicket), new("match", t.MatchId), new("rating", t.Rating), new("members", t.Members),
+        new("local", t.LocalAddress),
     ];
 
     async Task<MatchTicket?> ReadTicketAsync(string id)
@@ -461,7 +468,7 @@ public sealed class MatchmakingService(
         Dictionary<string, RedisValue> f = entries.ToDictionary(e => e.Name.ToString(), e => e.Value);
         return new MatchTicket(id, Text(f, "player"), Text(f, "name"), Text(f, "playlist"), (uint)Number(f, "version"),
             Number(f, "created"), Number(f, "seen"), Text(f, "status"), Text(f, "address"), Text(f, "join"), Text(f, "match"),
-            (int)Number(f, "rating"), Text(f, "members"));
+            (int)Number(f, "rating"), Text(f, "members"), Text(f, "local"));
     }
 
     async Task<FleetServer?> ReadServerAsync(string id)
@@ -470,7 +477,7 @@ public sealed class MatchmakingService(
         if (entries.Length == 0) return null;
         Dictionary<string, RedisValue> f = entries.ToDictionary(e => e.Name.ToString(), e => e.Value);
         return new FleetServer(id, Text(f, "address"), (int)Number(f, "port"), (uint)Number(f, "version"), Text(f, "state"),
-            Text(f, "match"), (int)Number(f, "players"), Text(f, "assigned"), Text(f, "assignedPlaylist"));
+            Text(f, "match"), (int)Number(f, "players"), Text(f, "assigned"), Text(f, "assignedPlaylist"), Number(f, "local") == 1);
     }
 
     static string Text(Dictionary<string, RedisValue> fields, string name) => fields.TryGetValue(name, out RedisValue v) ? v.ToString() : "";
