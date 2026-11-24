@@ -200,6 +200,19 @@ namespace Recoil.Client.Visuals
             }
         }
 
+        /// <summary>
+        /// How the body takes part in shadows: On (seen and casting, the default), Off (seen,
+        /// casting none) or ShadowsOnly (not seen at all, only its shadow).
+        /// </summary>
+        public void SetShadowCasting(UnityEngine.Rendering.ShadowCastingMode mode)
+        {
+            foreach ((SkinnedMeshRenderer renderer, ModelZone[] _) in _parts)
+            {
+                renderer.shadowCastingMode = mode;
+                renderer.receiveShadows = mode == UnityEngine.Rendering.ShadowCastingMode.On;
+            }
+        }
+
         public void SetVisible(bool visible)
         {
             if (_root.gameObject.activeSelf != visible) _root.gameObject.SetActive(visible);

@@ -49,6 +49,31 @@ That is the offline range. The main menu and online play are in a second scene: 
 
 On first open Unity creates several settings files and one asset (`Resources/UI/HudPanel.asset`). Commit them; they are part of the project.
 
+## Make the .exe
+
+1. Close Unity and double-click **`build.bat`** in the `recoil` folder. A few minutes later `Builds\Recoil` opens with **Recoil.exe** in it. (With Unity open, **Recoil ▸ Build ▸ Windows Game (.exe)** does the same.) If it says Windows Build Support is missing: in Unity Hub, **Installs**, the cog beside 6000.3.29f1, **Add modules**, tick **Windows Build Support (Mono)**, **Install**, and run it again. If it fails, the reason is at the end of `build.log` in the same folder.
+2. Double-click **Recoil.exe** to play. The firing range, bots and private matches need nothing else running.
+3. To give the game to someone, zip the whole `Builds\Recoil` folder: the .exe does not run without the folder beside it.
+
+### The backend on your PC
+
+Accounts, **Find match**, friends and parties need the backend running (see [backend/README.md](backend/README.md)). On your PC:
+
+1. Once: install Docker Desktop and the .NET 10 SDK, then restart the PC and start Docker Desktop:
+
+   ```
+   winget install -e --id Docker.DockerDesktop
+   winget install -e --id Microsoft.DotNet.SDK.10
+   ```
+2. Double-click **`start-backend.bat`** in the `recoil` folder (the first time it fetches the `backend` folder from GitHub) and leave its window open. Verification and password-reset codes are printed in that window instead of emailed.
+3. For **Find match**, also double-click **`Start matchmaking server.bat`** in `Builds\Recoil`: a dedicated server, with no window, that the backend sends matches to.
+
+The game looks for the backend at `http://localhost:5080`, this PC.
+
+### Playing with friends over the internet
+
+A backend on your PC serves only your PC. For friends elsewhere to sign in and find matches, the backend and a matchmaking server have to run on a machine everyone can reach (a small server rented online), and every copy of the game has to be told its address: put it on the first line of **`backend.txt`** beside Recoil.exe before you zip the folder. Until then, play together with private matches: one of you hosts and the others **Join by address** (see [Two people](#two-people)).
+
 ## Accounts
 
 **On again.** Sign in (or create an account) from the top of the main menu. An account keeps your loadouts, settings, level, weapon levels, challenges and ranks, and they follow you to any computer. Ranked needs a verified email; the menu tells you how to verify.
@@ -108,7 +133,7 @@ You are in a match against bots a few seconds later.
 
 You need two copies of the game running. The Editor is one; a build is the other.
 
-1. Make a build: **File ▸ Build Profiles** (Build Settings in older versions), check that **Duel** is the first scene in the list and **FiringRange** the second, and press **Build**. If the list is wrong, run **Recoil ▸ Run Project Doctor** first.
+1. Make a build: see [Make the .exe](#make-the-exe).
 2. One copy hosts a private match. The banner shows the address others should use, something like `192.168.1.20` (on one computer, `127.0.0.1`).
 3. The other types that address and chooses **Join by address**.
 
@@ -217,7 +242,7 @@ Gameplay and audio settings follow a signed-in account; video settings stay on t
 
 **Customize** is on the main menu and in the Esc menu (on the range and in a match). Everything is free to pick for now.
 
-Every player is a realistic soldier modelled in Blender (the scripts that build the models are in `art/blender`): a human body and face from the MakeHuman base mesh (CC0), with real eyes, eyelashes, a hairstyle of their choice (crew cut, buzz cut, shaved, side part, slicked back, mohawk, curly top or bun) and a painted skin texture (brows, lips, stubble, pores) in the chosen skin tone, dressed in a fitted combat uniform with folds, cuffs, a collar, pocket flaps and team armbands, a plate carrier with webbing, magazine, admin, radio and medical pouches and padded shoulder straps, a belt with pouches, gloves, knee and elbow pads and laced boots, with the chosen headgear and pack. Every surface has baked texture maps: the weave of the cloth with a ripstop grid and stitched hems and seams, leather boots, neoprene gloves, nylon pouches and twill webbing (from CC0 Poly Haven materials), and soft shade in the folds and under the straps and pouches. The body, uniform and kit are skinned to one skeleton, so soldiers walk, run, strafe, crouch, slide and jump without seams at the joints, aim where they look, and hold their gun in both hands. Every weapon is a real one, modelled whole at its real size (see [Weapons](#weapons)), and in first person you see your own sleeves and gloved hands closed round its grip and handguard.
+Every player is a realistic soldier modelled in Blender (the scripts that build the models are in `art/blender`): a human body and face from the MakeHuman base mesh (CC0), with real eyes, eyelashes, a hairstyle of their choice (crew cut, buzz cut, shaved, side part, slicked back, mohawk, curly top or bun) and a painted skin texture (brows, lips, stubble, pores) in the chosen skin tone, dressed in a fitted combat uniform with folds, cuffs, a collar, pocket flaps and team armbands, a plate carrier with webbing, magazine, admin, radio and medical pouches and padded shoulder straps, a belt with pouches, gloves, knee and elbow pads and laced boots, with the chosen headgear and pack. Every surface has baked texture maps: the weave of the cloth with a ripstop grid and stitched hems and seams, leather boots, neoprene gloves, nylon pouches and twill webbing (from CC0 Poly Haven materials), and soft shade in the folds and under the straps and pouches. The body, uniform and kit are skinned to one skeleton, so soldiers walk, run, strafe, crouch, slide and jump without seams at the joints, aim where they look, and hold their gun in both hands. Every weapon is a real one, modelled whole at its real size (see [Weapons](#weapons)), and in first person you see your own sleeves and gloved hands closed round its grip and handguard. Look down and there is the rest of you, in your own look: chest, kit, legs and boots, walking, crouching and sliding as you do, and your whole shadow on the ground, gun and all.
 
 - **Uniform**: the colour of your shirt and trousers. Field colours (olive drab, ranger green, coyote, khaki, graphite, black...) and brighter ones.
 - **Gear**: the colour of your plate carrier, pouches, knee pads, helmet or hat, and pack.

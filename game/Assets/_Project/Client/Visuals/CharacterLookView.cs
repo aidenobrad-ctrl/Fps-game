@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Recoil.Shared.Combat;
 using Recoil.Shared.Cosmetics;
 using Recoil.Shared.Match;
@@ -23,6 +24,7 @@ namespace Recoil.Client.Visuals
         public const string GearSet = "Gear";
 
         readonly SoldierView _soldier;
+        readonly ShadowCastingMode _shadows;
         readonly List<(MeshRenderer Renderer, HitZone Zone)> _boxes = new List<(MeshRenderer, HitZone)>();
         readonly List<Material> _owned = new List<Material>();
         readonly List<GameObject> _worn = new List<GameObject>();
@@ -33,13 +35,24 @@ namespace Recoil.Client.Visuals
         /// <summary>The animated soldier, or null when the model files are missing and the simple shapes are shown.</summary>
         public SoldierView Soldier => _soldier;
 
-        public CharacterLookView(UnityCharacterBody body)
+        public CharacterLookView(UnityCharacterBody body) : this(body.Root, body, ShadowCastingMode.On) { }
+
+        /// <summary>
+        /// A soldier with no hitboxes to stand in for: the player's own body, seen from inside it.
+        /// If the model files are missing nothing is shown at all.
+        /// </summary>
+        /// <param name="shadows">Off for a body that is seen but casts no shadow, ShadowsOnly for one that is only a shadow.</param>
+        public CharacterLookView(Transform parent, ShadowCastingMode shadows) : this(parent, null, shadows) { }
+
+        CharacterLookView(Transform parent, UnityCharacterBody body, ShadowCastingMode shadows)
         {
+            _shadows = shadows;
             if (SoldierView.Available)
             {
                 try
                 {
-                    _soldier = new SoldierView(body.Root, castShadows: true);
+                    _soldier = new SoldierView(parent, castShadows: shadows != ShadowCastingMode.Off);
+                    if (shadows != ShadowCastingMode.On) _soldier.SetShadowCasting(shadows);
                 }
                 catch (System.Exception e)
                 {
@@ -48,7 +61,7 @@ namespace Recoil.Client.Visuals
                     ReportOnce("the soldier model could not be built", e);
                 }
             }
-            if (_soldier == null)
+            if (_soldier == null && body != null)
             {
                 foreach (UnityCharacterBody.Part part in body.Parts)
                 {
@@ -209,7 +222,8 @@ namespace Recoil.Client.Visuals
             var go = new GameObject(name);
             go.transform.SetParent(_soldier.Bone(bone), false);
             go.transform.localPosition = model.Pivot - _soldier.Pivot(bone);
-            MeshRenderer renderer = ModelLibrary.Attach(go, model, _soldier.ZoneMaterial, castShadows: true);
+            MeshRenderer renderer = ModelLibrary.Attach(go, model, _soldier.ZoneMaterial, castShadows: _shadows != ShadowCastingMode.Off);
+            if (_shadows == ShadowCastingMode.ShadowsOnly) renderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
             // A hairstyle's strands, and any other maps the model was baked with.
             ModelMaterials.ApplyMaps(renderer, name, model.TexelScale);
             _worn.Add(go);

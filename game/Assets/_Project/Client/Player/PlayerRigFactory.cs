@@ -57,6 +57,8 @@ namespace Recoil.Client.Player
             var viewModel = viewModelObject.AddComponent<WeaponViewModel>();
 
             player.Initialize(movement, loadout, projectiles, playerCamera, viewModel, yaw, session);
+            // Your own soldier: legs and chest when you look down, and your whole shadow.
+            LocalBodyView.Attach(player, movement.standEyeHeight);
 
             var fx = cameraObject.AddComponent<WeaponFx>();
             fx.Initialize(viewModel, player);

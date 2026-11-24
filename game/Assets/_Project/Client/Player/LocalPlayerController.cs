@@ -91,6 +91,16 @@ namespace Recoil.Client.Player
         /// <summary>How far the current frame sits between the last two ticks, 0..1.</summary>
         public float TickAlpha { get; private set; }
 
+        /// <summary>Where the player's feet are drawn this frame: blended between ticks, like the camera.</summary>
+        public Vector3 ViewFeet { get; private set; }
+
+        /// <summary>The eye's height above the feet as drawn this frame (lower while crouched or sliding).</summary>
+        public float ViewEyeHeight { get; private set; }
+
+        /// <summary>Where the player is looking this frame, in degrees; positive pitch is down.</summary>
+        public float ViewYaw { get; private set; }
+        public float ViewPitch { get; private set; }
+
         /// <summary>False while a menu is open: the player keeps simulating but receives no input.</summary>
         public bool InputEnabled { get; set; } = true;
 
@@ -664,6 +674,10 @@ namespace Recoil.Client.Player
             }
             Vector3 feet = Vector3.Lerp(a.Position, b.Position, alpha) + _viewError;
             Vector3 eye = feet + Vector3.up * Mathf.Lerp(a.EyeHeight, b.EyeHeight, alpha);
+            ViewFeet = feet;
+            ViewEyeHeight = eye.y - feet.y;
+            ViewYaw = yaw;
+            ViewPitch = pitch;
 
             transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 

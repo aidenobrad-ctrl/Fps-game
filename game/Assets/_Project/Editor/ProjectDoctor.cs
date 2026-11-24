@@ -120,7 +120,7 @@ namespace Recoil.EditorTools
             CreateFiringRangeScene();
         }
 
-        static List<string> Run(bool firstOpen)
+        internal static List<string> Run(bool firstOpen)
         {
             var report = new List<string>();
 

@@ -62,7 +62,10 @@ namespace Recoil.Client.Online
             CosmeticsLibrary.Local = null;
         }
 
-        /// <param name="backendUrl">Used only by whichever scene creates the services first. -backend URL on the command line wins over it.</param>
+        /// <param name="backendUrl">
+        /// Used only by whichever scene creates the services first. -backend URL on the command
+        /// line wins over it, and so does a backend.txt beside a built game's Recoil.exe.
+        /// </param>
         public static GameServices Get(LoadoutCatalog catalog, string backendUrl = DefaultBackendUrl)
         {
             if (_instance != null) return _instance;
@@ -70,8 +73,38 @@ namespace Recoil.Client.Online
             var go = new GameObject("Game Services");
             DontDestroyOnLoad(go);
             _instance = go.AddComponent<GameServices>();
-            _instance.Build(catalog, CommandLine("-backend") ?? backendUrl);
+            _instance.Build(catalog, CommandLine("-backend") ?? BackendFromFile() ?? backendUrl);
             return _instance;
+        }
+
+        /// <summary>The file beside a built game that says where its backend is, so a copy given to friends can point at one online.</summary>
+        public const string BackendFileName = "backend.txt";
+
+        /// <summary>
+        /// The first line of backend.txt beside the game's .exe that is an http or https address,
+        /// or null: in the Editor, with no such file, or with nothing usable in it.
+        /// </summary>
+        static string BackendFromFile()
+        {
+            if (Application.isEditor) return null;
+            try
+            {
+                string folder = Path.GetDirectoryName(Application.dataPath);
+                string file = folder != null ? Path.Combine(folder, BackendFileName) : null;
+                if (file == null || !File.Exists(file)) return null;
+                foreach (string raw in File.ReadAllLines(file))
+                {
+                    string line = raw.Trim();
+                    if (line.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || line.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                        return line.TrimEnd('/');
+                }
+                Debug.LogWarning("Recoil: " + file + " has no http:// or https:// address in it, so the game uses " + DefaultBackendUrl + ".");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("Recoil: " + BackendFileName + " could not be read (" + e.Message + "), so the game uses " + DefaultBackendUrl + ".");
+            }
+            return null;
         }
 
         void Build(LoadoutCatalog catalog, string backendUrl)
